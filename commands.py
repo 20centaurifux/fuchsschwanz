@@ -1,0 +1,393 @@
+"""
+    project............: Fuchsschwanz
+    description........: icbd server implementation
+    date...............: 05/2019
+    copyright..........: Sebastian Fedrau
+
+    Permission is hereby granted, free of charge, to any person obtaining
+    a copy of this software and associated documentation files (the
+    "Software"), to deal in the Software without restriction, including
+    without limitation the rights to use, copy, modify, merge, publish,
+    distribute, sublicense, and/or sell copies of the Software, and to
+    permit persons to whom the Software is furnished to do so, subject to
+    the following conditions:
+
+    The above copyright notice and this permission notice shall be
+    included in all copies or substantial portions of the Software.
+
+    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+    EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+    MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+    IN NO EVENT SHALL THE AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR
+    OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+    ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+    OTHER DEALINGS IN THE SOFTWARE.
+"""
+import config, di, session, broker, groups, validate
+import database, nickdb, tld, validate
+import re, sys, secrets
+from exception import TldStatusException, TldErrorException
+from logger import log
+
+class Injected(di.Injected):
+    def __init__(self):
+        super().__init__()
+
+    def inject(self,
+               session: session.Store,
+               broker: broker.Broker,
+               groups: groups.Store,
+               db_connection: database.Connection,
+               nickdb: nickdb.NickDb):
+        self.session = session
+        self.broker = broker
+        self.groups = groups
+        self.db_connection = db_connection
+        self.nickdb = nickdb
+
+class User(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def login(self, session_id, loginid, nick, password, group):
+        log.debug("User login: loginid='%s', nick='%s', password='%s'" % (loginid, nick, password))
+
+        if not validate.is_valid_loginid(loginid):
+            raise TldStatusException("Register", "loginid is malformed.")
+
+        if not validate.is_valid_nick(nick):
+            raise TldStatusException("Register", "nick is malformed.")
+
+        if len(password) == 0:
+            self.__login_no_password__(session_id, loginid, nick)
+        else:
+            self.__login_password__(session_id, loginid, nick, password)
+
+        if group == "":
+            group = config.DEFAULT_GROUP
+
+        self.join(session_id, group)
+
+    def __login_no_password__(self, session_id, loginid, nick):
+        log.debug("No password given, skipping authentication.")
+
+        existing_session = self.session.find_nick(nick)
+
+        if not existing_session is None:
+            log.debug("'%s' already logged in, aborting login." % nick)
+
+            raise TldStatusException("Register", "Nick already in use.")
+
+        with self.db_connection.enter_scope() as scope:
+            if self.nickdb.exists(scope, nick):
+                if self.nickdb.is_admin(nick):
+                    raise TldErrorException("Nickname already in use.")
+                else:
+                    self.broker.deliver(session_id, tld.encode_status_msg("Register", "Send password to authenticate your nickname."))
+            else:
+                self.broker.deliver(session_id, tld.encode_status_msg("No-Pass", "Your nickname does not have a password."))
+                self.broker.deliver(session_id, tld.encode_status_msg("No-Pass", "For help type /m server ?"))
+
+        self.broker.deliver(session_id, tld.encode_empty_cmd("a"))
+        self.broker.assign_nick(session_id, nick)
+
+        self.session.update(session_id, loginid=loginid, nick=nick, authenticated=False)
+
+    def __login_password__(self, session_id, loginid, nick, password):
+        log.debug("Password set, trying to authenticate '%s'." % nick)
+
+        authenticated = False
+        is_admin = False
+
+        with self.db_connection.enter_scope() as scope:
+            if self.nickdb.exists(scope, nick):
+                authenticated = self.nickdb.check_password(scope, nick, password)
+                is_admin = self.nickdb.is_admin(scope, nick)
+
+        if authenticated:
+            log.debug("Password verified.")
+
+            self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
+        else:
+            log.debug("Password is invalid.")
+
+            self.broker.deliver(session_id, tld.encode_str("e", "Authorization failure"))
+
+            if is_admin:
+                raise TldErrorException("Nickname already in use.")
+
+        existing_session = self.session.find_nick(nick)
+
+        if not existing_session is None and not authenticated:
+            log.debug("'%s' already logged in, aborting login." % nick)
+
+            raise TldStatusException("Register", "Nick already in use.")
+
+        if not existing_session is None:
+            self.auto_rename(existing_session)
+
+        self.session.update(session_id, loginid=loginid, nick=nick, authenticated=authenticated)
+
+        self.broker.deliver(session_id, tld.encode_empty_cmd("a"))
+        self.broker.assign_nick(session_id, nick)
+
+    def auto_rename(self, session_id):
+        state = self.session.get(session_id)
+
+        prefix, suffix = self.__split_name__(state.nick)
+        new_nick = self.__guess_nick__(prefix, suffix)
+
+        if new_nick is None:
+            prefix, suffix = self.__split_name__(state.loginid)
+            new_nick = self.__guess_nick__(prefix, suffix)
+
+        while new_nick is None:
+            new_nick = self.__guess_nick__(secrets.token_hex(8), 0)
+
+        self.rename(session_id, new_nick)
+
+    def __split_name__(self, name):
+        prefix = name
+        suffix = 1
+
+        m = re.match("(.*)-([0-9]+)$", name)
+
+        if not m is None:
+            prefix = m.group(1)
+            suffix = int(m.group(2))
+
+        return prefix, suffix
+
+    def __guess_nick__(self, name, suffix):
+        nick = "%s-%d" % (name, suffix)
+        guessed = None
+
+        if validate.is_valid_nick(nick):
+            if self.session.find_nick(nick) is None:
+                guessed = nick
+            elif suffix != sys.maxsize:
+                guessed = self.__guess_nick__(name, suffix + 1)
+
+        return guessed
+
+    def rename(self, session_id, nick):
+        state = self.session.get(session_id)
+
+        if not state.nick is None:
+            log.info("Renaming '%s' to '%s'" % (state.nick, nick))
+
+            if self.session.find_nick(nick):
+                raise TldErrorException("Nick already in use.")
+
+            if not state.group is None:
+                log.debug("Renaming '%s' to '%s' in channel '%s'." % (state.nick, nick, state.group))
+
+                self.broker.to_channel(state.group, tld.encode_status_msg("Name", "%s changed nickname to %s" % (state.nick, nick)))
+
+                if self.groups.get(state.group).moderator == session_id:
+                    self.broker.to_channel(state.group, tld.encode_status_msg("Pass", "%s is now mod." % nick))
+
+            self.broker.unassign_nick(state.nick)
+            self.broker.assign_nick(session_id, nick)
+
+            self.session.update(session_id, nick=nick, authenticated=False)
+
+            with self.db_connection.enter_scope() as scope:
+                if self.nickdb.exists(scope, nick):
+                    self.broker.deliver(session_id, tld.encode_status_msg("Register", "Send password to authenticate your nickname."))
+                else:
+                    self.broker.deliver(session_id, tld.encode_status_msg("No-Pass", "To register your nickname type /m server p password"))
+
+    def sign_off(self, session_id):
+        state = self.session.get(session_id)
+
+        if not state.nick is None:
+            log.debug("Dropping session: '%s'" % session_id)
+
+            if not state.group is None:
+                log.debug("Removing '%s' from channel '%s'." % (state.nick, state.group))
+
+                if self.broker.part(session_id, state.group):
+                    info = self.groups.get(state.group)
+
+                    if info.volume != groups.Volume.QUIET:
+                        self.broker.to_channel_from(session_id, state.group, tld.encode_status_msg("Sign-off", "%s (%s@%s) has signed off." % (state.nick, state.loginid, state.host)))
+
+                        if info.moderator == session_id:
+                            self.broker.to_channel_from(session_id, state.group, tld.encode_status_msg("Sign-off", "Your group moderator signed off. (No timeout)"))
+
+                        new_mod = {}
+                        min_elapsed = -1
+
+                        for sub_id in self.broker.get_subscribers(state.group):
+                            sub_state = self.session.get(sub_id)
+                            elapsed = sub_state.t_recv.elapsed()
+
+                            if min_elapsed == -1 or elapsed < min_elapsed:
+                                min_elapsed = elapsed
+                                new_mod = [sub_id, sub_state.nick]
+
+                        self.broker.to_channel(state.group, tld.encode_status_msg("Pass", "%s is now mod." % new_mod[1]))
+
+                        info.moderator = new_mod[0]
+                else:
+                    self.groups.delete(state.group)
+
+            log.debug("Removing nick '%s' from session '%s'." % (state.nick, session_id))
+            self.broker.unassign_nick(state.nick)
+
+            self.session.update(session_id, nick=None, authenticated=False)
+
+    def join(self, session_id, group):
+        state = self.session.get(session_id)
+
+        log.info("'%s' joins group '%s'." % (state.nick, group))
+
+        old_group = state.group
+        
+        if old_group == group:
+            raise TldErrorException("You are already in that group.")
+
+        group = self.__resolve_user_group_name__(group)
+        visibility, group = self.__extract_visibility_from_groupname__(group)
+
+        if not validate.is_valid_group(group):
+            raise TldErrorException("Invalid group name.")
+
+        info = self.groups.get(group)
+
+        if info.control == groups.Control.RESTRICTED:
+            pass # TODO
+        else:
+            if self.broker.join(session_id, group):
+                log.info("Group '%s' created." % group)
+
+                info.visibility = visibility
+
+                if group == config.DEFAULT_GROUP:
+                    info.control = groups.Control.PUBLIC
+                elif group == config.IDLE_GROUP:
+                    info.control = groups.Control.PUBLIC
+                    info.visibility = groups.visibility.VISIBLE
+                    info.volumne = groups.volumne.QUIET
+                    info.topic = config.IDLE_TOPIC
+                else:
+                    info.control = groups.Control.MODERATED
+                    info.moderator = session_id
+
+                self.groups.set(group, info)
+
+            msg = "You are now in group %s" % group
+
+            if info.moderator == session_id:
+                msg += " as moderator"
+
+            self.broker.deliver(session_id, tld.encode_status_msg("Status", msg))
+
+        if info.volume != groups.Volume.QUIET:
+            category = "Sign-on" if old_group is None else "Arrive"
+            self.broker.to_channel_from(session_id, group, tld.encode_status_msg(category, "%s (%s@%s) entered group" % (state.nick, state.loginid, state.host)))
+
+            self.session.update(session_id, group=group)
+
+        if not old_group is None:
+            info = self.groups.get(old_group)
+
+            log.debug("Removing '%s' from channel '%s'." % (state.nick, old_group))
+
+            if self.broker.part(session_id, old_group):
+                if info.volume != groups.Volume.QUIET:
+                    self.broker.to_channel_from(session_id, old_group, tld.encode_status_msg("Depart", "%s (%s@%s) just left" % (state.nick, state.loginid, state.host)))
+            else:
+                self.groups.delete(old_group)
+
+    def __resolve_user_group_name__(self, group):
+        if group.startswith("@"):
+            session_id = self.session.find_nick(group[1:])
+
+            if session_id is None:
+                raise TldErrorException("User not found.")
+
+            state = self.session.get(session_id)
+
+            if state.group is None or self.groups.get(state.group).visibility != groups.Visibility.VISIBLE:
+                raise TldErrorException("User not found.")
+
+            group = state.group
+
+        return group
+
+    def __extract_visibility_from_groupname__(self, group):
+        visibility = groups.Visibility.VISIBLE
+
+        if group.startswith(".."):
+            visibility = groups.Visibility.SUPERSECRET
+            group = group[2:]
+        elif group.startswith("."):
+            visibility = groups.Visibility.SECRET
+            group = group[1:]
+
+        return visibility, group
+
+class OpenMessage(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def send(self, session_id, message):
+        state = self.session.get(session_id)
+        
+        if not state.group is None:
+            e = tld.Encoder("b")
+
+            e.add_field_str(state.nick, append_null=True)
+            e.add_field_str(message, append_null=True)
+
+            self.broker.to_channel_from(session_id, state.group, e.encode())
+        else:
+            print("no")
+
+class Ping(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def ping(self, session_id, message_id=""):
+        state = self.session.get(session_id)
+        
+        if not state.group is None:
+            self.broker.deliver(session_id, encode_str("m", message_id))
+
+class Group(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def set_topic(self, session_id, topic):
+        name, info = self.__get_group_if_moderator__(session_id)
+
+        if not validate.is_valid_topic(topic):
+            raise TldErrorException("Topic is invalid.")
+
+        info.topic = topic
+
+        self.groups.set(name, info)
+
+        self.broker.to_channel(name, tld.encode_status_msg("Topic", "%s changed the topic to \"%s\"" % (self.session.get(session_id).nick, topic)))
+
+    def __get_group__(self, session_id):
+        state = self.session.get(session_id)
+        
+        if not state.group:
+            raise TldErrorException("You have to be logged in.")
+
+        return state.group, self.groups.get(state.group)
+
+    def __get_group_if_moderator__(self, session_id):
+        name, info = self.__get_group__(session_id)
+
+        if info.moderator != session_id:
+            with self.db_connection.enter_scope() as scope:
+                state = self.session.get(session_id)
+
+                if not self.nickdb.exists(scope, state.nick) and not self.nickdb.is_admin(state.nick):
+                    raise TldStatusException("You aren't the moderator.")
+
+        return name, info

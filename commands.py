@@ -522,3 +522,26 @@ class Registration(Injected):
                 self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
 
                 scope.complete()
+
+    def change_password(self, session_id, old_pwd, new_pwd):
+        log.debug("Changing user password.")
+
+        state = self.session.get(session_id)
+
+        if state.nick is None:
+            raise TldErrorException("Login required.")
+
+        with self.db_connection.enter_scope() as scope:
+            if not self.nickdb.exists(scope, state.nick):
+                raise TldErrorException("Authorization failure")
+
+            log.debug("Nick found, validating password.")
+
+            if not self.nickdb.check_password(scope, state.nick, old_pwd):
+                raise TldErrorException("Authorization failure")
+
+            self.nickdb.set_password(scope, state.nick, new_pwd)
+
+            self.broker.deliver(session_id, tld.encode_status_msg("Pass", "Password changed"))
+
+            scope.complete()

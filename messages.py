@@ -129,6 +129,25 @@ class Register:
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).register(session_id, fields[0])
 
+@command("p")
+class Register:
+    @fields(count=1)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).register(session_id, fields[0])
+
+@command("cp")
+class Register:
+    @fields(count=1)
+    def process(self, session_id, fields):
+        tokens = fields[0].split(" ")
+
+        if len(tokens) == 2:
+            old_pwd, new_pwd = tokens
+
+            INSTANCE(commands.Registration).change_password(session_id, old_pwd, new_pwd)
+        else:
+            raise TldErrorException("Missing parameter.")
+
 @command("topic")
 class ChangeTopic:
     @fields(count=1)

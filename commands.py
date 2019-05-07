@@ -53,10 +53,10 @@ class User(Injected):
         log.debug("User login: loginid='%s', nick='%s', password='%s'" % (loginid, nick, password))
 
         if not validate.is_valid_loginid(loginid):
-            raise TldStatusException("Register", "loginid is malformed.")
+            raise TldErrorException("loginid is invalid.")
 
         if not validate.is_valid_nick(nick):
-            raise TldStatusException("Register", "nick is malformed.")
+            raise TldErrorException("nick is invalid.")
 
         if not self.__try_login_unsecure__(session_id, loginid, nick):
             if len(password) == 0:
@@ -123,7 +123,7 @@ class User(Injected):
 
         with self.db_connection.enter_scope() as scope:
             if self.nickdb.exists(scope, nick):
-                if self.nickdb.is_admin(nick):
+                if self.nickdb.is_admin(scope, nick):
                     raise TldErrorException("Nickname already in use.")
                 else:
                     self.broker.deliver(session_id, tld.encode_status_msg("Register", "Send password to authenticate your nickname."))
@@ -224,6 +224,9 @@ class User(Injected):
         return guessed
 
     def rename(self, session_id, nick):
+        if not validate.is_valid_nick(nick):
+            raise TldErrorException("Nick is invalid.")
+
         state = self.session.get(session_id)
 
         if not state.nick is None:
@@ -323,10 +326,11 @@ class User(Injected):
 
                 if group == config.DEFAULT_GROUP:
                     info.control = groups.Control.PUBLIC
+                    info.topic = config.DEFAULT_TOPIC
                 elif group == config.IDLE_GROUP:
                     info.control = groups.Control.PUBLIC
-                    info.visibility = groups.visibility.VISIBLE
-                    info.volumne = groups.volumne.QUIET
+                    info.visibility = groups.Visibility.VISIBLE
+                    info.volume = groups.Volume.QUIET
                     info.topic = config.IDLE_TOPIC
                 else:
                     info.control = groups.Control.MODERATED
@@ -347,7 +351,7 @@ class User(Injected):
                                         group,
                                         tld.encode_status_msg(category, "%s (%s@%s) entered group" % (state.nick, state.loginid, state.host)))
 
-            self.session.update(session_id, group=group)
+        self.session.update(session_id, group=group)
 
         if not old_group is None:
             info = self.groups.get(old_group)
@@ -413,6 +417,8 @@ class OpenMessage(Injected):
         else:
             log.warning("Cannot send open message, session '%s' not logged in." % session_id)
 
+            raise TldErrorException("Login required.")
+
 class Ping(Injected):
     def __init__(self):
         super().__init__()
@@ -428,7 +434,12 @@ class Group(Injected):
         super().__init__()
 
     def set_topic(self, session_id, topic):
-        name, info = self.__get_group_if_moderator__(session_id)
+        log.debug("Setting topic.")
+
+        name, info = self.__get_group_if_can_moderate__(session_id)
+
+        if name in [config.DEFAULT_GROUP, config.IDLE_GROUP]:
+            raise TldErrorException("You can't change this group's topic.")
 
         if not validate.is_valid_topic(topic):
             raise TldErrorException("Topic is invalid.")
@@ -437,24 +448,31 @@ class Group(Injected):
 
         self.groups.set(name, info)
 
-        self.broker.to_channel(name, tld.encode_status_msg("Topic", "%s changed the topic to \"%s\"" % (self.session.get(session_id).nick, topic)))
+        if info.volume != groups.Volume.QUIET:
+            self.broker.to_channel(name, tld.encode_status_msg("Topic", "%s changed the topic to \"%s\"" % (self.session.get(session_id).nick, topic)))
 
     def __get_group__(self, session_id):
         state = self.session.get(session_id)
         
         if not state.group:
-            raise TldErrorException("You have to be logged in.")
+            log.warning("Cannot set topic, session '%s' not logged in." % session_id)
+
+            raise TldErrorException("Login required.")
 
         return state.group, self.groups.get(state.group)
 
-    def __get_group_if_moderator__(self, session_id):
+    def __get_group_if_can_moderate__(self, session_id):
         name, info = self.__get_group__(session_id)
 
-        if info.moderator != session_id:
+        log.debug("Group's moderator: %s" % info.moderator)
+
+        if not info.moderator is None and info.moderator != session_id:
+            log.debug("User isn't moderator, testing administrative privileges.")
+
             with self.db_connection.enter_scope() as scope:
                 state = self.session.get(session_id)
 
-                if not self.nickdb.exists(scope, state.nick) and not self.nickdb.is_admin(state.nick):
-                    raise TldStatusException("You aren't the moderator.")
+                if not self.nickdb.exists(scope, state.nick) or not self.nickdb.is_admin(scope, state.nick):
+                    raise TldErrorException("You aren't the moderator.")
 
         return name, info

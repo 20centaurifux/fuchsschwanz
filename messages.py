@@ -136,7 +136,7 @@ class Register:
         INSTANCE(commands.Registration).register(session_id, fields[0])
 
 @command("cp")
-class Register:
+class ChangePassword:
     @fields(count=1)
     def process(self, session_id, fields):
         tokens = fields[0].split(" ")
@@ -147,6 +147,18 @@ class Register:
             INSTANCE(commands.Registration).change_password(session_id, old_pwd, new_pwd)
         else:
             raise TldErrorException("Missing parameter.")
+
+@command("secure")
+class EnableSecurity:
+    @fields(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).set_security_mode(session_id, enabled=True, msgid=fields[1] if len(fields) == 2 else "")
+
+@command("nosecure")
+class DisableSecurity:
+    @fields(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).set_security_mode(session_id, enabled=False, msgid=fields[1] if len(fields) == 2 else "")
 
 @command("topic")
 class ChangeTopic:

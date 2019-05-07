@@ -58,7 +58,7 @@ class UserSession(Injected):
         if not validate.is_valid_nick(nick):
             raise TldErrorException("nick is invalid.")
 
-        if not self.__try_login_unsecure__(session_id, loginid, nick):
+        if not config.ENABLE_UNSECURE_LOGIN or not self.__try_login_unsecure__(session_id, loginid, nick):
             if len(password) == 0:
                 self.__login_no_password__(session_id, loginid, nick)
             else:
@@ -250,7 +250,22 @@ class UserSession(Injected):
 
             with self.db_connection.enter_scope() as scope:
                 if self.nickdb.exists(scope, nick):
-                    self.broker.deliver(session_id, tld.encode_status_msg("Register", "Send password to authenticate your nickname."))
+                    if self.nickdb.is_secure(scope, nick):
+                        self.broker.deliver(session_id, tld.encode_status_msg("Register", "Send password to authenticate your nickname."))
+                    else:
+                        log.debug("Nick not secure, trying to register automatically.")
+
+                        lastlogin = self.nickdb.get_lastlogin(scope, nick)
+
+                        if not lastlogin is None:
+                            log.debug("Last login: %s@%s" % (lastlogin[0], lastlogin[1]))
+
+                            authenticated = (lastlogin[0] == state.loginid and lastlogin[1] == state.host)
+
+                            if authenticated:
+                                self.session.update(session_id, nick=nick, authenticated=True)
+
+                                self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
                 else:
                     self.broker.deliver(session_id, tld.encode_status_msg("No-Pass", "To register your nickname type /m server p password"))
 
@@ -543,5 +558,23 @@ class Registration(Injected):
             self.nickdb.set_password(scope, state.nick, new_pwd)
 
             self.broker.deliver(session_id, tld.encode_status_msg("Pass", "Password changed"))
+
+            scope.complete()
+
+    def set_security_mode(self, session_id, enabled, msgid):
+        log.debug("Setting security flag: %s" % enabled)
+
+        state = self.session.get(session_id)
+
+        if not state.authenticated:
+            raise TldErrorException("You must be registered to change your security.")
+
+        with self.db_connection.enter_scope() as scope:
+            self.nickdb.set_secure(scope, state.nick, enabled)
+
+            if enabled:
+                self.broker.deliver(session_id, tld.encode_co_output("Security set to password required."))
+            else:
+                self.broker.deliver(session_id, tld.encode_co_output("Security set to automatic."))
 
             scope.complete()

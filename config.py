@@ -35,3 +35,5 @@ IDLE_GROUP="idle"
 IDLE_TOPIC="Idlers"
 
 SQLITE_DB="./icbd.db"
+
+ENABLE_UNSECURE_LOGIN=False

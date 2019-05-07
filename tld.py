@@ -77,6 +77,17 @@ def encode_status_msg(category, message):
 def encode_empty_cmd(T):
     return encode_str(T, "")
 
+def encode_co_output(text, msgid=""):
+    e = Encoder("i")
+
+    e.add_field_str("co", append_null=False)
+    e.add_field_str(text, append_null=True)
+
+    if not msgid == "":
+        e.add_field_str(msgid, append_null=True)
+
+    return e.encode()
+
 class Decoder:
     def __init__(self):
         self.__buffer = bytearray()

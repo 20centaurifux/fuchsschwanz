@@ -286,25 +286,26 @@ class UserSession(Injected):
                                                     state.group,
                                                     tld.encode_status_msg("Sign-off", "%s (%s@%s) has signed off." % (state.nick, state.loginid, state.host)))
 
-                        if info.moderator == session_id:
+                    if info.moderator == session_id:
+                        if info.volume != groups.Volume.QUIET:
                             self.broker.to_channel_from(session_id,
                                                         state.group,
                                                         tld.encode_status_msg("Sign-off", "Your group moderator signed off. (No timeout)"))
 
-                            new_mod = {}
-                            min_elapsed = -1
+                        new_mod = {}
+                        min_elapsed = -1
 
-                            for sub_id in self.broker.get_subscribers(state.group):
-                                sub_state = self.session.get(sub_id)
-                                elapsed = sub_state.t_recv.elapsed()
+                        for sub_id in self.broker.get_subscribers(state.group):
+                            sub_state = self.session.get(sub_id)
+                            elapsed = sub_state.t_recv.elapsed()
 
-                                if min_elapsed == -1 or elapsed < min_elapsed:
-                                    min_elapsed = elapsed
-                                    new_mod = [sub_id, sub_state.nick]
+                            if min_elapsed == -1 or elapsed < min_elapsed:
+                                min_elapsed = elapsed
+                                new_mod = [sub_id, sub_state.nick]
 
-                            self.broker.to_channel(state.group, tld.encode_status_msg("Pass", "%s is now mod." % new_mod[1]))
+                        self.broker.to_channel(state.group, tld.encode_status_msg("Pass", "%s is now mod." % new_mod[1]))
 
-                            info.moderator = new_mod[0]
+                        info.moderator = new_mod[0]
                 else:
                     self.groups.delete(state.group)
 

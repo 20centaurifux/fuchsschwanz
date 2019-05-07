@@ -56,8 +56,8 @@ def catchtldexceptions(fn):
 def fields(count=0, min=0, max=0):
     def decorator(fn):
         def wrapper(self, session_id, fields):
-            if count > 0:
-                pass
+            if count > 0 and len(fields) != count:
+                    raise TldErrorException("Malformed message, wrong number of fields.")
             else:
                 if len(fields) < min:
                     raise TldErrorException("Malformed message, missing fields.")
@@ -122,12 +122,6 @@ class Rename:
     @fields(count=1)
     def process(self, session_id, fields):
         INSTANCE(commands.UserSession).rename(session_id, fields[0])
-
-@command("p")
-class Register:
-    @fields(count=1)
-    def process(self, session_id, fields):
-        INSTANCE(commands.Registration).register(session_id, fields[0])
 
 @command("p")
 class Register:

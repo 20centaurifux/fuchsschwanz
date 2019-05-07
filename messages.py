@@ -34,39 +34,59 @@ def code(code):
 
     return decorator
 
-def textfields(cls):
-    fn = cls.process
+def textfields(fn):
+    def wrapper(self, session_id, fields):
+        fn(self, session_id, [b.decode("ascii").strip(" \0") for b in fields])
 
-    cls.process = lambda self, session_id, fields: fn(self,
-                                                      session_id,
-                                                      [b.decode("ascii").strip(" \0") for b in fields])
-
-    return cls
+    return wrapper
 
 def catchtldexceptions(fn):
-    def wrapper(*args):
+    def wrapper(self, session_id, fields):
         try:
-            fn(*args)
+            fn(self, session_id, fields)
 
         except TldResponseException as ex:
             b = di.default_container.resolve(broker.Broker)
 
-            b.deliver(args[1], ex.response)
+            b.deliver(session_id, ex.response)
 
     return wrapper
 
-@code("a")
-@textfields
-class Login:
-    def process(self, session_id, fields):
-        if len(fields) <= 4:
-            raise TldErrorException("Malformed login message.")
+def fields(count=0, min=0, max=0):
+    def decorator(fn):
+        def wrapper(self, session_id, fields):
+            if count > 0:
+                pass
+            else:
+                if len(fields) < min:
+                    raise TldErrorException("Malformed message, missing fields.")
 
+                if max > min and len(fields) > max:
+                    raise TldErrorException("Malformed message, too many fields.")
+
+            fn(self, session_id, fields)
+            
+        return wrapper
+
+    return decorator
+
+def Cache():
+    m = {}
+
+    return lambda T: m.get(T, T())
+
+INSTANCE = Cache()
+
+@code("a")
+class Login:
+    @textfields
+    @fields(min=5, max=7)
+    def process(self, session_id, fields):
         fn = None
         args = []
 
         if fields[3] == "login":
-            fn = commands.User().login
+            fn = INSTANCE(commands.User).login
             args = [session_id, fields[0], fields[1], fields[4] if len(fields) >= 5 else "", fields[2]]
 
         if fn is None:
@@ -75,43 +95,34 @@ class Login:
         fn(*args)
 
 @code("b")
-@textfields
 class OpenMessage:
+    @textfields
     @catchtldexceptions
+    @fields(count=1)
     def process(self, session_id, fields):
-        if len(fields) != 1:
-            raise TldErrorException("Malformed open message.")
-
-        commands.OpenMessage().send(session_id, fields[0])
+        INSTANCE(commands.OpenMessage).send(session_id, fields[0])
 
 @code("h")
-@textfields
 class Command:
-    def __init__(self):
-        super().__init__()
-
+    @textfields
     @catchtldexceptions
+    @fields(min=1, max=3)
     def process(self, session_id, fields):
-        if len(fields) < 1:
-            raise TldErrorException("Malformed command message.")
-
         arg = fields[1] if len(fields) >= 2 else ""
-
+        print(fields[0])
         if fields[0] == "g":
-            commands.User().join(session_id, arg)
-        if fields[0] == "name":
-            commands.User().rename(session_id, arg)
-        if fields[0] == "topic":
-            commands.Group().set_topic(session_id, arg)
+            INSTANCE(commands.User).join(session_id, arg)
+        elif fields[0] == "name":
+            INSTANCE(commands.User).rename(session_id, arg)
+        elif fields[0] == "topic":
+            INSTANCE(commands.Group).set_topic(session_id, arg)
         else:
             raise TldErrorException("Unknown command: %s" % fields[0])
 
 @code("l")
-@textfields
 class Ping:
+    @textfields
     @catchtldexceptions
+    @fields(min=0, max=1)
     def process(self, session_id, fields):
-        if len(fields) > 1:
-            raise TldErrorException("Malformed ping message.")
-
-        commands.Ping().ping(session_id, fields[0] if len(fields) == 1 else "")
+        INSTANCE(commands.Ping).ping(session_id, fields[0] if len(fields) == 1 else "")

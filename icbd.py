@@ -52,8 +52,8 @@ class Server(asyncore.dispatcher):
 
             Session(client_info[0], client_info[1])
 
-MESSAGES = {cls.code: cls for cls in filter(lambda cls: isinstance(cls, type) and "code" in cls.__dict__,
-                                            messages.__dict__.values())}
+MESSAGES = {cls.code: cls() for cls in filter(lambda cls: isinstance(cls, type) and "code" in cls.__dict__,
+                                              messages.__dict__.values())}
 
 class Session(asyncore.dispatcher, di.Injected):
     def __init__(self, sock, address):
@@ -131,7 +131,7 @@ class Session(asyncore.dispatcher, di.Injected):
         if msg is None:
             self.__broker.deliver(self.__session_id, tld.encode_str("e", "Command not found."))
         else: 
-            msg().process(self.__session_id, tld.split(payload))
+            msg.process(self.__session_id, tld.split(payload))
 
     def __write_protocol_info__(self):
         e = tld.Encoder("j")

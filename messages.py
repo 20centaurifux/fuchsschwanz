@@ -23,6 +23,7 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+import sys
 import commands, di, broker
 from exception import TldStatusException, TldErrorException, TldResponseException
 
@@ -70,6 +71,14 @@ def fields(count=0, min=0, max=0):
 
     return decorator
 
+def command(command):
+    def decorator(cls):
+        cls.command = command
+
+        return cls
+
+    return decorator
+
 def Cache():
     m = {}
 
@@ -86,7 +95,7 @@ class Login:
         args = []
 
         if fields[3] == "login":
-            fn = INSTANCE(commands.User).login
+            fn = INSTANCE(commands.UserSession).login
             args = [session_id, fields[0], fields[1], fields[4] if len(fields) >= 5 else "", fields[2]]
 
         if fn is None:
@@ -102,22 +111,45 @@ class OpenMessage:
     def process(self, session_id, fields):
         INSTANCE(commands.OpenMessage).send(session_id, fields[0])
 
+@command("g")
+class ChangeGroup:
+    @fields(count=1)
+    def process(self, session_id, fields):
+        INSTANCE(commands.UserSession).join(session_id, fields[0])
+
+@command("name")
+class Rename:
+    @fields(count=1)
+    def process(self, session_id, fields):
+        INSTANCE(commands.UserSession).rename(session_id, fields[0])
+
+@command("p")
+class Rename:
+    @fields(count=1)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).register(session_id, fields[0])
+
+@command("topic")
+class ChangeTopic:
+    @fields(count=1)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Group).set_topic(session_id, fields[0])
+
+COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, type) and "command" in cls.__dict__,
+                                                 sys.modules[__name__].__dict__.values())}
+
 @code("h")
 class Command:
     @textfields
     @catchtldexceptions
     @fields(min=1, max=3)
     def process(self, session_id, fields):
-        arg = fields[1] if len(fields) >= 2 else ""
-        print(fields[0])
-        if fields[0] == "g":
-            INSTANCE(commands.User).join(session_id, arg)
-        elif fields[0] == "name":
-            INSTANCE(commands.User).rename(session_id, arg)
-        elif fields[0] == "topic":
-            INSTANCE(commands.Group).set_topic(session_id, arg)
-        else:
+        cmd = COMMANDS.get(fields[0])
+
+        if cmd is None:
             raise TldErrorException("Unknown command: %s" % fields[0])
+
+        cmd.process(session_id, fields[1:])
 
 @code("l")
 class Ping:
@@ -126,3 +158,4 @@ class Ping:
     @fields(min=0, max=1)
     def process(self, session_id, fields):
         INSTANCE(commands.Ping).ping(session_id, fields[0] if len(fields) == 1 else "")
+

@@ -39,3 +39,6 @@ def is_valid_group(group):
 
 def is_valid_topic(topic):
     return has_valid_length(topic, 1, 32)
+
+def is_valid_password(password):
+    return has_valid_length(password, 8, 128)

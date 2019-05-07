@@ -45,7 +45,7 @@ class Injected(di.Injected):
         self.db_connection = db_connection
         self.nickdb = nickdb
 
-class User(Injected):
+class UserSession(Injected):
     def __init__(self):
         super().__init__()
 
@@ -476,3 +476,49 @@ class Group(Injected):
                     raise TldErrorException("You aren't the moderator.")
 
         return name, info
+
+class Registration(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def register(self, session_id, password):
+        log.debug("Starting user registration.")
+
+        state = self.session.get(session_id)
+
+        if state.nick is None:
+            raise TldErrorException("Login required.")
+
+        with self.db_connection.enter_scope() as scope:
+            authenticated = False
+
+            if self.nickdb.exists(scope, state.nick):
+                log.debug("Nick found, validating password.")
+
+                if not self.nickdb.check_password(scope, state.nick, password):
+                    raise TldErrorException("Authorization failure")
+                
+                authenticated = True
+            else:
+                log.info("Creating new user profile for '%s'." % state.nick)
+
+                if not validate.is_valid_password(password):
+                    raise TldStatusException("Register", "Password format not valid.")
+
+                self.nickdb.create(scope, state.nick)
+                self.nickdb.set_secure(scope, state.nick, True)
+                self.nickdb.set_admin(scope, state.nick, False)
+                self.nickdb.set_password(scope, state.nick, password)
+
+                authenticated = True
+
+            if authenticated:
+                log.debug("Authentication succeeded.")
+
+                self.nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
+
+                self.session.update(session_id, authenticated=True)
+
+                self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
+
+                scope.complete()

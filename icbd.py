@@ -114,7 +114,7 @@ class Session(asyncore.dispatcher, di.Injected):
     def __shutdown__(self):
         log.info("Closing session: '%s'", self.__session_id)
 
-        commands.User().sign_off(self.__session_id)
+        commands.UserSession().sign_off(self.__session_id)
 
         self.__broker.remove_session(self.__session_id)
         self.__session_store.delete(self.__session_id)

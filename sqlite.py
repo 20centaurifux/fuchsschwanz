@@ -135,7 +135,7 @@ class NickDb(nickdb.NickDb):
 
     def create(self, scope, nick):
         cur = scope.get_handle()
-        cur.execute("insert into Nick (Name, Salt) values (?, ?)", (nick, token_hex(20)))
+        cur.execute("insert into Nick (Name) values (?)", (nick, ))
 
         return self.lookup(scope, nick)
 

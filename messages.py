@@ -124,7 +124,7 @@ class Rename:
         INSTANCE(commands.UserSession).rename(session_id, fields[0])
 
 @command("p")
-class Rename:
+class Register:
     @fields(count=1)
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).register(session_id, fields[0])

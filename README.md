@@ -10,6 +10,7 @@ The project is at a *very* early stage. The following features are implemented:
 * changing nicks
 * changing topics
 * basic permission management (group moderators & admins)
+* setting personal information
 
 You need Python 3.7 to start the server.
 

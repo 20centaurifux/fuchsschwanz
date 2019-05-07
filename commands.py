@@ -398,14 +398,20 @@ class OpenMessage(Injected):
         state = self.session.get(session_id)
         
         if not state.group is None:
+            info = self.groups.get(state.group)
+
+            if info.volume == groups.Volume.QUIET:
+                raise TldErrorException("Open messages are not permitted in quiet groups.")
+
             e = tld.Encoder("b")
 
             e.add_field_str(state.nick, append_null=True)
             e.add_field_str(message, append_null=True)
 
-            self.broker.to_channel_from(session_id, state.group, e.encode())
+            if self.broker.to_channel_from(session_id, state.group, e.encode()) == 0:
+                raise TldErrorException("No one else in group!")
         else:
-            print("no")
+            log.warning("Cannot send open message, session '%s' not logged in." % session_id)
 
 class Ping(Injected):
     def __init__(self):

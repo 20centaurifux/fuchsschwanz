@@ -142,13 +142,20 @@ class Memory(Broker):
         self.deliver(session_id, message)
 
     def to_channel_from(self, sender, channel, message):
+        count = 0
+
         for session_id in self.__channels[channel]:
             if session_id != sender:
                 self.deliver(session_id, message)
+                count += 1
+
+        return count
 
     def to_channel(self, channel, message):
         for session_id in self.__channels[channel]:
             self.deliver(session_id, message)
+
+        return len(self.__channels[channel])
 
     def broadcast(self, message):
         for session_id in self.__sessions:

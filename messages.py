@@ -43,6 +43,18 @@ def textfields(cls):
 
     return cls
 
+def catchtldexceptions(fn):
+    def wrapper(*args):
+        try:
+            fn(*args)
+
+        except TldResponseException as ex:
+            b = di.default_container.resolve(broker.Broker)
+
+            b.deliver(args[1], ex.response)
+
+    return wrapper
+
 @code("a")
 @textfields
 class Login:
@@ -65,6 +77,7 @@ class Login:
 @code("b")
 @textfields
 class OpenMessage:
+    @catchtldexceptions
     def process(self, session_id, fields):
         if len(fields) != 1:
             raise TldErrorException("Malformed open message.")
@@ -73,35 +86,30 @@ class OpenMessage:
 
 @code("h")
 @textfields
-class Command(di.Injected):
+class Command:
     def __init__(self):
         super().__init__()
 
+    @catchtldexceptions
     def process(self, session_id, fields):
         if len(fields) < 1:
             raise TldErrorException("Malformed command message.")
 
-        try:
-            arg = fields[1] if len(fields) >= 2 else ""
+        arg = fields[1] if len(fields) >= 2 else ""
 
-            if fields[0] == "g":
-                commands.User().join(session_id, arg)
-            if fields[0] == "name":
-                commands.User().rename(session_id, arg)
-            if fields[0] == "topic":
-                commands.Group().set_topic(session_id, arg)
-            else:
-                raise TldErrorException("Unknown command: %s" % fields[0])
-                
-        except TldResponseException as ex:
-            self.__broker.deliver(session_id, ex.response)
-
-    def inject(self, broker: broker.Broker):
-        self.__broker = broker
+        if fields[0] == "g":
+            commands.User().join(session_id, arg)
+        if fields[0] == "name":
+            commands.User().rename(session_id, arg)
+        if fields[0] == "topic":
+            commands.Group().set_topic(session_id, arg)
+        else:
+            raise TldErrorException("Unknown command: %s" % fields[0])
 
 @code("l")
 @textfields
 class Ping:
+    @catchtldexceptions
     def process(self, session_id, fields):
         if len(fields) > 1:
             raise TldErrorException("Malformed ping message.")

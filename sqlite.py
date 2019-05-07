@@ -104,21 +104,21 @@ class NickDb(nickdb.NickDb):
         cur = scope.get_handle()
 
         cur.execute("""create table Version (
-                         Revision integer NOT NULL)""")
+                         Revision integer not null)""")
 
         cur.execute("insert into Version (Revision) values (1)")
 
         cur.execute("""create table Nick (
-                         Name varchar(16) NOT NULL,
+                         Name varchar(16) not null,
                          Password char(20),
-                         Salt char(20) NOT NULL,
+                         Salt char(20),
                          RealName varchar(32),
                          Phone varchar(32),
                          Address varchar(64),
                          Email varchar(32),
                          Text varchar(32),
                          WWW varchar(32),
-                         Secure integer,
+                         Secure integer not null default 0,
                          IsAdmin integer,
                          LastLoginID varchar(16),
                          LastLoginHost varchar(32),
@@ -172,9 +172,8 @@ class NickDb(nickdb.NickDb):
     def set_password(self, scope, nick, password):
         cur = scope.get_handle()
 
-        cur.execute("select Salt from Nick where Name=?", (nick,))
-        salt = cur.fetchone()[0]
-        cur.execute("update Nick set Password=? where Name=?", (self.__hash_password__(salt, password), nick))
+        salt = token_hex(20)
+        cur.execute("update Nick set Salt=?, Password=? where Name=?", (salt, self.__hash_password__(password, salt), nick))
 
     def check_password(self, scope, nick, password):
         cur = scope.get_handle()
@@ -186,12 +185,13 @@ class NickDb(nickdb.NickDb):
         if not row is None:
             salt, hash = row
 
-            success = (hash == self.__hash_password__(salt, password))
+            if salt is not None and hash is not None:
+                success = (hash == self.__hash_password__(password, salt))
 
         return success
 
-    def __hash_password__(self, salt, plain):
-        return sha256((salt + plain).encode("ASCII")).hexdigest()
+    def __hash_password__(self, plain, salt):
+        return sha256((plain + salt).encode("ascii")).hexdigest()
 
     def is_secure(self, scope, nick):
         cur = scope.get_handle()

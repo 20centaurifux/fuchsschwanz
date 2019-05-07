@@ -68,5 +68,11 @@ class NickDb:
     def set_admin(self, scope, nick, is_admin):
         raise NotImplementedError
 
+    def get_lastlogin(self, scope, nick):
+        raise NotImplementedError
+
+    def set_lastlogin(self, scope, nick, loginid, host):
+        raise NotImplementedError
+
     def delete(self, scope, nick):
         raise NotImplementedError

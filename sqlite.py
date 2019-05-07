@@ -197,21 +197,38 @@ class NickDb(nickdb.NickDb):
         cur = scope.get_handle()
         cur.execute("select Secure from Nick where Name=?", (nick,))
 
-        return bool(cur.fetchone()[0])
+        return bool(cur.fetchone()["Secure"])
 
     def set_secure(self, scope, nick, secure):
         cur = scope.get_handle()
-        cur.execute("update Nick set Secure=? where Name=?", (int(secure), nick,))
+        cur.execute("update Nick set Secure=? where Name=?", (int(secure), nick))
 
     def is_admin(self, scope, nick):
         cur = scope.get_handle()
         cur.execute("select IsAdmin from Nick where Name=?", (nick,))
 
-        return bool(cur.fetchone()[0])
+        return bool(cur.fetchone()["IsAdmin"])
 
     def set_admin(self, scope, nick, is_admin):
         cur = scope.get_handle()
-        cur.execute("update Nick set IsAdmin=? where Name=?", (int(is_admin), nick,))
+        cur.execute("update Nick set IsAdmin=? where Name=?", (int(is_admin), nick))
+
+    def get_lastlogin(self, scope, nick):
+        info = None
+
+        cur = scope.get_handle()
+        cur.execute("select LastLoginID, LastLoginHost from Nick where Name=?", (nick,))
+
+        row = cur.fetchone()
+
+        if not row["LastLoginID"] is None and not row["LastLoginHost"] is None:
+            info = (row["LastLoginID"], row["LastLoginHost"])
+
+        return info
+
+    def set_lastlogin(self, scope, nick, loginid, host):
+        cur = scope.get_handle()
+        cur.execute("update Nick set LastLoginID=?, LastLoginHost=? where Name=?", (loginid, host, nick))
 
     def delete(self, scope, nick):
         cur = scope.get_handle()

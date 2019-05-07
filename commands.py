@@ -58,15 +58,58 @@ class User(Injected):
         if not validate.is_valid_nick(nick):
             raise TldStatusException("Register", "nick is malformed.")
 
-        if len(password) == 0:
-            self.__login_no_password__(session_id, loginid, nick)
-        else:
-            self.__login_password__(session_id, loginid, nick, password)
+        if not self.__try_login_unsecure__(session_id, loginid, nick):
+            if len(password) == 0:
+                self.__login_no_password__(session_id, loginid, nick)
+            else:
+                self.__login_password__(session_id, loginid, nick, password)
+
+            self.__set_lastlogin__(session_id)
 
         if group == "":
             group = config.DEFAULT_GROUP
 
         self.join(session_id, group)
+
+    def __try_login_unsecure__(self, session_id, loginid, nick):
+        log.debug("Testing unsecure authentication.")
+
+        authenticated = False
+
+        with self.db_connection.enter_scope() as scope:
+            if self.nickdb.exists(scope, nick):
+                log.debug("Nick found, testing security level.")
+
+                if not self.nickdb.is_secure(scope, nick):
+                    log.debug("Nick allows auto-register.")
+
+                    lastlogin = self.nickdb.get_lastlogin(scope, nick)
+
+                    if not lastlogin is None:
+                        log.debug("Last login: %s@%s" % (lastlogin[0], lastlogin[1]))
+
+                        state = self.session.get(session_id)
+
+                        authenticated = (lastlogin[0] == loginid and lastlogin[1] == state.host)
+                    else:
+                       log.debug("First login, skipping auto-register.")
+                else:
+                    log.debug("Nick doesn't allow auto-register.")
+        
+        if authenticated:
+            self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
+
+            existing_session = self.session.find_nick(nick)
+
+            if not existing_session is None:
+                self.auto_rename(existing_session)
+
+            self.session.update(session_id, loginid=loginid, nick=nick, authenticated=True)
+
+            self.broker.deliver(session_id, tld.encode_empty_cmd("a"))
+            self.broker.assign_nick(session_id, nick)
+
+        return authenticated
 
     def __login_no_password__(self, session_id, loginid, nick):
         log.debug("No password given, skipping authentication.")
@@ -131,18 +174,28 @@ class User(Injected):
         self.broker.deliver(session_id, tld.encode_empty_cmd("a"))
         self.broker.assign_nick(session_id, nick)
 
+    def __set_lastlogin__(self, session_id):
+        state = self.session.get(session_id)
+
+        if state.authenticated:
+            with self.db_connection.enter_scope() as scope:
+                if self.nickdb.exists(scope, state.nick):
+                    self.nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
+
+                    scope.complete()
+
     def auto_rename(self, session_id):
         state = self.session.get(session_id)
 
-        prefix, suffix = self.__split_name__(state.nick)
-        new_nick = self.__guess_nick__(prefix, suffix)
+        prefix, _ = self.__split_name__(state.nick)
+        new_nick = self.__guess_nick__(prefix, 1)
 
         if new_nick is None:
-            prefix, suffix = self.__split_name__(state.loginid)
-            new_nick = self.__guess_nick__(prefix, suffix)
+            prefix, _ = self.__split_name__(state.loginid)
+            new_nick = self.__guess_nick__(prefix, 1)
 
         while new_nick is None:
-            new_nick = self.__guess_nick__(secrets.token_hex(8), 0)
+            new_nick = self.__guess_nick__(secrets.token_hex(8), 1)
 
         self.rename(session_id, new_nick)
 
@@ -211,10 +264,14 @@ class User(Injected):
                     info = self.groups.get(state.group)
 
                     if info.volume != groups.Volume.QUIET:
-                        self.broker.to_channel_from(session_id, state.group, tld.encode_status_msg("Sign-off", "%s (%s@%s) has signed off." % (state.nick, state.loginid, state.host)))
+                        self.broker.to_channel_from(session_id,
+                                                    state.group,
+                                                    tld.encode_status_msg("Sign-off", "%s (%s@%s) has signed off." % (state.nick, state.loginid, state.host)))
 
                         if info.moderator == session_id:
-                            self.broker.to_channel_from(session_id, state.group, tld.encode_status_msg("Sign-off", "Your group moderator signed off. (No timeout)"))
+                            self.broker.to_channel_from(session_id,
+                                                        state.group,
+                                                        tld.encode_status_msg("Sign-off", "Your group moderator signed off. (No timeout)"))
 
                         new_mod = {}
                         min_elapsed = -1
@@ -286,7 +343,9 @@ class User(Injected):
 
         if info.volume != groups.Volume.QUIET:
             category = "Sign-on" if old_group is None else "Arrive"
-            self.broker.to_channel_from(session_id, group, tld.encode_status_msg(category, "%s (%s@%s) entered group" % (state.nick, state.loginid, state.host)))
+            self.broker.to_channel_from(session_id,
+                                        group,
+                                        tld.encode_status_msg(category, "%s (%s@%s) entered group" % (state.nick, state.loginid, state.host)))
 
             self.session.update(session_id, group=group)
 
@@ -297,7 +356,9 @@ class User(Injected):
 
             if self.broker.part(session_id, old_group):
                 if info.volume != groups.Volume.QUIET:
-                    self.broker.to_channel_from(session_id, old_group, tld.encode_status_msg("Depart", "%s (%s@%s) just left" % (state.nick, state.loginid, state.host)))
+                    self.broker.to_channel_from(session_id,
+                                                old_group,
+                                                tld.encode_status_msg("Depart", "%s (%s@%s) just left" % (state.nick, state.loginid, state.host)))
             else:
                 self.groups.delete(old_group)
 

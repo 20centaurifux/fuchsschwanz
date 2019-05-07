@@ -42,3 +42,21 @@ def is_valid_topic(topic):
 
 def is_valid_password(password):
     return has_valid_length(password, 8, 128)
+
+def is_valid_realname(real_name):
+    return has_valid_length(real_name, 0, 32)
+
+def is_valid_address(address):
+    return has_valid_length(address, 0, 64)
+
+def is_valid_phone(phone):
+    return has_valid_length(phone, 0, 32)
+
+def is_valid_email(email):
+    return has_valid_length(email, 0, 32)
+
+def is_valid_text(text):
+    return has_valid_length(text, 0, 32)
+
+def is_valid_text(www):
+    return has_valid_length(www, 0, 32)

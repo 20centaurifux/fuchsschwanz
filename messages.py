@@ -148,17 +148,56 @@ class ChangePassword:
         else:
             raise TldErrorException("Missing parameter.")
 
+def msgid(fields):
+    return fields[1] if len(fields) == 2 else ""
+
 @command("secure")
 class EnableSecurity:
     @fields(min=1, max=2)
     def process(self, session_id, fields):
-        INSTANCE(commands.Registration).set_security_mode(session_id, enabled=True, msgid=fields[1] if len(fields) == 2 else "")
+        INSTANCE(commands.Registration).set_security_mode(session_id, enabled=True, msgid=msgid(fields))
 
 @command("nosecure")
 class DisableSecurity:
     @fields(min=1, max=2)
     def process(self, session_id, fields):
-        INSTANCE(commands.Registration).set_security_mode(session_id, enabled=False, msgid=fields[1] if len(fields) == 2 else "")
+        INSTANCE(commands.Registration).set_security_mode(session_id, enabled=False, msgid=msgid(fields))
+
+@command("rname")
+class ChangeRealname:
+    @fields(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).change_field(session_id, "real_name", fields[0], msgid=msgid(fields))
+
+@command("addr")
+class ChangeAddress:
+    @fields(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).change_field(session_id, "address", fields[0], msgid=msgid(fields))
+
+@command("phone")
+class ChangePhone:
+    @fields(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).change_field(session_id, "phone", fields[0], msgid=msgid(fields))
+
+@command("email")
+class ChangeEmail:
+    @fields(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).change_field(session_id, "email", fields[0], msgid=msgid(fields))
+
+@command("text")
+class ChangeText:
+    @fields(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).change_field(session_id, "text", fields[0], msgid=msgid(fields))
+
+@command("www")
+class ChangeWebsite:
+    @fields(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).change_field(session_id, "www", fields[0], msgid=msgid(fields))
 
 @command("topic")
 class ChangeTopic:

@@ -160,7 +160,7 @@ class NickDb(nickdb.NickDb):
 
     def update(self, scope, nick, details):
         cur = scope.get_handle()
-        cur.execute("update Nick set RealName=?, Phone=?, Address=?, Email=?, Text=?, WWW=?, where Name=?",
+        cur.execute("update Nick set RealName=?, Phone=?, Address=?, Email=?, Text=?, WWW=? where Name=?",
                     (details.real_name,
                      details.phone,
                      details.address,

@@ -26,7 +26,7 @@
 import config, di, session, broker, groups, validate
 import database, nickdb, tld, validate
 import re, sys, secrets
-from exception import TldStatusException, TldErrorException
+from exception import TldResponseException, TldStatusException, TldErrorException
 from logger import log
 
 class Injected(di.Injected):
@@ -573,8 +573,58 @@ class Registration(Injected):
             self.nickdb.set_secure(scope, state.nick, enabled)
 
             if enabled:
-                self.broker.deliver(session_id, tld.encode_co_output("Security set to password required."))
+                self.broker.deliver(session_id, tld.encode_co_output("Security set to password required.", msgid))
             else:
-                self.broker.deliver(session_id, tld.encode_co_output("Security set to automatic."))
+                self.broker.deliver(session_id, tld.encode_co_output("Security set to automatic.", msgid))
 
             scope.complete()
+
+    def change_field(self, session_id, field, text, msgid):
+        log.debug("Setting field '%s' to '%s'" % (field, text))
+
+        state = self.session.get(session_id)
+
+        if not state.authenticated:
+            raise TldErrorException("You must be registered to change your security.")
+
+        if not self.__validate_field__(field, text):
+            raise TldResponseException("Invalid attribute.", tld.encode_co_output("'%s' format not valid." % self.__map_field__(field), msgid))
+
+        with self.db_connection.enter_scope() as scope:
+            details = self.nickdb.lookup(scope, state.nick)
+
+            setattr(details, field, text)
+
+            self.nickdb.update(scope, state.nick, details)
+
+            self.broker.deliver(session_id, tld.encode_co_output("%s set to '%s'" % (self.__map_field__(field), text), msgid))
+
+            scope.complete()
+
+    def __map_field__(self, field):
+        if field == "real_name":
+            return "Real Name"
+        elif field == "address":
+            return "Address"
+        elif field == "phone":
+            return "Phone Number"
+        elif field == "email":
+            return "E-Mail"
+        elif field == "text":
+            return "Message text"
+        elif field == "www":
+            return "WWW"
+
+    def __validate_field__(self, field, text):
+        if field == "real_name":
+            return validate.is_valid_realname(text)
+        elif field == "address":
+            return validate.is_valid_address(text)
+        elif field == "phone":
+            return validate.is_valid_phone(text)
+        elif field == "email":
+            return validate.is_valid_email(text)
+        elif field == "text":
+            return validate.is_valid_text(text)
+        elif field == "www":
+            return validate.is_valid_www(text)

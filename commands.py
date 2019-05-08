@@ -519,7 +519,8 @@ class Registration(Injected):
                 log.info("Creating new user profile for '%s'." % state.nick)
 
                 if not validate.is_valid_password(password):
-                    raise TldStatusException("Register", "Password format not valid.")
+                    raise TldStatusException("Register",
+                                             "Password format not valid. Passwords length must be between %d and %d characters." % (validate.PASSWORD_MIN, validate.PASSWORD_MAX))
 
                 self.nickdb.create(scope, state.nick)
                 self.nickdb.set_secure(scope, state.nick, True)
@@ -629,3 +630,24 @@ class Registration(Injected):
             return validate.is_valid_text(text)
         elif field == "www":
             return validate.is_valid_www(text)
+
+    def delete(self, session_id, password, msgid):
+        state = self.session.get(session_id)
+
+        if not state.authenticated:
+            raise TldErrorException("You must be registered to delete your entry.")
+
+        if password == "":
+            raise TldErrorException("Password required.")
+
+        with self.db_connection.enter_scope() as scope:
+            if not self.nickdb.check_password(scope, state.nick, password):
+                raise TldErrorException("Password incorrect.")
+
+            self.nickdb.delete(scope, state.nick)
+
+            self.broker.deliver(session_id, tld.encode_co_output("Record Deleted", msgid))
+
+            self.session.update(session_id, authentication=False)
+
+            scope.complete()

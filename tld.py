@@ -64,11 +64,11 @@ def encode_str(T, text):
 def encode_status_msg(category, message):
     pkgs = bytearray()
 
-    for part in wrap(message, 70):
+    for part in wrap(message, 50):
         e = Encoder("d")
 
         e.add_field_str(category, append_null=True)
-        e.add_field_str(part, append_null=True)
+        e.add_field_str(part.strip(), append_null=True)
     
         pkgs.extend(e.encode())
 

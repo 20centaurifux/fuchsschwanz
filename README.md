@@ -6,11 +6,12 @@ The project is at a *very* early stage. The following features are implemented:
 
 * user login & authentication (/secure and /nosecure node)
 * user registration
-* changing groups
-* changing nicks
-* changing topics
-* basic permission management (group moderators & admins)
 * setting personal information
+* delete users
+* change group
+* change nick
+* change topic
+* basic permission management (group moderators & admins)
 
 You need Python 3.7 to start the server.
 

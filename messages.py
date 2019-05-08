@@ -221,6 +221,12 @@ class ChangeWebsite:
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "www", fields[0], msgid=msgid(fields))
 
+@command("delete")
+class DeleteNick:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).delete(session_id, fields[0], msgid=msgid(fields))
+
 @command("topic")
 class ChangeTopic:
     @fieldslength(count=1)

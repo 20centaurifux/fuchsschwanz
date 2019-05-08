@@ -10,8 +10,10 @@ The project is at a *very* early stage. The following features are implemented:
 * delete users
 * change group
 * change nick
-* change topic
+* public messages
 * basic permission management (group moderators & admins)
+* change topic
+* personal message box
 
 You need Python 3.7 to start the server.
 

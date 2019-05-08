@@ -23,12 +23,12 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import sqlite3, database
+import sqlite3, database, nickdb
 from secrets import token_hex
 from hashlib import sha256
 from logger import log
 from datetime import datetime
-import nickdb
+import uuid
 
 class TransactionScope(database.TransactionScope):
     def __init__(self, db):
@@ -126,6 +126,16 @@ class NickDb(nickdb.NickDb):
                          Signon integer,
                          Signoff integer,
                          primary key (Name))""")
+
+        cur.execute("""create table Message (
+                         UUID char(32) not null,
+                         Sender varchar(16) not null,
+                         Receiver varchar(16) not null,
+                         Timestamp integer not null,
+                         Message varchar(128) not null,
+                         primary key (UUID))""")
+
+        cur.execute("create index foobar on Message (Receiver, Timestamp)")
 
     def __create_admin__(self, scope):
         log.info("Creating admin account: username='admin', password='trustno1'")
@@ -274,6 +284,35 @@ class NickDb(nickdb.NickDb):
             timestamp = datetime.utcnow()
 
         cur.execute("update Nick set Signoff=? where Name=?", (int(timestamp.timestamp()), nick))
+
+    def add_message(self, scope, receiver, sender, text):
+        msgid = uuid.uuid4().hex
+        timestamp = int(datetime.utcnow().timestamp())
+
+        cur = scope.get_handle()
+        cur.execute("insert into Message (UUID, Sender, Receiver, Timestamp, Message) values (?, ?, ?, ?, ?)", (msgid, sender, receiver, timestamp, text))
+
+        return msgid
+
+    def count_messages(self, scope, receiver):
+        cur = scope.get_handle()
+        cur.execute("select count(UUID) from Message where Receiver=?", (receiver,))
+
+        return int(cur.fetchone()[0])
+
+    def get_messages(self, scope, receiver):
+        cur = scope.get_handle()
+        cur.execute("select * from Message where Receiver=?", (receiver,))
+
+        return [nickdb.Message(uuid=uuid.UUID(row["UUID"]),
+                               sender=row["Sender"],
+                               date=datetime.fromtimestamp(row["Timestamp"]),
+                               text=row["Message"])
+                for row in cur]
+
+    def delete_message(self, scope, uuid):
+        cur = scope.get_handle()
+        cur.execute("delete from Message where UUID=?", (uuid.hex,))
 
     def delete(self, scope, nick):
         cur = scope.get_handle()

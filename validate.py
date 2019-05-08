@@ -44,7 +44,7 @@ def is_valid_group(group):
     return has_valid_length(group, GROUP_MIN, GROUP_MAX)
 
 TOPIC_MIN = 0
-TOPIC_MAX = 32
+TOPIC_MAX = 64
 
 def is_valid_topic(topic):
     return has_valid_length(topic, TOPIC_MIN, TOPIC_MAX)
@@ -90,3 +90,9 @@ WWW_MAX = 32
 
 def is_valid_www(www):
     return has_valid_length(www, WWW_MIN, WWW_MAX)
+
+MESSAGE_MIN = 1
+MESSAGE_MAX = 128
+
+def is_valid_message(msg):
+    return has_valid_length(msg, MESSAGE_MIN, MESSAGE_MAX)

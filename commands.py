@@ -57,7 +57,7 @@ class UserSession(Injected):
             raise TldErrorException("loginid is invalid.")
 
         if not validate.is_valid_nick(nick):
-            raise TldErrorException("nick is invalid.")
+            raise TldErrorException("Nick is invalid.")
 
         if not config.ENABLE_UNSECURE_LOGIN or not self.__try_login_unsecure__(session_id, loginid, nick):
             if len(password) == 0:
@@ -93,6 +93,12 @@ class UserSession(Injected):
                         state = self.session.get(session_id)
 
                         authenticated = (lastlogin[0] == loginid and lastlogin[1] == state.host)
+
+                        if authenticated:
+                            count = self.nickdb.count_messages(scope, nick)
+
+                            if count > 0:
+                                self.broker.deliver(session_id, tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
                     else:
                        log.debug("First login, skipping auto-register.")
                 else:
@@ -104,7 +110,7 @@ class UserSession(Injected):
             existing_session = self.session.find_nick(nick)
 
             if not existing_session is None:
-                self.auto_rename(existing_session)
+                self.__auto_rename__(existing_session)
 
             self.session.update(session_id, loginid=loginid, nick=nick, authenticated=True)
 
@@ -149,17 +155,22 @@ class UserSession(Injected):
                 authenticated = self.nickdb.check_password(scope, nick, password)
                 is_admin = self.nickdb.is_admin(scope, nick)
 
-        if authenticated:
-            log.debug("Password verified.")
+            if authenticated:
+                log.debug("Password verified.")
 
-            self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
-        else:
-            log.debug("Password is invalid.")
+                self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
 
-            self.broker.deliver(session_id, tld.encode_str("e", "Authorization failure"))
+                count = self.nickdb.count_messages(scope, nick)
 
-            if is_admin:
-                raise TldErrorException("Nickname already in use.")
+                if count > 0:
+                    self.broker.deliver(session_id, tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
+            else:
+                log.debug("Password is invalid.")
+
+                self.broker.deliver(session_id, tld.encode_str("e", "Authorization failure"))
+
+                if is_admin:
+                    raise TldErrorException("Nickname already in use.")
 
         existing_session = self.session.find_nick(nick)
 
@@ -169,7 +180,7 @@ class UserSession(Injected):
             raise TldStatusException("Register", "Nick already in use.")
 
         if not existing_session is None:
-            self.auto_rename(existing_session)
+            self.__auto_rename__(existing_session)
 
         self.session.update(session_id, loginid=loginid, nick=nick, authenticated=authenticated)
 
@@ -194,7 +205,7 @@ class UserSession(Injected):
 
                 scope.complete()
 
-    def auto_rename(self, session_id):
+    def __auto_rename__(self, session_id):
         state = self.session.get(session_id)
 
         prefix, _ = self.__split_name__(state.nick)
@@ -286,6 +297,11 @@ class UserSession(Injected):
                                 self.session.update(session_id, nick=nick, authenticated=True)
 
                                 self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
+
+                                count = self.nickdb.count_messages(scope, nick)
+
+                                if count > 0:
+                                    self.broker.deliver(session_id, tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
                 else:
                     self.broker.deliver(session_id, tld.encode_status_msg("No-Pass", "To register your nickname type /m server p password"))
 
@@ -541,7 +557,7 @@ class Registration(Injected):
 
                 if not self.nickdb.check_password(scope, state.nick, password):
                     raise TldErrorException("Authorization failure")
-                
+
                 authenticated = True
             else:
                 log.info("Creating new user profile for '%s'." % state.nick)
@@ -567,8 +583,13 @@ class Registration(Injected):
 
                 self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
 
+                count = self.nickdb.count_messages(scope, state.nick)
+
+                self.broker.deliver(session_id, tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
+
                 scope.complete()
 
+            
     def change_password(self, session_id, old_pwd, new_pwd):
         log.debug("Changing user password.")
 
@@ -745,3 +766,69 @@ class Registration(Injected):
                 msgs.extend(tld.encode_co_output("                | %s" % part, msgid))
 
         self.broker.deliver(session_id, msgs)
+
+class MessageBox(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def send_message(self, session_id, receiver, text):
+        state = self.session.get(session_id)
+
+        if not state.authenticated:
+            raise TldErrorException("You must be registered to write a message.")
+
+        if not validate.is_valid_nick(receiver):
+            raise TldErrorException("'%s' is not a valid nick name." % receiver)
+
+        if not validate.is_valid_message(text):
+            raise TldErrorException("Message text not valid. Length has be between %d and %d characters." % (validate.MESSAGE_MIN, validate.MESSAGE_MAX))
+
+        with self.db_connection.enter_scope() as scope:
+            if not self.nickdb.exists(scope, receiver):
+                raise TldErrorException("%s is not registered." % receiver)
+
+            count = self.nickdb.count_messages(scope, receiver) + 1
+            loggedin_session = self.session.find_nick(receiver)
+
+            if count > config.MSGBOX_LIMIT:
+                if not loggedin_session is None:
+                    self.broker.deliver(loggedin_session, tld.encode_str("e", "User mailbox is full."))
+
+                raise TldErrorException("User mailbox full")
+
+            uuid = self.nickdb.add_message(scope, receiver, state.nick, text)
+
+            self.broker.deliver(session_id, tld.encode_status_msg("Message", "Message '%s' saved." % uuid))
+
+            if not loggedin_session is None:
+                self.broker.deliver(session_id, tld.encode_status_msg("Warning", "%s is logged in now." % receiver))
+                self.broker.deliver(loggedin_session, tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
+
+                if count == config.MSGBOX_LIMIT:
+                    self.broker.deliver(loggedin_session, tld.encode_str("e", "User mailbox is full."))
+
+            scope.complete()
+
+    def read_messages(self, session_id, msgid=""):
+        state = self.session.get(session_id)
+
+        if not state.authenticated:
+            raise TldErrorException("You must be registered to read any messages.")
+
+        with self.db_connection.enter_scope() as scope:
+            if self.nickdb.count_messages(scope, state.nick) == 0:
+                raise TldErrorException("No messages")
+
+            for msg in self.nickdb.get_messages(scope, state.nick):
+                self.broker.deliver(session_id, tld.encode_co_output("Message left at %s" % msg.date, msgid))
+
+                e = tld.Encoder("c")
+
+                e.add_field_str(msg.sender, append_null=False)
+                e.add_field_str(msg.text, append_null=True)
+
+                self.broker.deliver(session_id, e.encode())
+
+                self.nickdb.delete_message(scope, msg.uuid)
+
+            scope.complete()

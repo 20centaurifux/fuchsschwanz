@@ -155,14 +155,14 @@ class Register:
 class ChangePassword:
     @fieldslength(count=1)
     def process(self, session_id, fields):
-        tokens = fields[0].split(" ")
+        msg_fields = fields[0].split(" ")
 
-        if len(tokens) == 2:
-            old_pwd, new_pwd = tokens
+        if len(msg_fields) == 2:
+            old_pwd, new_pwd = msg_fields
 
             INSTANCE(commands.Registration).change_password(session_id, old_pwd, new_pwd)
         else:
-            raise TldErrorException("Missing parameter.")
+            raise TldErrorException("Usage: /cp old_password new_password")
 
 def msgid(fields):
     return fields[1] if len(fields) == 2 else ""
@@ -233,6 +233,28 @@ class Whois:
     @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).whois(session_id, fields[0], msgid=msgid(fields))
+
+@command("write")
+class WriteMessage:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        msg_fields = fields[0].split(" ", 1)
+
+        if len(msg_fields) == 2:
+            receiver, message = [f.strip() for f in msg_fields]
+        else:
+            raise TldErrorException("Usage: /write nick message text")
+
+        INSTANCE(commands.MessageBox).send_message(session_id, receiver, message)
+
+@command("read")
+class ReadMessages:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        if len(fields[0]) > 0:
+            raise TldErrorException("Usage: /read")
+
+        INSTANCE(commands.MessageBox).read_messages(session_id, msgid=msgid(fields))
 
 @command("topic")
 class ChangeTopic:

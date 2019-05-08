@@ -28,12 +28,14 @@ SERVER_ADDRESS=("127.0.0.1", 7326)
 HOSTNAME="localhost"
 SERVER_ID="localhost v0.1.0"
 
-DEFAULT_TOPIC="to be or not to be"
+DEFAULT_TOPIC="If You Don’t See the Fnord it Can’t Eat You"
 DEFAULT_GROUP="1"
 
 IDLE_GROUP="idle"
-IDLE_TOPIC="Idlers"
+IDLE_TOPIC="Be Quiet and Drive (Far Away)"
 
 SQLITE_DB="./icbd.db"
 
 ENABLE_UNSECURE_LOGIN=False
+
+MSGBOX_LIMIT=20

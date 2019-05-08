@@ -24,6 +24,8 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from dataclasses import dataclass
+from datetime import datetime
+from uuid import UUID
 
 @dataclass
 class UserDetails:
@@ -34,6 +36,13 @@ class UserDetails:
     text: str = None
     www: str = None
 
+@dataclass
+class Message:
+    uuid: UUID = None
+    sender: str = None
+    date: datetime = None
+    text: str = None
+    
 class NickDb:
     def setup(self, scope):
         raise NotImplementedError
@@ -84,6 +93,18 @@ class NickDb:
         raise NotImplementedError
 
     def set_signoff(self, scope, nick, timestamp):
+        raise NotImplementedError
+
+    def add_message(self, scope, receiver, sender, text):
+        raise NotImplementedError
+
+    def count_messages(self, scope, receiver):
+        raise NotImplementedError
+
+    def get_messages(self, scope, receiver):
+        raise NotImplementedError
+
+    def delete_message(self, scope, uuid):
         raise NotImplementedError
 
     def delete(self, scope, nick):

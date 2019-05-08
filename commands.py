@@ -26,6 +26,7 @@
 import config, di, session, broker, groups, validate
 import database, nickdb, tld, validate
 import re, sys, secrets
+from textwrap import wrap
 from exception import TldResponseException, TldStatusException, TldErrorException
 from logger import log
 
@@ -563,7 +564,7 @@ class Registration(Injected):
 
             scope.complete()
 
-    def set_security_mode(self, session_id, enabled, msgid):
+    def set_security_mode(self, session_id, enabled, msgid=""):
         log.debug("Setting security flag: %s" % enabled)
 
         state = self.session.get(session_id)
@@ -581,7 +582,7 @@ class Registration(Injected):
 
             scope.complete()
 
-    def change_field(self, session_id, field, text, msgid):
+    def change_field(self, session_id, field, text, msgid=""):
         log.debug("Setting field '%s' to '%s'" % (field, text))
 
         state = self.session.get(session_id)
@@ -631,7 +632,7 @@ class Registration(Injected):
         elif field == "www":
             return validate.is_valid_www(text)
 
-    def delete(self, session_id, password, msgid):
+    def delete(self, session_id, password, msgid=""):
         state = self.session.get(session_id)
 
         if not state.authenticated:
@@ -651,3 +652,58 @@ class Registration(Injected):
             self.session.update(session_id, authentication=False)
 
             scope.complete()
+
+    def whois(self, session_id, nick, msgid=""):
+        state = self.session.get(session_id)
+
+        if nick == "":
+            raise TldErrorException("Nickname to lookup not specified.")
+
+        with self.db_connection.enter_scope() as scope:
+            if not self.nickdb.exists(scope, nick):
+                raise TldErrorException("%s is not in the database." % nick)
+
+            details = self.nickdb.lookup(scope, state.nick)
+
+            msgs = bytearray()
+
+            def is_empty(text):
+                return text is None or text == ""
+
+            def display_value(text):
+                if is_empty(text):
+                    text = "(None)"
+
+                return text
+
+            msgs.extend(tld.encode_co_output("Nickname        | %s" % nick, msgid))
+            msgs.extend(tld.encode_co_output("Address         | %s" % "(None)", msgid))
+            msgs.extend(tld.encode_co_output("Last signin     | %s" % "(None)", msgid))
+            msgs.extend(tld.encode_co_output("Last signon     | %s" % "(None)", msgid))
+            msgs.extend(tld.encode_co_output("Real Name       | %s" % display_value(details.real_name), msgid))
+            msgs.extend(tld.encode_co_output("Phone           | %s" % display_value(details.phone), msgid))
+            msgs.extend(tld.encode_co_output("E-Mail          | %s" % display_value(details.email), msgid))
+            msgs.extend(tld.encode_co_output("WWW             | %s" % display_value(details.www), msgid))
+
+            if is_empty(details.address):
+                msgs.extend(tld.encode_co_output("Street address  | (None)", msgid))
+            else:
+                parts = [p.strip() for p in details.address.split("|")]
+
+                msgs.extend(tld.encode_co_output("Street address  | %s" % parts[0], msgid))
+
+                for part in parts[1:]:
+                    msgs.extend(tld.encode_co_output("                | %s" % part, msgid))
+
+            if is_empty(details.text):
+                msgs.extend(tld.encode_co_output("Text            | (None)", msgid))
+            else:
+                parts = wrap(details.text, 20)
+
+                msgs.extend(tld.encode_co_output("Text            | %s" % parts[0], msgid))
+
+                for part in parts[1:]:
+                    msgs.extend(tld.encode_co_output("                | %s" % part, msgid))
+
+            self.broker.deliver(session_id, msgs)
+

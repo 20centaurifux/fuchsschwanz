@@ -64,7 +64,7 @@ def encode_str(T, text):
 def encode_status_msg(category, message):
     pkgs = bytearray()
 
-    for part in wrap(message, 50):
+    for part in wrap(message, 70):
         e = Encoder("d")
 
         e.add_field_str(category, append_null=True)

@@ -227,6 +227,13 @@ class DeleteNick:
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).delete(session_id, fields[0], msgid=msgid(fields))
 
+@command("whois")
+class Whois:
+    @fieldslength(min=1, max=2)
+    @arglength(index=0, min=validate.NICK_MIN, max=validate.NICK_MAX)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Registration).whois(session_id, fields[0], msgid=msgid(fields))
+
 @command("topic")
 class ChangeTopic:
     @fieldslength(count=1)

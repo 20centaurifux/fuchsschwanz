@@ -71,31 +71,31 @@ def fieldslength(count=0, min=0, max=0):
 
     return decorator
 
+def arglength(at=0, min=0, max=0, display="Argument"):
+    def decorator(fn):
+        def wrapper(self, session_id, fields):
+            val = fields[at]
+
+            if len(val) < min:
+                if min == 1:
+                    raise TldErrorException("%s cannot be empty." % display)
+                else:
+                    raise TldErrorException("%s requires at least %d characters." % (display, min))
+
+            if max > min and len(val) > max:
+                raise TldErrorException("%s exceeds allowed maximum length (%d characters)." % (display, max))
+
+            fn(self, session_id, fields)
+            
+        return wrapper
+
+    return decorator
+
 def command(command):
     def decorator(cls):
         cls.command = command
 
         return cls
-
-    return decorator
-
-def arglength(index=0, min=0, max=0):
-    def decorator(fn):
-        def wrapper(self, session_id, fields):
-            arg = fields[index]
-
-            if len(arg) < min:
-                if min == 1:
-                    raise TldErrorException("Argument cannot be empty.")
-                else:
-                    raise TldErrorException("Argument requires at least %d characters." % min)
-
-            if max > min and len(arg) > max:
-                raise TldErrorException("Argument exceeds allowed maximum length (%d characters)." % max)
-
-            fn(self, session_id, fields)
-            
-        return wrapper
 
     return decorator
 
@@ -134,14 +134,14 @@ class OpenMessage:
 @command("g")
 class ChangeGroup:
     @fieldslength(count=1)
-    @arglength(index=0, min=validate.GROUP_MIN, max=validate.GROUP_MAX)
+    @arglength(display="Group name", min=validate.GROUP_MIN, max=validate.GROUP_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.UserSession).join(session_id, fields[0])
 
 @command("name")
 class Rename:
     @fieldslength(count=1)
-    @arglength(index=0, min=validate.NICK_MIN, max=validate.NICK_MAX)
+    @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.UserSession).rename(session_id, fields[0])
 
@@ -182,42 +182,42 @@ class DisableSecurity:
 @command("rname")
 class ChangeRealname:
     @fieldslength(min=1, max=2)
-    @arglength(index=0, min=validate.REALNAME_MIN, max=validate.REALNAME_MAX)
+    @arglength(display="Real Name", min=validate.REALNAME_MIN, max=validate.REALNAME_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "real_name", fields[0], msgid=msgid(fields))
 
 @command("addr")
 class ChangeAddress:
     @fieldslength(min=1, max=2)
-    @arglength(index=0, min=validate.ADDRESS_MIN, max=validate.ADDRESS_MAX)
+    @arglength(display="Address", min=validate.ADDRESS_MIN, max=validate.ADDRESS_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "address", fields[0], msgid=msgid(fields))
 
 @command("phone")
 class ChangePhone:
     @fieldslength(min=1, max=2)
-    @arglength(index=0, min=validate.PHONE_MIN, max=validate.PHONE_MAX)
+    @arglength(display="Phone Number", min=validate.PHONE_MIN, max=validate.PHONE_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "phone", fields[0], msgid=msgid(fields))
 
 @command("email")
 class ChangeEmail:
     @fieldslength(min=1, max=2)
-    @arglength(index=0, min=validate.EMAIL_MIN, max=validate.EMAIL_MAX)
+    @arglength(display="E-Mail address", min=validate.EMAIL_MIN, max=validate.EMAIL_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "email", fields[0], msgid=msgid(fields))
 
 @command("text")
 class ChangeText:
     @fieldslength(min=1, max=2)
-    @arglength(index=0, min=validate.TEXT_MIN, max=validate.TEXT_MAX)
+    @arglength(display="Text", min=validate.TEXT_MIN, max=validate.TEXT_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "text", fields[0], msgid=msgid(fields))
 
 @command("www")
 class ChangeWebsite:
     @fieldslength(min=1, max=2)
-    @arglength(index=0, min=validate.WWW_MIN, max=validate.WWW_MAX)
+    @arglength(display="WWW", min=validate.WWW_MIN, max=validate.WWW_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "www", fields[0], msgid=msgid(fields))
 
@@ -230,14 +230,14 @@ class DeleteNick:
 @command("whois")
 class Whois:
     @fieldslength(min=1, max=2)
-    @arglength(index=0, min=validate.NICK_MIN, max=validate.NICK_MAX)
+    @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.Registration).whois(session_id, fields[0], msgid=msgid(fields))
 
 @command("topic")
 class ChangeTopic:
     @fieldslength(count=1)
-    @arglength(index=0, min=validate.TOPIC_MIN, max=validate.TOPIC_MAX)
+    @arglength(display="Topic", min=validate.TOPIC_MIN, max=validate.TOPIC_MAX)
     def process(self, session_id, fields):
         INSTANCE(commands.Group).set_topic(session_id, fields[0])
 

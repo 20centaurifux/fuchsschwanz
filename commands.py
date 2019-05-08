@@ -66,6 +66,7 @@ class UserSession(Injected):
                 self.__login_password__(session_id, loginid, nick, password)
 
             self.__set_lastlogin__(session_id)
+            self.__set_signon__(session_id)
 
         if group == "":
             group = config.DEFAULT_GROUP
@@ -180,10 +181,18 @@ class UserSession(Injected):
 
         if state.authenticated:
             with self.db_connection.enter_scope() as scope:
-                if self.nickdb.exists(scope, state.nick):
-                    self.nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
+                self.nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
 
-                    scope.complete()
+                scope.complete()
+
+    def __set_signon__(self, session_id):
+        state = self.session.get(session_id)
+
+        if state.authenticated:
+            with self.db_connection.enter_scope() as scope:
+                self.nickdb.set_signon(scope, state.nick)
+
+                scope.complete()
 
     def auto_rename(self, session_id):
         state = self.session.get(session_id)
@@ -230,26 +239,34 @@ class UserSession(Injected):
 
         state = self.session.get(session_id)
 
-        if not state.nick is None:
-            log.info("Renaming '%s' to '%s'" % (state.nick, nick))
+        old_nick = state.nick
+        was_authenticated = False
+
+        if not old_nick is None:
+            log.info("Renaming '%s' to '%s'" % (old_nick, nick))
+
+            was_authenticated = state.authenticated
 
             if self.session.find_nick(nick):
                 raise TldErrorException("Nick already in use.")
 
             if not state.group is None:
-                log.debug("Renaming '%s' to '%s' in channel '%s'." % (state.nick, nick, state.group))
+                log.debug("Renaming '%s' to '%s' in channel '%s'." % (old_nick, nick, state.group))
 
-                self.broker.to_channel(state.group, tld.encode_status_msg("Name", "%s changed nickname to %s" % (state.nick, nick)))
+                self.broker.to_channel(state.group, tld.encode_status_msg("Name", "%s changed nickname to %s" % (old_nick, nick)))
 
                 if self.groups.get(state.group).moderator == session_id:
                     self.broker.to_channel(state.group, tld.encode_status_msg("Pass", "%s is now mod." % nick))
 
-            self.broker.unassign_nick(state.nick)
+            self.broker.unassign_nick(old_nick)
             self.broker.assign_nick(session_id, nick)
 
             self.session.update(session_id, nick=nick, authenticated=False)
 
             with self.db_connection.enter_scope() as scope:
+                if was_authenticated and self.nickdb.exists(scope, old_nick):
+                    self.nickdb.set_signoff(scope, old_nick)
+
                 if self.nickdb.exists(scope, nick):
                     if self.nickdb.is_secure(scope, nick):
                         self.broker.deliver(session_id, tld.encode_status_msg("Register", "Send password to authenticate your nickname."))
@@ -264,17 +281,27 @@ class UserSession(Injected):
                             authenticated = (lastlogin[0] == state.loginid and lastlogin[1] == state.host)
 
                             if authenticated:
+                                self.nickdb.set_signon(scope, nick)
+
                                 self.session.update(session_id, nick=nick, authenticated=True)
 
                                 self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
                 else:
                     self.broker.deliver(session_id, tld.encode_status_msg("No-Pass", "To register your nickname type /m server p password"))
 
+                scope.complete()
+
     def sign_off(self, session_id):
         state = self.session.get(session_id)
 
         if not state.nick is None:
             log.debug("Dropping session: '%s'" % session_id)
+
+            if state.authenticated:
+                with self.db_connection.enter_scope() as scope:
+                    self.nickdb.set_signoff(scope, state.nick)
+
+                    scope.complete()
 
             if not state.group is None:
                 log.debug("Removing '%s' from channel '%s'." % (state.nick, state.group))
@@ -534,6 +561,7 @@ class Registration(Injected):
                 log.debug("Authentication succeeded.")
 
                 self.nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
+                self.nickdb.set_signon(scope, state.nick)
 
                 self.session.update(session_id, authenticated=True)
 
@@ -663,47 +691,57 @@ class Registration(Injected):
             if not self.nickdb.exists(scope, nick):
                 raise TldErrorException("%s is not in the database." % nick)
 
-            details = self.nickdb.lookup(scope, state.nick)
+            signon = self.nickdb.get_signon(scope, nick)
+            signoff = self.nickdb.get_signoff(scope, nick)
 
-            msgs = bytearray()
+            details = self.nickdb.lookup(scope, nick)
 
-            def is_empty(text):
-                return text is None or text == ""
+        login = None
+        loggedin_session = self.session.find_nick(nick)
 
-            def display_value(text):
-                if is_empty(text):
-                    text = "(None)"
+        if not loggedin_session is None:
+            loggedin_state = self.session.get(loggedin_session)
 
-                return text
+            login = "%s@%s" % (loggedin_state.loginid, loggedin_state.host)
 
-            msgs.extend(tld.encode_co_output("Nickname        | %s" % nick, msgid))
-            msgs.extend(tld.encode_co_output("Address         | %s" % "(None)", msgid))
-            msgs.extend(tld.encode_co_output("Last signin     | %s" % "(None)", msgid))
-            msgs.extend(tld.encode_co_output("Last signon     | %s" % "(None)", msgid))
-            msgs.extend(tld.encode_co_output("Real Name       | %s" % display_value(details.real_name), msgid))
-            msgs.extend(tld.encode_co_output("Phone           | %s" % display_value(details.phone), msgid))
-            msgs.extend(tld.encode_co_output("E-Mail          | %s" % display_value(details.email), msgid))
-            msgs.extend(tld.encode_co_output("WWW             | %s" % display_value(details.www), msgid))
+        msgs = bytearray()
 
-            if is_empty(details.address):
-                msgs.extend(tld.encode_co_output("Street address  | (None)", msgid))
-            else:
-                parts = [p.strip() for p in details.address.split("|")]
+        def is_empty(text):
+            return text is None or text == ""
 
-                msgs.extend(tld.encode_co_output("Street address  | %s" % parts[0], msgid))
+        def display_value(text):
+            if is_empty(text):
+                text = "(None)"
 
-                for part in parts[1:]:
-                    msgs.extend(tld.encode_co_output("                | %s" % part, msgid))
+            return text
 
-            if is_empty(details.text):
-                msgs.extend(tld.encode_co_output("Text            | (None)", msgid))
-            else:
-                parts = wrap(details.text, 20)
+        msgs.extend(tld.encode_co_output("Nickname        | %s" % nick, msgid))
+        msgs.extend(tld.encode_co_output("Login           | %s" % display_value(login), msgid))
+        msgs.extend(tld.encode_co_output("Last signon     | %s" % display_value(signon), msgid))
+        msgs.extend(tld.encode_co_output("Last signoff    | %s" % display_value(signoff), msgid))
+        msgs.extend(tld.encode_co_output("Real Name       | %s" % display_value(details.real_name), msgid))
+        msgs.extend(tld.encode_co_output("Phone           | %s" % display_value(details.phone), msgid))
+        msgs.extend(tld.encode_co_output("E-Mail          | %s" % display_value(details.email), msgid))
+        msgs.extend(tld.encode_co_output("WWW             | %s" % display_value(details.www), msgid))
 
-                msgs.extend(tld.encode_co_output("Text            | %s" % parts[0], msgid))
+        if is_empty(details.address):
+            msgs.extend(tld.encode_co_output("Street address  | (None)", msgid))
+        else:
+            parts = [p.strip() for p in details.address.split("|")]
 
-                for part in parts[1:]:
-                    msgs.extend(tld.encode_co_output("                | %s" % part, msgid))
+            msgs.extend(tld.encode_co_output("Street address  | %s" % parts[0], msgid))
 
-            self.broker.deliver(session_id, msgs)
+            for part in parts[1:]:
+                msgs.extend(tld.encode_co_output("                | %s" % part, msgid))
 
+        if is_empty(details.text):
+            msgs.extend(tld.encode_co_output("Text            | (None)", msgid))
+        else:
+            parts = wrap(details.text, 20)
+
+            msgs.extend(tld.encode_co_output("Text            | %s" % parts[0], msgid))
+
+            for part in parts[1:]:
+                msgs.extend(tld.encode_co_output("                | %s" % part, msgid))
+
+        self.broker.deliver(session_id, msgs)

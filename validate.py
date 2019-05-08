@@ -80,7 +80,7 @@ def is_valid_email(email):
     return has_valid_length(email, EMAIL_MIN, EMAIL_MAX)
 
 TEXT_MIN = 0
-TEXT_MAX = 32
+TEXT_MAX = 128
 
 def is_valid_text(text):
     return has_valid_length(text, TEXT_MIN, TEXT_MAX)

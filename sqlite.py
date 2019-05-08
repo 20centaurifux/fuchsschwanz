@@ -27,6 +27,7 @@ import sqlite3, database
 from secrets import token_hex
 from hashlib import sha256
 from logger import log
+from datetime import datetime
 import nickdb
 
 class TransactionScope(database.TransactionScope):
@@ -116,13 +117,15 @@ class NickDb(nickdb.NickDb):
                          Phone varchar(32),
                          Address varchar(64),
                          Email varchar(32),
-                         Text varchar(32),
+                         Text varchar(128),
                          WWW varchar(32),
-                         Secure integer not null default 0,
+                         IsSecure integer not null default 0,
                          IsAdmin integer,
                          LastLoginID varchar(16),
                          LastLoginHost varchar(32),
-                        primary key (Name))""")
+                         Signon integer,
+                         Signoff integer,
+                         primary key (Name))""")
 
     def __create_admin__(self, scope):
         log.info("Creating admin account: username='admin', password='trustno1'")
@@ -195,13 +198,13 @@ class NickDb(nickdb.NickDb):
 
     def is_secure(self, scope, nick):
         cur = scope.get_handle()
-        cur.execute("select Secure from Nick where Name=?", (nick,))
+        cur.execute("select IsSecure from Nick where Name=?", (nick,))
 
-        return bool(cur.fetchone()["Secure"])
+        return bool(cur.fetchone()["IsSecure"])
 
     def set_secure(self, scope, nick, secure):
         cur = scope.get_handle()
-        cur.execute("update Nick set Secure=? where Name=?", (int(secure), nick))
+        cur.execute("update Nick set IsSecure=? where Name=?", (int(secure), nick))
 
     def is_admin(self, scope, nick):
         cur = scope.get_handle()
@@ -229,6 +232,48 @@ class NickDb(nickdb.NickDb):
     def set_lastlogin(self, scope, nick, loginid, host):
         cur = scope.get_handle()
         cur.execute("update Nick set LastLoginID=?, LastLoginHost=? where Name=?", (loginid, host, nick))
+
+    def get_signon(self, scope, nick):
+        signon = None
+
+        cur = scope.get_handle()
+        cur.execute("select Signon from Nick where Name=?", (nick,))
+
+        row = cur.fetchone()
+
+        if not row["Signon"] is None:
+            signon = datetime.fromtimestamp(row["Signon"])
+
+        return signon
+
+    def set_signon(self, scope, nick, timestamp=None):
+        cur = scope.get_handle()
+
+        if timestamp is None:
+            timestamp = datetime.utcnow()
+
+        cur.execute("update Nick set Signon=? where Name=?", (int(timestamp.timestamp()), nick))
+
+    def get_signoff(self, scope, nick):
+        signoff = None
+
+        cur = scope.get_handle()
+        cur.execute("select Signoff from Nick where Name=?", (nick,))
+
+        row = cur.fetchone()
+
+        if not row["Signoff"] is None:
+            signoff = datetime.fromtimestamp(row["Signoff"])
+
+        return signoff
+
+    def set_signoff(self, scope, nick, timestamp=None):
+        cur = scope.get_handle()
+
+        if timestamp is None:
+            timestamp = datetime.utcnow()
+
+        cur.execute("update Nick set Signoff=? where Name=?", (int(timestamp.timestamp()), nick))
 
     def delete(self, scope, nick):
         cur = scope.get_handle()

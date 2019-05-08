@@ -74,5 +74,17 @@ class NickDb:
     def set_lastlogin(self, scope, nick, loginid, host):
         raise NotImplementedError
 
+    def get_signon(self, scope, nick):
+        raise NotImplementedError
+
+    def set_signon(self, scope, nick, timestamp):
+        raise NotImplementedError
+
+    def get_signoff(self, scope, nick):
+        raise NotImplementedError
+
+    def set_signoff(self, scope, nick, timestamp):
+        raise NotImplementedError
+
     def delete(self, scope, nick):
         raise NotImplementedError

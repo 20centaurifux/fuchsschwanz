@@ -28,35 +28,65 @@ import re
 def has_valid_length(text, min_length, max_length):
     return len(text) >= min_length and len(text) <= max_length
 
+NICK_MIN = 1
+NICK_MAX = 12
+
 def is_valid_nick(nick):
-    return has_valid_length(nick, 1, 12)
+    return has_valid_length(nick, NICK_MIN, NICK_MAX)
 
 def is_valid_loginid(loginid):
     return re.match("^[A-Za-z]{1,12}$", loginid)
 
+GROUP_MIN = 1
+GROUP_MAX = 12
+
 def is_valid_group(group):
-    return has_valid_length(group, 1, 12)
+    return has_valid_length(group, GROUP_MIN, GROUP_MAX)
+
+TOPIC_MIN = 0
+TOPIC_MAX = 32
 
 def is_valid_topic(topic):
-    return has_valid_length(topic, 1, 32)
+    return has_valid_length(topic, TOPIC_MIN, TOPIC_MAX)
+
+PASSWORD_MIN = 6
+PASSWORD_MAX = 64
 
 def is_valid_password(password):
-    return has_valid_length(password, 8, 128)
+    return has_valid_length(password, PASSWORD_MIN, PASSWORD_MAX)
+
+REALNAME_MIN = 0
+REALNAME_MAX = 32
 
 def is_valid_realname(real_name):
-    return has_valid_length(real_name, 0, 32)
+    return has_valid_length(real_name, REALNAME_MIN, REALNAME_MAX)
+
+ADDRESS_MIN = 0
+ADDRESS_MAX = 64
 
 def is_valid_address(address):
-    return has_valid_length(address, 0, 64)
+    return has_valid_length(address, ADDRESS_MIN, ADDRESS_MAX)
+
+PHONE_MIN = 0
+PHONE_MAX = 32
 
 def is_valid_phone(phone):
-    return has_valid_length(phone, 0, 32)
+    return has_valid_length(phone, PHONE_MIN, PHONE_MAX)
+
+EMAIL_MIN = 0
+EMAIL_MAX = 32
 
 def is_valid_email(email):
-    return has_valid_length(email, 0, 32)
+    return has_valid_length(email, EMAIL_MIN, EMAIL_MAX)
+
+TEXT_MIN = 0
+TEXT_MAX = 32
 
 def is_valid_text(text):
-    return has_valid_length(text, 0, 32)
+    return has_valid_length(text, TEXT_MIN, TEXT_MAX)
 
-def is_valid_text(www):
-    return has_valid_length(www, 0, 32)
+WWW_MIN = 0
+WWW_MAX = 32
+
+def is_valid_www(www):
+    return has_valid_length(www, WWW_MIN, WWW_MAX)

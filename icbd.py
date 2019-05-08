@@ -129,7 +129,7 @@ class Session(asyncore.dispatcher, di.Injected):
         self.__session_store.update(self.__session_id, t_recv=Timer())
 
         if msg is None:
-            self.__broker.deliver(self.__session_id, tld.encode_str("e", "Command not found."))
+            self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
         else: 
             msg.process(self.__session_id, tld.split(payload))
 

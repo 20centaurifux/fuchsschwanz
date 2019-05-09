@@ -30,6 +30,7 @@ from timer import Timer
 @dataclass
 class State:
     loginid: str = None
+    ip: str = None
     host: str = None
     nick: str = None
     group: str = None

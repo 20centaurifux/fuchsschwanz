@@ -251,10 +251,19 @@ class WriteMessage:
 class ReadMessages:
     @fieldslength(min=1, max=2)
     def process(self, session_id, fields):
-        if len(fields[0]) > 0:
+        if fields[0]:
             raise TldErrorException("Usage: /read")
 
         INSTANCE(commands.MessageBox).read_messages(session_id, msgid=msgid(fields))
+
+@command("whereis")
+class Whereis:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        if not fields[0]:
+            raise TldErrorException("Usage: /whereis nick")
+
+        INSTANCE(commands.UserSession).whereis(session_id, fields[0], msgid(fields))
 
 @command("topic")
 class ChangeTopic:

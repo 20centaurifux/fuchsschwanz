@@ -60,7 +60,7 @@ class Session(asyncore.dispatcher, di.Injected):
         di.Injected.__init__(self)
         asyncore.dispatcher.__init__(self, sock)
 
-        self.__session_id = self.__session_store.new(host=socket.getfqdn(address[0]))
+        self.__session_id = self.__session_store.new(ip=address[0], host=socket.getfqdn(address[0]))
         self.__broker.add_session(self.__session_id)
         self.__buffer = bytearray()
         self.__decoder = tld.Decoder()

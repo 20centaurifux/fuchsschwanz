@@ -424,6 +424,16 @@ class UserSession(Injected):
 
         return visibility, group
 
+    def whereis(self, session_id, nick, msgid=""):
+        loggedin_session = self.session.find_nick(nick)
+
+        if loggedin_session:
+            state = self.session.get(loggedin_session)
+
+            self.broker.deliver(session_id, tld.encode_co_output("%-16s %s (%s)" % (nick, state.host, state.ip), msgid))
+        else:
+            self.broker.deliver(session_id, tld.encode_co_output("Nickname not found.", msgid))
+
 class OpenMessage(Injected):
     def __init__(self):
         super().__init__()

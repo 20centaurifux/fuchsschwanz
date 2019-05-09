@@ -247,6 +247,19 @@ class WriteMessage:
 
         INSTANCE(commands.MessageBox).send_message(session_id, receiver, message)
 
+@command("m")
+class WritePrivateMessage:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        msg_fields = fields[0].split(" ", 1)
+
+        if len(msg_fields) == 2:
+            receiver, message = [f.strip() for f in msg_fields]
+        else:
+            raise TldErrorException("Usage: /m nick message text")
+
+        INSTANCE(commands.PrivateMessage).send(session_id, receiver, message)
+
 @command("read")
 class ReadMessages:
     @fieldslength(min=1, max=2)
@@ -295,4 +308,3 @@ class Ping:
     @fieldslength(min=0, max=1)
     def process(self, session_id, fields):
         INSTANCE(commands.Ping).ping(session_id, fields[0] if len(fields) == 1 else "")
-

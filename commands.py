@@ -459,6 +459,25 @@ class OpenMessage(Injected):
 
             raise TldErrorException("Login required.")
 
+class PrivateMessage(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def send(self, session_id, receiver, message):
+        loggedin_session = self.session.find_nick(receiver)
+
+        if loggedin_session:
+            state = self.session.get(session_id)
+
+            e = tld.Encoder("c")
+
+            e.add_field_str(state.nick, append_null=False)
+            e.add_field_str(message, append_null=True)
+
+            self.broker.deliver(loggedin_session, e.encode())
+        else:
+            raise TldErrorException("%s is not signed on." % receiver)
+
 class Ping(Injected):
     def __init__(self):
         super().__init__()

@@ -60,6 +60,8 @@ class Connection(database.Connection):
             self.__conn = sqlite3.connect(self.__db)
             self.__conn.row_factory = sqlite3.Row
 
+            self.__conn.cursor().execute("pragma foreign_keys=on")
+
     def __create_transaction_scope__(self):
         self.__connect__()
         return TransactionScope(self)
@@ -133,7 +135,11 @@ class NickDb(nickdb.NickDb):
                          Receiver varchar(16) not null,
                          Timestamp integer not null,
                          Message varchar(128) not null,
-                         primary key (UUID))""")
+                         primary key (UUID),
+                         constraint fk_receiver
+                           foreign key (Receiver)
+                           references Nick(Name)
+                           on delete cascade)""")
 
         cur.execute("create index foobar on Message (Receiver, Timestamp)")
 
@@ -315,5 +321,6 @@ class NickDb(nickdb.NickDb):
         cur.execute("delete from Message where UUID=?", (uuid.hex,))
 
     def delete(self, scope, nick):
+        print("DELETE: %s" % nick)
         cur = scope.get_handle()
         cur.execute("delete from Nick where Name=?", (nick,))

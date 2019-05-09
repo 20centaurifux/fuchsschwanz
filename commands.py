@@ -585,7 +585,8 @@ class Registration(Injected):
 
                 count = self.nickdb.count_messages(scope, state.nick)
 
-                self.broker.deliver(session_id, tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
+                if count > 0:
+                    self.broker.deliver(session_id, tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
 
                 scope.complete()
 

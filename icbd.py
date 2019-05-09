@@ -77,7 +77,7 @@ class Session(asyncore.dispatcher, di.Injected):
     def writable(self):
         msg = self.__broker.pop(self.__session_id)
 
-        if not msg is None:
+        if msg:
             self.__buffer.extend(msg)
             self.__shutdown = (len(msg) >= 2 and msg[1] == 103)
 
@@ -103,7 +103,7 @@ class Session(asyncore.dispatcher, di.Injected):
                 self.__broker.deliver(self.__session_id, tld.encode_empty_cmd("g"))
 
             except Exception as ex:
-                log.error("Unexpected error: session='%s', reason=%s", self.__session_id, str(ex))
+                log.fatal("Unexpected error: session='%s', reason=%s", self.__session_id, str(ex))
 
                 self.__broker.deliver(self.__session_id, tld.encode_str("e", "An unexpected error occured."))
                 self.__broker.deliver(self.__session_id, tld.encode_empty_cmd("g"))
@@ -128,7 +128,7 @@ class Session(asyncore.dispatcher, di.Injected):
 
         self.__session_store.update(self.__session_id, t_recv=Timer())
 
-        if msg is None:
+        if not msg:
             self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
         else: 
             msg.process(self.__session_id, tld.split(payload))

@@ -118,7 +118,7 @@ class Login:
             fn = INSTANCE(commands.UserSession).login
             args = [session_id, fields[0], fields[1], fields[4] if len(fields) >= 5 else "", fields[2]]
 
-        if fn is None:
+        if not fn:
             raise TldErrorException("Unsupported login type: \"%s\"" % fields[3])
 
         fn(*args)
@@ -274,7 +274,7 @@ class Command:
     def process(self, session_id, fields):
         cmd = COMMANDS.get(fields[0])
 
-        if cmd is None:
+        if not cmd:
             raise TldErrorException("Unsupported command: %s" % fields[0])
 
         cmd.process(session_id, fields[1:])

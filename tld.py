@@ -23,8 +23,6 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from textwrap import wrap
-
 class Encoder:
     def __init__(self, T):
         self.__T = T
@@ -62,17 +60,12 @@ def encode_str(T, text):
     return e.encode()
 
 def encode_status_msg(category, message):
-    pkgs = bytearray()
+    e = Encoder("d")
 
-    for part in wrap(message, 70):
-        e = Encoder("d")
-
-        e.add_field_str(category, append_null=True)
-        e.add_field_str(part.strip(), append_null=True)
+    e.add_field_str(category, append_null=True)
+    e.add_field_str(message, append_null=True)
     
-        pkgs.extend(e.encode())
-
-    return pkgs
+    return e.encode()
 
 def encode_empty_cmd(T):
     return encode_str(T, "")
@@ -83,7 +76,7 @@ def encode_co_output(text, msgid=""):
     e.add_field_str("co", append_null=False)
     e.add_field_str(text, append_null=True)
 
-    if not msgid == "":
+    if msgid:
         e.add_field_str(msgid, append_null=True)
 
     return e.encode()

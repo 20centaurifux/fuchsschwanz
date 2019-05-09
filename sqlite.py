@@ -201,7 +201,7 @@ class NickDb(nickdb.NickDb):
         row = cur.fetchone()
         success = False
 
-        if not row is None:
+        if row:
             salt, hash = row
 
             if salt is not None and hash is not None:
@@ -216,7 +216,7 @@ class NickDb(nickdb.NickDb):
         cur = scope.get_handle()
         cur.execute("select IsSecure from Nick where Name=?", (nick,))
 
-        return bool(cur.fetchone()["IsSecure"])
+        return bool(cur.fetchone()[0])
 
     def set_secure(self, scope, nick, secure):
         cur = scope.get_handle()
@@ -226,7 +226,7 @@ class NickDb(nickdb.NickDb):
         cur = scope.get_handle()
         cur.execute("select IsAdmin from Nick where Name=?", (nick,))
 
-        return bool(cur.fetchone()["IsAdmin"])
+        return bool(cur.fetchone()[0])
 
     def set_admin(self, scope, nick, is_admin):
         cur = scope.get_handle()
@@ -240,7 +240,7 @@ class NickDb(nickdb.NickDb):
 
         row = cur.fetchone()
 
-        if not row["LastLoginID"] is None and not row["LastLoginHost"] is None:
+        if row["LastLoginID"] and row["LastLoginHost"]:
             info = (row["LastLoginID"], row["LastLoginHost"])
 
         return info
@@ -257,15 +257,15 @@ class NickDb(nickdb.NickDb):
 
         row = cur.fetchone()
 
-        if not row["Signon"] is None:
-            signon = datetime.fromtimestamp(row["Signon"])
+        if row[0]:
+            signon = datetime.fromtimestamp(row[0])
 
         return signon
 
     def set_signon(self, scope, nick, timestamp=None):
         cur = scope.get_handle()
 
-        if timestamp is None:
+        if not timestamp:
             timestamp = datetime.utcnow()
 
         cur.execute("update Nick set Signon=? where Name=?", (int(timestamp.timestamp()), nick))
@@ -278,15 +278,15 @@ class NickDb(nickdb.NickDb):
 
         row = cur.fetchone()
 
-        if not row["Signoff"] is None:
-            signoff = datetime.fromtimestamp(row["Signoff"])
+        if row[0]:
+            signoff = datetime.fromtimestamp(row[0])
 
         return signoff
 
     def set_signoff(self, scope, nick, timestamp=None):
         cur = scope.get_handle()
 
-        if timestamp is None:
+        if not timestamp:
             timestamp = datetime.utcnow()
 
         cur.execute("update Nick set Signoff=? where Name=?", (int(timestamp.timestamp()), nick))

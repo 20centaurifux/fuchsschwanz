@@ -26,6 +26,7 @@
 from dataclasses import dataclass
 from secrets import token_hex
 from timer import Timer
+from datetime import datetime
 
 @dataclass
 class State:
@@ -35,6 +36,7 @@ class State:
     nick: str = None
     group: str = None
     authenticated: bool = False
+    signon: datetime = datetime.utcnow()
     t_recv: Timer = None
 
     def __init__(self, **kwargs):
@@ -46,6 +48,9 @@ class Store:
         raise NotImplementedError
 
     def get(self, id):
+        raise NotImplementedError
+
+    def get_logins(self):
         raise NotImplementedError
 
     def update(self, id, **kwargs):
@@ -73,6 +78,9 @@ class MemoryStore(Store):
 
     def get(self, id):
         return self.__m[id]
+
+    def get_logins(self):
+        return {k: v for k, v in self.__m.items() if v.nick}
 
     def update(self, id, **kwargs):
         for k, v in kwargs.items():

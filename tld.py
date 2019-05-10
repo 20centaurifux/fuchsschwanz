@@ -35,7 +35,7 @@ class Encoder:
         self.__d.extend(data)
 
     def add_field_str(self, text, append_null=False):
-        self.add_field(text.encode("ascii"))
+        self.add_field(text.encode("ascii", "ignore"))
 
         if append_null:
             self.__d.append(0)

@@ -16,6 +16,7 @@ The project is at a *very* early stage. The following features are implemented:
 * basic permission management (group moderators & admins)
 * querying online users
 * change topic
+* motd
 
 You need Python 3.7 to start the server.
 

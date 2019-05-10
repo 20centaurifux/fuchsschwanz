@@ -57,6 +57,9 @@ class Store:
     def set(self, name, info):
         raise NotImplementedError
 
+    def get_groups(self):
+        raise NotImplementedError
+
     def delete(self, id):
         raise NotImplementedError
 
@@ -66,6 +69,9 @@ class MemoryStore(Store):
 
     def get(self, name):
         return self.__m.get(name, GroupInfo())
+
+    def get_groups(self):
+        return self.__m.keys()
 
     def set(self, name, info):
         self.__m[name] = info

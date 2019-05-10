@@ -24,9 +24,11 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 import config, di, session, broker, groups, validate
-import database, nickdb, tld, validate
+import database, nickdb, tld, validate, motd
 import re, sys, secrets
+from utils import Cache
 from textwrap import wrap
+from datetime import datetime
 from exception import TldResponseException, TldStatusException, TldErrorException
 from logger import log
 
@@ -46,6 +48,8 @@ class Injected(di.Injected):
         self.db_connection = db_connection
         self.nickdb = nickdb
 
+INSTANCE = Cache()
+
 class UserSession(Injected):
     def __init__(self):
         super().__init__()
@@ -54,10 +58,14 @@ class UserSession(Injected):
         log.debug("User login: loginid='%s', nick='%s', password='%s'" % (loginid, nick, password))
 
         if not validate.is_valid_loginid(loginid):
-            raise TldErrorException("loginid is invalid.")
+            raise TldErrorException("loginid is invalid. Length must be between %d and %d characters)." % (validate.LOGINID_MIN, LOGINID_MAX))
 
         if not validate.is_valid_nick(nick):
-            raise TldErrorException("Nick is invalid.")
+            raise TldErrorException("Nickname is invalid. Length must be between %d and %d characters)." % (validate.NICK_MIN, validate.NICK_MAX))
+
+        self.broker.deliver(session_id, tld.encode_empty_cmd("a"))
+
+        INSTANCE(Motd).receive(session_id)
 
         registered = config.ENABLE_UNSECURE_LOGIN and self.__try_login_unsecure__(session_id, loginid, nick)
 
@@ -67,10 +75,11 @@ class UserSession(Injected):
             else:
                 registered = self.__login_password__(session_id, loginid, nick, password)
 
-        self.broker.deliver(session_id, tld.encode_empty_cmd("a"))
+        self.session.update(session_id, signon=datetime.utcnow())
+
         self.broker.assign_nick(session_id, nick)
 
-        registration = Registration()
+        registration = INSTANCE(Registration)
 
         if registered:
             registration.mark_registered(session_id)
@@ -151,6 +160,7 @@ class UserSession(Injected):
                 log.debug("Password is invalid.")
 
                 self.broker.deliver(session_id, tld.encode_str("e", "Authorization failure"))
+                self.broker.deliver(session_id, tld.encode_status_msg("Register", "Send password to authenticate your nickname."))
 
                 if is_admin:
                     raise TldErrorException("You need a password to login as administrator.")
@@ -262,7 +272,7 @@ class UserSession(Injected):
                 else:
                     self.broker.deliver(session_id, tld.encode_status_msg("No-Pass", "To register your nickname type /m server p password"))
 
-            registration = Registration()
+            registration = INSTANCE(Registration)
             change_failed = False
 
             if registered:
@@ -276,6 +286,7 @@ class UserSession(Injected):
                 self.__auto_rename__(session_id)
             else:               
                 registration.notify_messagebox(session_id)
+                self.session.update(session_id, signon=datetime.utcnow())
             
     def sign_off(self, session_id):
         state = self.session.get(session_id)
@@ -434,6 +445,45 @@ class UserSession(Injected):
         else:
             self.broker.deliver(session_id, tld.encode_co_output("Nickname not found.", msgid))
 
+    def list(self, session_id):
+        log.debug("Sending session list.")
+
+        logins = self.session.get_logins()
+        groups = {g: self.groups.get(g) for g in self.groups.get_groups()}
+
+        for group, info in sorted(groups.items(), key=lambda kv: kv[0].lower()):
+            self.broker.deliver(session_id, tld.encode_co_output("Group: %-27s Mod: %-16s" % (group, logins[info.moderator].nick if info.moderator else "(None)")))
+            self.broker.deliver(session_id, tld.encode_co_output("Topic: %s" % info.topic if info.topic else "(None)"))
+            self.broker.deliver(session_id, tld.encode_co_output("Nickname           Idle            Signon (UTC)      Account"))
+
+            for sub_id, state in sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(group)], key=lambda arg: arg[1].nick.lower()):
+                total_seconds = int(state.t_recv.elapsed())
+                total_minutes = int(total_seconds / 60)
+                total_hours = int(total_minutes / 60)
+                minutes = total_minutes - (total_hours * 60)
+
+                if total_hours > 0:
+                    idle = "%dh%dm"  % (total_hours, minutes)
+                elif total_minutes > 0:
+                    idle = "%dm"  % minutes
+                else:
+                    idle = "%ds"  % minutes
+
+                admin_flag = "*" if info.moderator == sub_id else " "
+
+                self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s@%s" % (admin_flag, state.nick, idle, state.signon.strftime("%Y/%m/%d %H:%M"), state.loginid, state.host)))
+
+            self.broker.deliver(session_id, tld.encode_co_output(""))
+
+        logins_n = len(logins)
+        logins_suffix = "s" if logins_n > 1 else ""
+
+        groups_n = len(groups)
+        groups_suffix = "s" if groups_n > 1 else ""
+
+        self.broker.deliver(session_id, tld.encode_co_output("Total: %d user%s in %d group%s" % (logins_n, logins_suffix, groups_n, groups_suffix)))
+        self.broker.deliver(session_id, tld.encode_empty_cmd("g"))
+
 class OpenMessage(Injected):
     def __init__(self):
         super().__init__()
@@ -583,9 +633,12 @@ class Registration(Injected):
             state = self.session.get(session_id)
 
             self.nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
-            self.nickdb.set_signon(scope, state.nick)
 
-            self.session.update(session_id, authenticated=True)
+            now = datetime.utcnow()
+
+            self.nickdb.set_signon(scope, state.nick, now)
+
+            self.session.update(session_id, signon=now, authenticated=True)
 
             self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
 
@@ -843,3 +896,15 @@ class MessageBox(Injected):
                 self.nickdb.delete_message(scope, msg.uuid)
 
             scope.complete()
+
+class Motd(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def receive(self, session_id, msgid=""):
+        try:
+            for line in motd.load():
+                self.broker.deliver(session_id, tld.encode_co_output(line, msgid))
+
+        except Exception as ex:
+            log.warn(str(ex))

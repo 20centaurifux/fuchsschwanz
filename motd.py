@@ -23,22 +23,35 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-SERVER_ADDRESS=("127.0.0.1", 7326)
+import config
+import os, subprocess
+from textwrap import wrap
 
-HOSTNAME="localhost"
-SERVER_ID="localhost v0.1.0"
+class Stdout:
+    def __init__(self, filename):
+        self.__filename = filename
+        self.__stdout = ""
 
-#MOTD_PATH="/usr/bin/fortune"
-MOTD_PATH="./motd"
+    def __enter__(self):
+        result = subprocess.run(self.__filename, stdout=subprocess.PIPE)
 
-DEFAULT_TOPIC="If You Don't See the Fnord it Can't Eat You"
-DEFAULT_GROUP="1"
+        if result.returncode == 0:
+            self.__stdout = result.stdout.decode("ascii", "ignore")
 
-IDLE_GROUP="~IDLE~"
-IDLE_TOPIC="Be Quiet and Drive (Far Away)"
+        return self
 
-SQLITE_DB="./icbd.db"
+    def __exit__(self, type, value, traceback): pass
 
-ENABLE_UNSECURE_LOGIN=False
+    def __iter__(self):
+        for l in self.__stdout.split("\n")[:-1]:
+            yield l
 
-MSGBOX_LIMIT=20
+def read_motd():
+    if os.access(config.MOTD_PATH, os.X_OK):
+        return Stdout(config.MOTD_PATH)
+    else:
+        return open(config.MOTD_PATH)
+
+def load():
+    with read_motd() as f:
+        return [l.rstrip() for l in f]

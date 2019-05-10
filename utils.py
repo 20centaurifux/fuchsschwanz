@@ -23,22 +23,8 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-SERVER_ADDRESS=("127.0.0.1", 7326)
 
-HOSTNAME="localhost"
-SERVER_ID="localhost v0.1.0"
+def Cache():
+    m = {}
 
-#MOTD_PATH="/usr/bin/fortune"
-MOTD_PATH="./motd"
-
-DEFAULT_TOPIC="If You Don't See the Fnord it Can't Eat You"
-DEFAULT_GROUP="1"
-
-IDLE_GROUP="~IDLE~"
-IDLE_TOPIC="Be Quiet and Drive (Far Away)"
-
-SQLITE_DB="./icbd.db"
-
-ENABLE_UNSECURE_LOGIN=False
-
-MSGBOX_LIMIT=20
+    return lambda T: m.get(T, T())

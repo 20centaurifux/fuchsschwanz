@@ -25,6 +25,7 @@
 """
 import sys
 import commands, di, broker, validate
+from utils import Cache
 from exception import TldStatusException, TldErrorException, TldResponseException
 
 def code(code):
@@ -99,11 +100,6 @@ def command(command):
 
     return decorator
 
-def Cache():
-    m = {}
-
-    return lambda T: m.get(T, T())
-
 INSTANCE = Cache()
 
 @code("a")
@@ -117,6 +113,9 @@ class Login:
         if fields[3] == "login":
             fn = INSTANCE(commands.UserSession).login
             args = [session_id, fields[0], fields[1], fields[4] if len(fields) >= 5 else "", fields[2]]
+        elif fields[3] == "w":
+            fn = INSTANCE(commands.UserSession).list
+            args = [session_id]
 
         if not fn:
             raise TldErrorException("Unsupported login type: \"%s\"" % fields[3])
@@ -277,6 +276,15 @@ class Whereis:
             raise TldErrorException("Usage: /whereis nick")
 
         INSTANCE(commands.UserSession).whereis(session_id, fields[0], msgid(fields))
+
+@command("motd")
+class Motd:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        if fields[0]:
+            raise TldErrorException("Usage: /motd")
+
+        INSTANCE(commands.Motd).receive(session_id, msgid(fields))
 
 @command("topic")
 class ChangeTopic:

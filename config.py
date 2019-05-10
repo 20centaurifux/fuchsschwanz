@@ -23,6 +23,8 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+import logging
+
 SERVER_ADDRESS=("127.0.0.1", 7326)
 
 HOSTNAME="localhost"
@@ -30,6 +32,8 @@ SERVER_ID="localhost v0.1.0"
 
 #MOTD_PATH="/usr/bin/fortune"
 MOTD_PATH="./motd"
+
+LOG_LEVEL=logging.INFO
 
 DEFAULT_TOPIC="If You Don't See the Fnord it Can't Eat You"
 DEFAULT_GROUP="1"

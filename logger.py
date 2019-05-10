@@ -23,8 +23,7 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-
-import logging
+import logging, config
 
 log = None
 
@@ -33,6 +32,7 @@ if log is None:
 
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)
+    handler.setLevel(config.LOG_LEVEL)
 
     log = logging.getLogger('')
 

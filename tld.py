@@ -62,7 +62,7 @@ def encode_str(T, text):
 def encode_status_msg(category, message):
     e = Encoder("d")
 
-    e.add_field_str(category, append_null=True)
+    e.add_field_str(category, append_null=False)
     e.add_field_str(message, append_null=True)
     
     return e.encode()
@@ -74,10 +74,12 @@ def encode_co_output(text, msgid=""):
     e = Encoder("i")
 
     e.add_field_str("co", append_null=False)
-    e.add_field_str(text, append_null=True)
 
     if msgid:
+        e.add_field_str(text, append_null=False)
         e.add_field_str(msgid, append_null=True)
+    else:
+        e.add_field_str(text, append_null=True)
 
     return e.encode()
 

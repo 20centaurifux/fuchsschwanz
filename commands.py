@@ -499,7 +499,7 @@ class OpenMessage(Injected):
 
             e = tld.Encoder("b")
 
-            e.add_field_str(state.nick, append_null=True)
+            e.add_field_str(state.nick, append_null=False)
             e.add_field_str(message, append_null=True)
 
             if self.broker.to_channel_from(session_id, state.group, e.encode()) == 0:

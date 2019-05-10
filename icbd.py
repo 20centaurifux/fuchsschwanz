@@ -137,7 +137,7 @@ class Session(asyncore.dispatcher, di.Injected):
         e = tld.Encoder("j")
 
         e.add_field_str(PROTOCOL_VERSION)
-        e.add_field_str(config.HOSTNAME, append_null=True)
+        e.add_field_str(config.HOSTNAME, append_null=False)
         e.add_field_str(config.SERVER_ID, append_null=True)
 
         self.__broker.deliver(self.__session_id, e.encode())

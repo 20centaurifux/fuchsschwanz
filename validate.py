@@ -59,7 +59,7 @@ def is_valid_password(password):
     return has_valid_length(password, PASSWORD_MIN, PASSWORD_MAX)
 
 REALNAME_MIN = 0
-REALNAME_MAX = 32
+REALNAME_MAX = 12
 
 def is_valid_realname(real_name):
     return has_valid_length(real_name, REALNAME_MIN, REALNAME_MAX)
@@ -71,7 +71,7 @@ def is_valid_address(address):
     return has_valid_length(address, ADDRESS_MIN, ADDRESS_MAX)
 
 PHONE_MIN = 0
-PHONE_MAX = 32
+PHONE_MAX = 24
 
 def is_valid_phone(phone):
     return has_valid_length(phone, PHONE_MIN, PHONE_MAX)

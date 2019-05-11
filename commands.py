@@ -796,34 +796,31 @@ class Registration(Injected):
 
             return text
 
-        msgs.extend(tld.encode_co_output("Nickname        | %s" % nick, msgid))
-        msgs.extend(tld.encode_co_output("Login           | %s" % display_value(login), msgid))
-        msgs.extend(tld.encode_co_output("Last signon     | %s" % display_value(signon), msgid))
-        msgs.extend(tld.encode_co_output("Last signoff    | %s" % display_value(signoff), msgid))
-        msgs.extend(tld.encode_co_output("Real Name       | %s" % display_value(details.real_name), msgid))
-        msgs.extend(tld.encode_co_output("Phone           | %s" % display_value(details.phone), msgid))
-        msgs.extend(tld.encode_co_output("E-Mail          | %s" % display_value(details.email), msgid))
-        msgs.extend(tld.encode_co_output("WWW             | %s" % display_value(details.www), msgid))
+        msgs.extend(tld.encode_co_output("Nickname:       %-24s Address:      %s" % (nick, display_value(login)), msgid))
+        msgs.extend(tld.encode_co_output("Phone Number:   %-24s Real Name:    %s" % (display_value(details.phone), display_value(details.real_name)), msgid))
+        msgs.extend(tld.encode_co_output("Last signon:    %-24s Last signoff: %s" % (display_value(signon), display_value(signoff)), msgid))
+        msgs.extend(tld.encode_co_output("E-Mail:         %s" % display_value(details.email), msgid))
+        msgs.extend(tld.encode_co_output("WWW:            %s" % display_value(details.www), msgid))
 
         if not details.address:
-            msgs.extend(tld.encode_co_output("Street address  | (None)", msgid))
+            msgs.extend(tld.encode_co_output("Street address: (None)", msgid))
         else:
             parts = [p.strip() for p in details.address.split("|")]
 
-            msgs.extend(tld.encode_co_output("Street address  | %s" % parts[0], msgid))
+            msgs.extend(tld.encode_co_output("Street address: %s" % parts[0], msgid))
 
             for part in parts[1:]:
-                msgs.extend(tld.encode_co_output("                | %s" % part, msgid))
+                msgs.extend(tld.encode_co_output("                %s" % part, msgid))
 
         if not details.text:
-            msgs.extend(tld.encode_co_output("Text            | (None)", msgid))
+            msgs.extend(tld.encode_co_output("Text:           (None)", msgid))
         else:
-            parts = wrap(details.text, 20)
+            parts = wrap(details.text, 64)
 
-            msgs.extend(tld.encode_co_output("Text            | %s" % parts[0], msgid))
+            msgs.extend(tld.encode_co_output("Text:           %s" % parts[0], msgid))
 
             for part in parts[1:]:
-                msgs.extend(tld.encode_co_output("                | %s" % part, msgid))
+                msgs.extend(tld.encode_co_output("                %s" % part, msgid))
 
         self.broker.deliver(session_id, msgs)
 

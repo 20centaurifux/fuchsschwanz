@@ -442,6 +442,11 @@ class UserSession(Injected):
         else:
             self.broker.deliver(session_id, tld.encode_co_output("Nickname not found.", msgid))
 
+    def list_and_quit(self, session_id, msgid=""):
+        self.list(session_id, msgid)
+
+        self.broker.deliver(session_id, tld.encode_empty_cmd("g"))
+
     def list(self, session_id, msgid=""):
         log.debug("Sending session list.")
 

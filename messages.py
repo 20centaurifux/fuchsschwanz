@@ -114,7 +114,7 @@ class Login:
             fn = INSTANCE(commands.UserSession).login
             args = [session_id, fields[0], fields[1], fields[4] if len(fields) >= 5 else "", fields[2]]
         elif fields[3] == "w":
-            fn = INSTANCE(commands.UserSession).list
+            fn = INSTANCE(commands.UserSession).list_and_quit
             args = [session_id]
 
         if not fn:

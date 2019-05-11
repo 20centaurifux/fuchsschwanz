@@ -333,7 +333,19 @@ class ChangeTopic:
     @fieldslength(count=1)
     @arglength(display="Topic", min=validate.TOPIC_MIN, max=validate.TOPIC_MAX)
     def process(self, session_id, fields):
-        INSTANCE(commands.Group).set_topic(session_id, fields[0])
+        if fields[0]:
+            INSTANCE(commands.Group).set_topic(session_id, fields[0])
+        else:
+            INSTANCE(commands.Group).topic(session_id, msgid(fields))
+
+@command("status")
+class Status:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        if fields[0]:
+            INSTANCE(commands.Group).change_status(session_id, fields[0], msgid(fields))
+        else:
+            INSTANCE(commands.Group).status(session_id, msgid(fields))
 
 COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, type) and "command" in cls.__dict__,
                                                  sys.modules[__name__].__dict__.values())}

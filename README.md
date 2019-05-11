@@ -11,11 +11,12 @@ The project is at a *very* early stage. The following features are implemented:
 * change group
 * change nick
 * public messages
-* private message
+* change group topic
+* group visibility (visible, secret, invisible)
+* private messages
 * personal message box
 * basic permission management (group moderators & admins)
-* querying online users
-* change topic
+* query online users
 * motd
 
 You need Python 3.7 to start the server.

@@ -309,7 +309,10 @@ class UserSession(Injected):
                     if info.volume != groups.Volume.QUIET:
                         self.broker.to_channel_from(session_id,
                                                     state.group,
-                                                    tld.encode_status_msg("Sign-off", "%s (%s@%s) has signed off." % (state.nick, state.loginid, state.host)))
+                                                    tld.encode_status_msg("Sign-off",
+                                                                          "%s (%s@%s) has signed off." % (state.nick,
+                                                                                                          state.loginid,
+                                                                                                          state.host)))
 
                     if info.moderator == session_id:
                         if info.volume != groups.Volume.QUIET:
@@ -345,14 +348,14 @@ class UserSession(Injected):
 
         old_group = state.group
         
-        if old_group == group:
-            raise TldErrorException("You are already in that group.")
-
         group = self.__resolve_user_group_name__(group)
         visibility, group = self.__extract_visibility_from_groupname__(group)
 
         if not validate.is_valid_group(group):
             raise TldErrorException("Invalid group name.")
+
+        if old_group == group:
+            raise TldErrorException("You are already in that group.")
 
         info = self.groups.get(group)
 
@@ -426,7 +429,7 @@ class UserSession(Injected):
         visibility = groups.Visibility.VISIBLE
 
         if group.startswith(".."):
-            visibility = groups.Visibility.SUPERSECRET
+            visibility = groups.Visibility.INVISIBLE
             group = group[2:]
         elif group.startswith("."):
             visibility = groups.Visibility.SECRET
@@ -453,24 +456,51 @@ class UserSession(Injected):
         log.debug("Sending session list.")
 
         logins = self.session.get_logins()
-        groups = {g: self.groups.get(g) for g in self.groups.get_groups()}
+        available_groups = {g: self.groups.get(g) for g in self.groups.get_groups()}
 
-        for group, info in sorted(groups.items(), key=lambda kv: kv[0].lower()):
-            self.broker.deliver(session_id, tld.encode_co_output("Group: %-27s Mod: %-16s" % (group, logins[info.moderator].nick if info.moderator else "(None)"), msgid))
-            self.broker.deliver(session_id, tld.encode_co_output("Topic: %s" % info.topic if info.topic else "(None)", msgid))
-            self.broker.deliver(session_id, tld.encode_co_output("Nickname           Idle            Signon (UTC)      Account", msgid))
+        is_admin = False
 
-            for sub_id, state in sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(group)], key=lambda arg: arg[1].nick.lower()):
-                admin_flag = "*" if info.moderator == sub_id else " "
+        state = self.session.get(session_id)
 
-                self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s@%s" % (admin_flag, state.nick, state.t_recv.elapsed_str(), state.signon.strftime("%Y/%m/%d %H:%M"), state.loginid, state.host), msgid))
+        if state.authenticated:
+            with self.db_connection.enter_scope() as scope:
+                is_admin = self.nickdb.is_admin(scope, state.nick)
 
-            self.broker.deliver(session_id, tld.encode_co_output("", msgid))
+        for group, info in sorted(available_groups.items(), key=lambda kv: kv[0].lower()):
+            show_group = True
+            display_name = group
+
+            if info.visibility != groups.Visibility.VISIBLE:
+                if is_admin or state.group == group:
+                    display_name = "*%s*" % group
+                else:
+                    display_name = "-SECRET-"
+                    show_group = info.visibility != groups.Visibility.INVISIBLE
+
+            if show_group:
+                self.broker.deliver(session_id, tld.encode_co_output("Group: %-27s Mod: %-16s" % (display_name,
+                                                                                                  logins[info.moderator].nick if info.moderator else "(None)"),
+                                                                     msgid))
+                self.broker.deliver(session_id, tld.encode_co_output("Topic: %s" % (info.topic if info.topic else "(None)"), msgid))
+                self.broker.deliver(session_id, tld.encode_co_output("Nickname           Idle            Signon (UTC)      Account", msgid))
+
+                for sub_id, state in sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(group)], key=lambda arg: arg[1].nick.lower()):
+                    admin_flag = "*" if info.moderator == sub_id else " "
+
+                    self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s@%s" % (admin_flag,
+                                                                                                       state.nick,
+                                                                                                       state.t_recv.elapsed_str(),
+                                                                                                       state.signon.strftime("%Y/%m/%d %H:%M"),
+                                                                                                       state.loginid,
+                                                                                                       state.host),
+                                                                         msgid))
+
+                self.broker.deliver(session_id, tld.encode_co_output("", msgid))
 
         logins_n = len(logins) - 1
         logins_suffix = "" if logins_n == 1 else "s"
 
-        groups_n = len(groups)
+        groups_n = len(available_groups)
         groups_suffix = "" if groups_n == 1 else "s"
 
         self.broker.deliver(session_id, tld.encode_co_output("Total: %d user%s in %d group%s" % (logins_n, logins_suffix, groups_n, groups_suffix), msgid))
@@ -521,7 +551,9 @@ class PrivateMessage(Injected):
 
             if loggedin_state.away:
                 if not self.away_table.is_alive(session_id, receiver):
-                    self.broker.deliver(session_id, tld.encode_status_msg("Away", "%s (since %s)" % (loggedin_state.away, loggedin_state.t_away.elapsed_str())))
+                    self.broker.deliver(session_id, tld.encode_status_msg("Away",
+                                                                          "%s (since %s)" % (loggedin_state.away,
+                                                                                             loggedin_state.t_away.elapsed_str())))
                     self.away_table.set_alive(session_id, receiver, config.AWAY_MSG_TIMEOUT)
         else:
             raise TldErrorException("%s is not signed on." % receiver)
@@ -541,8 +573,6 @@ class Group(Injected):
         super().__init__()
 
     def set_topic(self, session_id, topic):
-        log.debug("Setting topic.")
-
         name, info = self.__get_group_if_can_moderate__(session_id)
 
         if name in [config.DEFAULT_GROUP, config.IDLE_GROUP]:
@@ -556,14 +586,62 @@ class Group(Injected):
         self.groups.set(name, info)
 
         if info.volume != groups.Volume.QUIET:
-            self.broker.to_channel(name, tld.encode_status_msg("Topic", "%s changed the topic to \"%s\"" % (self.session.get(session_id).nick, topic)))
+            self.broker.to_channel(name, tld.encode_status_msg("Topic",
+                                                               "%s changed the topic to \"%s\"" % (self.session.get(session_id).nick,
+                                                                                                   topic)))
+
+    def topic(self, session_id, msgid):
+        name, info = self.__get_group__(session_id)
+
+        if info.topic:
+            self.broker.deliver(session_id, tld.encode_co_output("The topic is: %s" % info.topic, msgid))
+        else:
+            self.broker.deliver(session_id, tld.encode_co_output("The topic is not set.", msgid))
+
+    def change_status(self, session_id, flags, msgid):
+        state = self.session.get(session_id)
+        name, info = self.__get_group_if_can_moderate__(session_id)
+
+        for flag in [f.strip() for f in flags.split(" ")]:
+            if len(flag) == 1:
+                if self.__try_change_visibility__(state.nick, name, info, flag):
+                    self.groups.set(name, info)
+                else:
+                    self.broker.deliver(session_id, tld.encode_str("e", "Option %s is unknown." % flag))
+            else:
+                self.broker.deliver(session_id, tld.encode_str("e", "Option %s is unknown." % flag))
+
+    def __try_change_visibility__(self, nick, group, info, flag):
+        changed = False
+
+        try:
+            visibility = groups.Visibility(ord(flag))
+
+            info.visibility = visibility
+
+            self.broker.to_channel(group, tld.encode_status_msg("Change", "%s made group %s." % (nick, str(visibility).lower())))
+
+            changed = True
+        except: pass
+
+        return changed
+
+    def status(self, session_id, msgid):
+        name, info = self.__get_group__(session_id)
+        logins = self.session.get_logins()
+
+        self.broker.deliver(session_id,
+                            tld.encode_co_output("Name: %s Mod: %s (%s / %s / %s)" % (name,
+                                                                                      logins[info.moderator].nick if info.moderator else "(None)",
+                                                                                      info.visibility,
+                                                                                      info.control,
+                                                                                      info.volume),
+                            msgid))
 
     def __get_group__(self, session_id):
         state = self.session.get(session_id)
         
         if not state.group:
-            log.warning("Cannot set topic, session '%s' not logged in." % session_id)
-
             raise TldErrorException("Login required.")
 
         return state.group, self.groups.get(state.group)

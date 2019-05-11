@@ -23,13 +23,12 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import config, tld, messages, exception, commands
+import config, utils, tld, messages, exception, commands
 import di, broker, session, groups
 import database, nickdb, sqlite
 import asyncore, socket
 from transform import transform
 from datetime import datetime
-from timer import Timer
 from logger import log
 from getpass import getuser
 
@@ -74,7 +73,8 @@ class Server(asyncore.dispatcher, di.Injected):
                                               host=socket.getfqdn(config.SERVER_ADDRESS[0]),
                                               nick=config.NICKSERV,
                                               authenticated=True,
-                                              signon=now)
+                                              signon=now,
+                                              t_recv=utils.Timer())
 
         with self.__db_connection.enter_scope() as scope:
             state = self.__session_store.get(session_id)
@@ -102,9 +102,10 @@ class Session(asyncore.dispatcher, di.Injected):
 
         self.__write_protocol_info__()
 
-    def inject(self, broker: broker.Broker, session_store: session.Store):
+    def inject(self, broker: broker.Broker, session_store: session.Store, away_table: session.AwayTimeoutTable):
         self.__broker = broker
         self.__session_store = session_store
+        self.__away_table = away_table
 
     def writable(self):
         msg = self.__broker.pop(self.__session_id)
@@ -149,6 +150,8 @@ class Session(asyncore.dispatcher, di.Injected):
 
         self.__broker.remove_session(self.__session_id)
         self.__session_store.delete(self.__session_id)
+        self.__away_table.remove_source(self.__session_id)
+        self.__away_table.remove_target(self.__session_id)
 
         self.close()
 
@@ -163,7 +166,7 @@ class Session(asyncore.dispatcher, di.Injected):
             self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
         else: 
             msg.process(self.__session_id, tld.split(payload))
-            self.__session_store.update(self.__session_id, t_recv=Timer())
+            self.__session_store.update(self.__session_id, t_recv=utils.Timer())
 
     def __write_protocol_info__(self):
         e = tld.Encoder("j")
@@ -181,6 +184,7 @@ if __name__ == "__main__":
 
     c.register(broker.Broker, broker.Memory())
     c.register(session.Store, session.MemoryStore())
+    c.register(session.AwayTimeoutTable, utils.TimeoutTable())
     c.register(groups.Store, groups.MemoryStore())
     c.register(database.Connection, sqlite.Connection(config.SQLITE_DB))
     c.register(nickdb.NickDb, sqlite.NickDb)

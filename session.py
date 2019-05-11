@@ -26,8 +26,9 @@
 from dataclasses import dataclass
 from enum import Enum
 from secrets import token_hex
-from timer import Timer
+from utils import Timer, TimeoutTable
 from datetime import datetime
+from typing import NewType
 
 class BeepMode(Enum):
     OFF = 0
@@ -45,10 +46,14 @@ class State:
     signon: datetime = datetime.utcnow()
     t_recv: Timer = None
     beep: BeepMode = BeepMode.ON
+    away: str = None
+    t_away: Timer = None
 
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             setattr(self, k, v)
+
+AwayTimeoutTable = NewType("AwayTimeoutTable", TimeoutTable)
 
 class Store:
     def new(self, *kwargs):

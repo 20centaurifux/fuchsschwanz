@@ -295,6 +295,21 @@ class NoBeep:
 
         INSTANCE(commands.Beep).set_mode(session_id, fields[0])
 
+@command("away")
+class Away:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        INSTANCE(commands.Away).away(session_id, fields[0])
+
+@command("noaway")
+class NoAway:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        if fields[0]:
+            raise TldErrorException("Usage: /noaway")
+
+        INSTANCE(commands.Away).noaway(session_id)
+
 @command("w")
 class Userlist:
     @fieldslength(min=1, max=2)

@@ -26,7 +26,7 @@
 import config, di, session, broker, groups, validate
 import database, nickdb, tld, validate, motd
 import re, sys, secrets
-from utils import Cache
+from utils import Cache, Timer
 from textwrap import wrap
 from datetime import datetime
 from exception import TldResponseException, TldStatusException, TldErrorException
@@ -38,11 +38,13 @@ class Injected(di.Injected):
 
     def inject(self,
                session: session.Store,
+               away_table: session.AwayTimeoutTable,
                broker: broker.Broker,
                groups: groups.Store,
                db_connection: database.Connection,
                nickdb: nickdb.NickDb):
         self.session = session
+        self.away_table = away_table
         self.broker = broker
         self.groups = groups
         self.db_connection = db_connection
@@ -459,21 +461,9 @@ class UserSession(Injected):
             self.broker.deliver(session_id, tld.encode_co_output("Nickname           Idle            Signon (UTC)      Account", msgid))
 
             for sub_id, state in sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(group)], key=lambda arg: arg[1].nick.lower()):
-                total_seconds = int(state.t_recv.elapsed())
-                total_minutes = int(total_seconds / 60)
-                total_hours = int(total_minutes / 60)
-                minutes = total_minutes - (total_hours * 60)
-
-                if total_hours > 0:
-                    idle = "%dh%dm"  % (total_hours, minutes)
-                elif total_minutes > 0:
-                    idle = "%dm"  % minutes
-                else:
-                    idle = "%ds"  % minutes
-
                 admin_flag = "*" if info.moderator == sub_id else " "
 
-                self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s@%s" % (admin_flag, state.nick, idle, state.signon.strftime("%Y/%m/%d %H:%M"), state.loginid, state.host), msgid))
+                self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s@%s" % (admin_flag, state.nick, state.t_recv.elapsed_str(), state.signon.strftime("%Y/%m/%d %H:%M"), state.loginid, state.host), msgid))
 
             self.broker.deliver(session_id, tld.encode_co_output("", msgid))
 
@@ -526,6 +516,13 @@ class PrivateMessage(Injected):
             e.add_field_str(message, append_null=True)
 
             self.broker.deliver(loggedin_session, e.encode())
+
+            loggedin_state = self.session.get(loggedin_session)
+
+            if loggedin_state.away:
+                if not self.away_table.is_alive(session_id, receiver):
+                    self.broker.deliver(session_id, tld.encode_status_msg("Away", "%s (since %s)" % (loggedin_state.away, loggedin_state.t_away.elapsed_str())))
+                    self.away_table.set_alive(session_id, receiver, config.AWAY_MSG_TIMEOUT)
         else:
             raise TldErrorException("%s is not signed on." % receiver)
 
@@ -785,13 +782,18 @@ class Registration(Injected):
 
             details = self.nickdb.lookup(scope, nick)
 
-        login = None
+        login = idle = away = None
+
         loggedin_session = self.session.find_nick(nick)
 
         if loggedin_session:
             loggedin_state = self.session.get(loggedin_session)
 
             login = "%s@%s" % (loggedin_state.loginid, loggedin_state.host)
+            idle = loggedin_state.t_recv.elapsed_str()
+
+            if loggedin_state.away:
+                away = "%s (since %s)" % (loggedin_state.away, loggedin_state.t_away.elapsed_str())
 
         msgs = bytearray()
 
@@ -804,6 +806,13 @@ class Registration(Injected):
         msgs.extend(tld.encode_co_output("Nickname:       %-24s Address:      %s" % (nick, display_value(login)), msgid))
         msgs.extend(tld.encode_co_output("Phone Number:   %-24s Real Name:    %s" % (display_value(details.phone), display_value(details.real_name)), msgid))
         msgs.extend(tld.encode_co_output("Last signon:    %-24s Last signoff: %s" % (display_value(signon), display_value(signoff)), msgid))
+
+        if idle:
+            msgs.extend(tld.encode_co_output("Idle:           %s" % idle, msgid))
+
+        if away:
+            msgs.extend(tld.encode_co_output("Away:           %s" % away, msgid))
+
         msgs.extend(tld.encode_co_output("E-Mail:         %s" % display_value(details.email), msgid))
         msgs.extend(tld.encode_co_output("WWW:            %s" % display_value(details.www), msgid))
 
@@ -885,7 +894,7 @@ class MessageBox(Injected):
                 raise TldErrorException("No messages")
 
             for msg in self.nickdb.get_messages(scope, state.nick):
-                self.broker.deliver(session_id, tld.encode_co_output("Message left at %s" % msg.date, msgid))
+                self.broker.deliver(session_id, tld.encode_co_output("Message left at %s (UTC)" % msg.date, msgid))
 
                 e = tld.Encoder("c")
 
@@ -920,9 +929,12 @@ class Beep(Injected):
 
         self.broker.deliver(loggedin_session, tld.encode_str("k", state.nick))
 
-    def set_mode(self, session_id, mode):
-        log.debug("Setting nobeep mode: '%s'" % mode)
+        if loggedin_state.away:
+            if not self.away_table.is_alive(session_id, receiver):
+                self.broker.deliver(session_id, tld.encode_status_msg("Away", "%s (since %s)" % (loggedin_state.away, loggedin_state.t_away.elapsed_str())))
+                self.away_table.set_alive(session_id, receiver, config.AWAY_MSG_TIMEOUT)
 
+    def set_mode(self, session_id, mode):
         if not mode in ["on", "off", "verbose"]:
             raise TldErrorException("Usage: /nobeep on/off/verbose")
 
@@ -936,6 +948,35 @@ class Beep(Injected):
         self.session.update(session_id, beep=real_mode)
 
         self.broker.deliver(session_id, tld.encode_status_msg("No-Beep", "No-Beep %s" % mode))
+
+class Away(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def away(self, session_id, text):
+        state = self.session.get(session_id)
+
+        if text:
+            if len(text) > 64:
+                text = "%s..." % text[:61]
+
+            self.session.update(session_id, away=text, t_away=Timer())
+
+            self.broker.deliver(session_id, tld.encode_status_msg("Away", "Away message set to \"%s\"." % text))
+        elif state.away:
+            self.broker.deliver(session_id, tld.encode_status_msg("Away", "Away message is set to \"%s\" (since %s)." % (state.away, state.t_away.elapsed_str())))
+        else:
+            self.broker.deliver(session_id, tld.encode_status_msg("Away", "Away message is not set."))
+
+    def noaway(self, session_id):
+        state = self.session.get(session_id)
+
+        if not state.away:
+            raise TldStatusException("Away", "No away message set!")
+
+        self.session.update(session_id, away=None, t_away=None)
+
+        self.broker.deliver(session_id, tld.encode_status_msg("Away", "Away message unset."))
 
 class Motd(Injected):
     def __init__(self):

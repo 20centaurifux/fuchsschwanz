@@ -277,6 +277,15 @@ class Whereis:
 
         INSTANCE(commands.UserSession).whereis(session_id, fields[0], msgid(fields))
 
+@command("w")
+class Userlist:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        if fields[0]:
+            raise TldErrorException("Usage: /w")
+
+        INSTANCE(commands.UserSession).list(session_id, msgid(fields))
+
 @command("motd")
 class Motd:
     @fieldslength(min=1, max=2)

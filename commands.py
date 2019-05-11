@@ -442,16 +442,16 @@ class UserSession(Injected):
         else:
             self.broker.deliver(session_id, tld.encode_co_output("Nickname not found.", msgid))
 
-    def list(self, session_id):
+    def list(self, session_id, msgid=""):
         log.debug("Sending session list.")
 
         logins = self.session.get_logins()
         groups = {g: self.groups.get(g) for g in self.groups.get_groups()}
 
         for group, info in sorted(groups.items(), key=lambda kv: kv[0].lower()):
-            self.broker.deliver(session_id, tld.encode_co_output("Group: %-27s Mod: %-16s" % (group, logins[info.moderator].nick if info.moderator else "(None)")))
-            self.broker.deliver(session_id, tld.encode_co_output("Topic: %s" % info.topic if info.topic else "(None)"))
-            self.broker.deliver(session_id, tld.encode_co_output("Nickname           Idle            Signon (UTC)      Account"))
+            self.broker.deliver(session_id, tld.encode_co_output("Group: %-27s Mod: %-16s" % (group, logins[info.moderator].nick if info.moderator else "(None)"), msgid))
+            self.broker.deliver(session_id, tld.encode_co_output("Topic: %s" % info.topic if info.topic else "(None)", msgid))
+            self.broker.deliver(session_id, tld.encode_co_output("Nickname           Idle            Signon (UTC)      Account", msgid))
 
             for sub_id, state in sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(group)], key=lambda arg: arg[1].nick.lower()):
                 total_seconds = int(state.t_recv.elapsed())
@@ -468,9 +468,9 @@ class UserSession(Injected):
 
                 admin_flag = "*" if info.moderator == sub_id else " "
 
-                self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s@%s" % (admin_flag, state.nick, idle, state.signon.strftime("%Y/%m/%d %H:%M"), state.loginid, state.host)))
+                self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s@%s" % (admin_flag, state.nick, idle, state.signon.strftime("%Y/%m/%d %H:%M"), state.loginid, state.host), msgid))
 
-            self.broker.deliver(session_id, tld.encode_co_output(""))
+            self.broker.deliver(session_id, tld.encode_co_output("", msgid))
 
         logins_n = len(logins) - 1
         logins_suffix = "" if logins_n == 1 else "s"
@@ -478,8 +478,7 @@ class UserSession(Injected):
         groups_n = len(groups)
         groups_suffix = "" if groups_n == 1 else "s"
 
-        self.broker.deliver(session_id, tld.encode_co_output("Total: %d user%s in %d group%s" % (logins_n, logins_suffix, groups_n, groups_suffix)))
-        self.broker.deliver(session_id, tld.encode_empty_cmd("g"))
+        self.broker.deliver(session_id, tld.encode_co_output("Total: %d user%s in %d group%s" % (logins_n, logins_suffix, groups_n, groups_suffix), msgid))
 
 class OpenMessage(Injected):
     def __init__(self):

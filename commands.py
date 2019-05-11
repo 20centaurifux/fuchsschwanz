@@ -484,15 +484,15 @@ class UserSession(Injected):
                 self.broker.deliver(session_id, tld.encode_co_output("Topic: %s" % (info.topic if info.topic else "(None)"), msgid))
                 self.broker.deliver(session_id, tld.encode_co_output("Nickname           Idle            Signon (UTC)      Account", msgid))
 
-                for sub_id, state in sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(group)], key=lambda arg: arg[1].nick.lower()):
+                for sub_id, sub_state in sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(group)], key=lambda arg: arg[1].nick.lower()):
                     admin_flag = "*" if info.moderator == sub_id else " "
 
                     self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s@%s" % (admin_flag,
-                                                                                                       state.nick,
-                                                                                                       state.t_recv.elapsed_str(),
-                                                                                                       state.signon.strftime("%Y/%m/%d %H:%M"),
-                                                                                                       state.loginid,
-                                                                                                       state.host),
+                                                                                                       sub_state.nick,
+                                                                                                       sub_state.t_recv.elapsed_str(),
+                                                                                                       sub_state.signon.strftime("%Y/%m/%d %H:%M"),
+                                                                                                       sub_state.loginid,
+                                                                                                       sub_state.host),
                                                                          msgid))
 
                 self.broker.deliver(session_id, tld.encode_co_output("", msgid))

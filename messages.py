@@ -25,7 +25,7 @@
 """
 import sys
 import commands, di, broker, validate
-from utils import Cache
+from utils import Cache, decode_ascii
 from exception import TldStatusException, TldErrorException, TldResponseException
 
 def code(code):
@@ -38,7 +38,7 @@ def code(code):
 
 def textfields(fn):
     def wrapper(self, session_id, fields):
-        fn(self, session_id, [b.decode("ascii").strip(" \0") for b in fields])
+        fn(self, session_id, [decode_ascii(b).strip(" \0") for b in fields])
 
     return wrapper
 
@@ -118,7 +118,7 @@ class Login:
             args = [session_id]
 
         if not fn:
-            raise TldErrorException("Unsupported login type: \"%s\"" % fields[3])
+            raise TldErrorException("Unsupported login type: '%s'" % fields[3])
 
         fn(*args)
 
@@ -305,7 +305,7 @@ class Command:
         cmd = COMMANDS.get(fields[0])
 
         if not cmd:
-            raise TldErrorException("Unsupported command: %s" % fields[0])
+            raise TldErrorException("Unsupported command: '%s'" % fields[0])
 
         cmd.process(session_id, fields[1:])
 

@@ -65,6 +65,9 @@ class UserSession(Injected):
 
         self.broker.deliver(session_id, tld.encode_empty_cmd("a"))
 
+        if nick == config.NICKSERV:
+            raise TldStatusException("Register", "Nick already in use.")
+
         INSTANCE(Motd).receive(session_id)
 
         registered = config.ENABLE_UNSECURE_LOGIN and self.__try_login_unsecure__(session_id, loginid, nick)
@@ -76,8 +79,6 @@ class UserSession(Injected):
                 registered = self.__login_password__(session_id, loginid, nick, password)
 
         self.session.update(session_id, signon=datetime.utcnow())
-
-        self.broker.assign_nick(session_id, nick)
 
         registration = INSTANCE(Registration)
 
@@ -243,9 +244,6 @@ class UserSession(Injected):
                 if self.groups.get(state.group).moderator == session_id:
                     self.broker.to_channel(state.group, tld.encode_status_msg("Pass", "%s is now mod." % nick))
 
-            self.broker.unassign_nick(old_nick)
-            self.broker.assign_nick(session_id, nick)
-
             self.session.update(session_id, nick=nick, authenticated=False)
 
             registered = False
@@ -335,7 +333,6 @@ class UserSession(Injected):
                     self.groups.delete(state.group)
 
             log.debug("Removing nick '%s' from session '%s'." % (state.nick, session_id))
-            self.broker.unassign_nick(state.nick)
 
             self.session.update(session_id, nick=None, authenticated=False)
 
@@ -475,11 +472,11 @@ class UserSession(Injected):
 
             self.broker.deliver(session_id, tld.encode_co_output(""))
 
-        logins_n = len(logins)
-        logins_suffix = "s" if logins_n > 1 else ""
+        logins_n = len(logins) - 1
+        logins_suffix = "" if logins_n == 1 else "s"
 
         groups_n = len(groups)
-        groups_suffix = "s" if groups_n > 1 else ""
+        groups_suffix = "" if groups_n == 1 else "s"
 
         self.broker.deliver(session_id, tld.encode_co_output("Total: %d user%s in %d group%s" % (logins_n, logins_suffix, groups_n, groups_suffix)))
         self.broker.deliver(session_id, tld.encode_empty_cmd("g"))
@@ -654,7 +651,7 @@ class Registration(Injected):
                 if count > 0:
                     self.broker.deliver(session_id, tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
 
-                if count >= config.MSGBOX_LIMIT:
+                if count >= config.MBOX_QUOTAS.get(state.nick, config.MBOX_DEFAULT_LIMIT):
                     self.broker.deliver(session_id, tld.encode_status_msg("Message", "User mailbox is full."))
 
     def change_password(self, session_id, old_pwd, new_pwd):
@@ -852,9 +849,12 @@ class MessageBox(Injected):
                 raise TldErrorException("%s is not registered." % receiver)
 
             count = self.nickdb.count_messages(scope, receiver) + 1
+
             loggedin_session = self.session.find_nick(receiver)
 
-            if count > config.MSGBOX_LIMIT:
+            limit = config.MBOX_QUOTAS.get(receiver, config.MBOX_DEFAULT_LIMIT)
+
+            if count > limit:
                 if loggedin_session:
                     self.broker.deliver(loggedin_session, tld.encode_str("e", "User mailbox is full."))
 
@@ -868,7 +868,7 @@ class MessageBox(Injected):
                 self.broker.deliver(session_id, tld.encode_status_msg("Warning", "%s is logged in now." % receiver))
                 self.broker.deliver(loggedin_session, tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
 
-                if count == config.MSGBOX_LIMIT:
+                if count == limit:
                     self.broker.deliver(loggedin_session, tld.encode_str("e", "User mailbox is full."))
 
             scope.complete()

@@ -23,12 +23,11 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import sqlite3, database, nickdb
-from secrets import token_hex
+import sqlite3, database, nickdb, config
+import uuid, secrets, string
 from hashlib import sha256
 from logger import log
 from datetime import datetime
-import uuid
 
 class TransactionScope(database.TransactionScope):
     def __init__(self, db):
@@ -85,7 +84,18 @@ class NickDb(nickdb.NickDb):
 
         if revision == 0:
             self.__create_tables__(scope)
-            self.__create_admin__(scope)
+
+            log.debug("Creating server account: nick='%s'" % config.NICKSERV)
+
+            self.__create_user__(scope, nick=config.NICKSERV, password=self.__generate_password__(), is_admin=False)
+
+            password = self.__generate_password__()
+
+            log.debug("Creating admin account: nick='admin', password='%s'" % password)
+
+            self.__create_user__(scope, nick="admin", password=password, is_admin=True)
+
+            print("Initial admin created with password '%s'." % password)
         elif revision > 1:
             raise Exception("Unsupported database version.")
 
@@ -143,14 +153,15 @@ class NickDb(nickdb.NickDb):
 
         cur.execute("create index foobar on Message (Receiver, Timestamp)")
 
-    def __create_admin__(self, scope):
-        log.info("Creating admin account: username='admin', password='trustno1'")
+    def __generate_password__(self):
+        return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(8)])
 
-        self.create(scope, "admin")
+    def __create_user__(self, scope, nick, password, is_admin):
+        self.create(scope, nick)
 
-        self.set_admin(scope, "admin", True)
-        self.set_password(scope, "admin", "trustno1")
-        self.set_secure(scope, "admin", True)
+        self.set_admin(scope, nick, is_admin)
+        self.set_password(scope, nick, password)
+        self.set_secure(scope, nick, True)
 
     def create(self, scope, nick):
         cur = scope.get_handle()
@@ -191,7 +202,7 @@ class NickDb(nickdb.NickDb):
     def set_password(self, scope, nick, password):
         cur = scope.get_handle()
 
-        salt = token_hex(20)
+        salt = secrets.token_hex(20)
         cur.execute("update Nick set Salt=?, Password=? where Name=?", (salt, self.__hash_password__(password, salt), nick))
 
     def check_password(self, scope, nick, password):
@@ -321,6 +332,5 @@ class NickDb(nickdb.NickDb):
         cur.execute("delete from Message where UUID=?", (uuid.hex,))
 
     def delete(self, scope, nick):
-        print("DELETE: %s" % nick)
         cur = scope.get_handle()
         cur.execute("delete from Nick where Name=?", (nick,))

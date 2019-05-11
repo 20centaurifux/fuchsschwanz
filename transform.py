@@ -23,16 +23,31 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+import config, tld
+from utils import decode_ascii
+from logger import log
 
-def Cache():
-    m = {}
+def transform(type_id, payload):
+    # tranform private message to server to command:
+    if type_id == "h":
+        fields = [decode_ascii(f).strip() for f in tld.split(payload)]
 
-    return lambda T: m.get(T, T())
+        if len(fields) >= 2 and fields[0] == "m":
+            args = [arg.rstrip(" \0") for arg in fields[1].split(" ", 2)]
 
-def decode_ascii(data):
-    text = ""
+            if args[0] == config.NICKSERV:
+                type_id = "h"
 
-    if data:
-        text = data.decode("ascii", errors="backslashreplace")
+                payload = bytearray()
 
-    return text
+                payload.extend(args[1].encode())
+                payload.append(1)
+
+                if len(args) == 3:
+                    payload.extend(args[2].encode())
+
+                payload.append(0)
+
+                log.debug("Message transformed: type='%s', command='%s'" % (type_id, args[1]))
+
+    return type_id, payload

@@ -23,6 +23,8 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+from logger import log
+
 class Broker:
     def add_session(self, session_id):
         raise NotImplementedError
@@ -31,12 +33,6 @@ class Broker:
         raise NotImplementedError
 
     def remove_session(self, session_id):
-        raise NotImplementedError
-
-    def assign_nick(self, session_id, nick):
-        raise NotImplementedError
-
-    def unassign_nick(self, nick):
         raise NotImplementedError
 
     def join(self, session_id, channel):
@@ -54,9 +50,6 @@ class Broker:
     def deliver(self, receiver, message):
         raise NotImplementedError
 
-    def to_nick(self, receiver, message):
-        raise NotImplementedError
-
     def to_channel(self, channel, message):
         raise NotImplementedError
 
@@ -72,7 +65,6 @@ class Broker:
 class Memory(Broker):
     def __init__(self):
         self.__sessions = {}
-        self.__nicks = {}
         self.__channels = {}
 
     def add_session(self, session_id):
@@ -96,20 +88,6 @@ class Memory(Broker):
                 pass
 
         self.__channels = {k: v for k, v in self.__channels.items() if len(v) > 0}
-
-        for k, v in self.__nicks.items():
-            if v == session_id:
-                del self.__nicks[k]
-                break
-
-    def assign_nick(self, session_id, nick):
-        if not session_id in self.__sessions:
-            raise KeyError
-
-        self.__nicks[nick] = session_id
-
-    def unassign_nick(self, nick):
-        del self.__nicks[nick]
 
     def join(self, session_id, channel):
         members = self.__channels.get(channel, set())
@@ -135,11 +113,10 @@ class Memory(Broker):
         return [k for k, v in self.__channels.items() if session_id in v]
 
     def deliver(self, receiver, message):
-        self.__sessions[receiver].append(message)
-
-    def to_nick(self, nick, message):
-        session_id = self.__nicks[nick]
-        self.deliver(session_id, message)
+        if receiver in self.__sessions:
+            self.__sessions[receiver].append(message)
+        else:
+            log.warning("Couldn't deliver message, session not registered.")
 
     def to_channel_from(self, sender, channel, message):
         count = 0

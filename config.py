@@ -30,10 +30,12 @@ SERVER_ADDRESS=("127.0.0.1", 7326)
 HOSTNAME="localhost"
 SERVER_ID="localhost v0.1.0"
 
+NICKSERV="server"
+
 #MOTD_PATH="/usr/bin/fortune"
 MOTD_PATH="./motd"
 
-LOG_LEVEL=logging.INFO
+LOG_LEVEL=logging.DEBUG
 
 DEFAULT_TOPIC="If You Don't See the Fnord it Can't Eat You"
 DEFAULT_GROUP="1"
@@ -45,4 +47,5 @@ SQLITE_DB="./icbd.db"
 
 ENABLE_UNSECURE_LOGIN=False
 
-MSGBOX_LIMIT=20
+MBOX_DEFAULT_LIMIT=20
+MBOX_QUOTAS={ NICKSERV: 0 }

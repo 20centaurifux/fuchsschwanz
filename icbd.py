@@ -27,14 +27,18 @@ import config, tld, messages, exception, commands
 import di, broker, session, groups
 import database, nickdb, sqlite
 import asyncore, socket
+from transform import transform
+from datetime import datetime
 from timer import Timer
 from logger import log
+from getpass import getuser
 
 PROTOCOL_VERSION = "1"
 
-class Server(asyncore.dispatcher):
+class Server(asyncore.dispatcher, di.Injected):
     def __init__(self, address):
         asyncore.dispatcher.__init__(self)
+        di.Injected.__init__(self)
 
         log.info("Listening on %s:%d" % address)
 
@@ -44,6 +48,16 @@ class Server(asyncore.dispatcher):
         self.address = self.socket.getsockname()
         self.listen(5)
 
+        self.__signon_server__()
+
+    def inject(self,
+               session: session.Store,
+               db_connection: database.Connection,
+               nickdb: nickdb.NickDb):
+        self.__session_store = session
+        self.__db_connection = db_connection
+        self.__nickdb = nickdb
+
     def handle_accept(self):
         client_info = self.accept()
 
@@ -51,6 +65,24 @@ class Server(asyncore.dispatcher):
             log.info("Client connected: %s" % (client_info[1], ))
 
             Session(client_info[0], client_info[1])
+
+    def __signon_server__(self):
+        now = datetime.utcnow()
+
+        session_id = self.__session_store.new(loginid=getuser(),
+                                              ip=config.SERVER_ADDRESS[0],
+                                              host=socket.getfqdn(config.SERVER_ADDRESS[0]),
+                                              nick=config.NICKSERV,
+                                              authenticated=True,
+                                              signon=now)
+
+        with self.__db_connection.enter_scope() as scope:
+            state = self.__session_store.get(session_id)
+
+            self.__nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
+            self.__nickdb.set_signon(scope, state.nick, now)
+
+            scope.complete()
 
 MESSAGES = {cls.code: cls() for cls in filter(lambda cls: isinstance(cls, type) and "code" in cls.__dict__,
                                               messages.__dict__.values())}
@@ -79,13 +111,13 @@ class Session(asyncore.dispatcher, di.Injected):
 
         if msg:
             self.__buffer.extend(msg)
-            self.__shutdown = (len(msg) >= 2 and msg[1] == 103)
+            self.__shutdown = (len(msg) >= 2 and msg[1] == 103) # quit message ("g")
 
         return bool(self.__buffer) or self.__shutdown
 
     def handle_write(self):
         if len(self.__buffer) > 0:
-            data = self.__buffer[:1024]
+            data = self.__buffer[:256]
             sent = self.send(data)
             self.__buffer = self.__buffer[sent:]
         elif self.__shutdown:
@@ -93,7 +125,7 @@ class Session(asyncore.dispatcher, di.Injected):
 
     def handle_read(self):
         if not self.__shutdown:
-            data = self.recv(1024)
+            data = self.recv(256)
 
             try:
                 self.__decoder.write(data)
@@ -105,8 +137,7 @@ class Session(asyncore.dispatcher, di.Injected):
             except Exception as ex:
                 log.fatal("Unexpected error: session='%s', reason=%s", self.__session_id, str(ex))
 
-                self.__broker.deliver(self.__session_id, tld.encode_str("e", "An unexpected error occured."))
-                self.__broker.deliver(self.__session_id, tld.encode_empty_cmd("g"))
+                raise asyncore.ExitNow()
     
     def handle_close(self):
         self.__shutdown__()
@@ -124,14 +155,15 @@ class Session(asyncore.dispatcher, di.Injected):
     def __message_received__(self, type_id, payload):
         log.debug("Received message: type='%s', session='%s', payload (size)=%d", type_id, self.__session_id, len(payload))
 
-        msg = MESSAGES.get(type_id)
+        type_id, payload = transform(type_id, payload)
 
-        self.__session_store.update(self.__session_id, t_recv=Timer())
+        msg = MESSAGES.get(type_id)
 
         if not msg:
             self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
         else: 
             msg.process(self.__session_id, tld.split(payload))
+            self.__session_store.update(self.__session_id, t_recv=Timer())
 
     def __write_protocol_info__(self):
         e = tld.Encoder("j")
@@ -158,4 +190,13 @@ if __name__ == "__main__":
         scope.complete()
 
     s = Server(config.SERVER_ADDRESS)
-    asyncore.loop()
+
+    try:
+        asyncore.loop()
+
+    except (KeyboardInterrupt, Exception):
+        log.info("Server finished.")
+
+    with c.resolve(database.Connection).enter_scope() as scope:
+        c.resolve(nickdb.NickDb).set_signoff(scope, config.NICKSERV, datetime.utcnow())
+        scope.complete()

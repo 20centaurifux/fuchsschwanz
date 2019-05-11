@@ -898,6 +898,45 @@ class MessageBox(Injected):
 
             scope.complete()
 
+class Beep(Injected):
+    def __init__(self):
+        super().__init__()
+
+    def beep(self, session_id, receiver):
+        loggedin_session = self.session.find_nick(receiver)
+
+        if not loggedin_session:
+            raise TldErrorException("%s not signed on." % receiver)
+
+        loggedin_state = self.session.get(loggedin_session)
+
+        state = self.session.get(session_id)
+
+        if loggedin_state.beep != session.BeepMode.ON:
+            if loggedin_state.beep == session.BeepMode.VERBOSE:
+                self.broker.deliver(loggedin_session, tld.encode_status_msg("No-Beep", "%s attempted (and failed) to beep you" % state.nick))
+
+            raise TldStatusException("Beep", "User has nobeep enabled.")
+
+        self.broker.deliver(loggedin_session, tld.encode_str("k", state.nick))
+
+    def set_mode(self, session_id, mode):
+        log.debug("Setting nobeep mode: '%s'" % mode)
+
+        if not mode in ["on", "off", "verbose"]:
+            raise TldErrorException("Usage: /nobeep on/off/verbose")
+
+        real_mode = session.BeepMode.ON
+
+        if mode == "on":
+            real_mode = session.BeepMode.OFF
+        elif mode == "verbose":
+            real_mode = session.BeepMode.VERBOSE
+            
+        self.session.update(session_id, beep=real_mode)
+
+        self.broker.deliver(session_id, tld.encode_status_msg("No-Beep", "No-Beep %s" % mode))
+
 class Motd(Injected):
     def __init__(self):
         super().__init__()

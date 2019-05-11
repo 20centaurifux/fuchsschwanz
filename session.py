@@ -24,9 +24,15 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from dataclasses import dataclass
+from enum import Enum
 from secrets import token_hex
 from timer import Timer
 from datetime import datetime
+
+class BeepMode(Enum):
+    OFF = 0
+    ON = 1
+    VERBOSE = 2
 
 @dataclass
 class State:
@@ -38,6 +44,7 @@ class State:
     authenticated: bool = False
     signon: datetime = datetime.utcnow()
     t_recv: Timer = None
+    beep: BeepMode = BeepMode.ON
 
     def __init__(self, **kwargs):
         for k, v in kwargs.items():

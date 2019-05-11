@@ -277,6 +277,24 @@ class Whereis:
 
         INSTANCE(commands.UserSession).whereis(session_id, fields[0], msgid(fields))
 
+@command("beep")
+class Beep:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        if not fields[0]:
+            raise TldErrorException("Usage: /beep nick")
+
+        INSTANCE(commands.Beep).beep(session_id, fields[0])
+
+@command("nobeep")
+class NoBeep:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        if not fields[0]:
+            raise TldErrorException("Usage: /nobeep on/off/verbose")
+
+        INSTANCE(commands.Beep).set_mode(session_id, fields[0])
+
 @command("w")
 class Userlist:
     @fieldslength(min=1, max=2)

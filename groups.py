@@ -27,17 +27,16 @@ from dataclasses import dataclass
 from enum import Enum
 
 class Visibility(Enum):
+    VISIBLE = 118
+    SECRET = 115
+    INVISIBLE = 105
+
     def __init__(self, val):
         super().__init__()
 
         self.__names = {118: "Visible",
                         115: "Secret",
                         105: "Invisible"}
-
-    VISIBLE = 118
-    SECRET = 115
-    INVISIBLE = 105
-
     def __str__(self):
         return self.__names[self.value]
 
@@ -45,30 +44,30 @@ class Control(Enum):
     def __init__(self, val):
         super().__init__()
 
-        self.__names = {1: "Public",
-                        2: "Moderated",
-                        3: "Restricted",
-                        4: "Controlled"}
+        self.__names = {112: "Public",
+                        155: "Moderated",
+                        114: "Restricted",
+                        99: "Controlled"}
 
-    PUBLIC = 1
-    MODERATED = 2
-    RESTRICTED = 3
-    CONTROLLED = 4
+    PUBLIC = 112
+    MODERATED = 155
+    RESTRICTED = 114
+    CONTROLLED = 99
 
     def __str__(self):
         return self.__names[self.value]
 
 class Volume(Enum):
+    QUIET = 113
+    NORMAL = 110
+    LOUD = 108
+
     def __init__(self, val):
         super().__init__()
 
-        self.__names = {1: "Quiet",
-                        2: "Normal",
-                        3: "Loud"}
-
-    QUIET = 1
-    NORMAL = 2
-    LOUD = 3
+        self.__names = {113: "Quiet",
+                        110: "Normal",
+                        108: "Loud"}
 
     def __str__(self):
         return self.__names[self.value]

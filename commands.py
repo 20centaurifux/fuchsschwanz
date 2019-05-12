@@ -604,7 +604,8 @@ class Group(Injected):
 
         for flag in [f.strip() for f in flags.split(" ")]:
             if len(flag) == 1:
-                if self.__try_change_visibility__(state.nick, name, info, flag):
+                if (self.__try_change_visibility__(state.nick, name, info, flag)
+                    or self.__try_change_volume__(state.nick, name, info, flag)):
                     self.groups.set(name, info)
                 else:
                     self.broker.deliver(session_id, tld.encode_str("e", "Option %s is unknown." % flag))
@@ -620,6 +621,21 @@ class Group(Injected):
             info.visibility = visibility
 
             self.broker.to_channel(group, tld.encode_status_msg("Change", "%s made group %s." % (nick, str(visibility).lower())))
+
+            changed = True
+        except: pass
+
+        return changed
+
+    def __try_change_volume__(self, nick, group, info, flag):
+        changed = False
+
+        try:
+            volume = groups.Volume(ord(flag))
+
+            info.volume = volume
+
+            self.broker.to_channel(group, tld.encode_status_msg("Change", "%s made group %s." % (nick, str(volume).lower())))
 
             changed = True
         except: pass
@@ -651,7 +667,7 @@ class Group(Injected):
 
         log.debug("Group's moderator: %s" % info.moderator)
 
-        if info.moderator and info.moderator != session_id:
+        if info.moderator != session_id:
             log.debug("User isn't moderator, testing administrative privileges.")
 
             with self.db_connection.enter_scope() as scope:

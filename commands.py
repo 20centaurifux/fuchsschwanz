@@ -310,9 +310,7 @@ class UserSession(Injected):
                         self.broker.to_channel_from(session_id,
                                                     state.group,
                                                     tld.encode_status_msg("Sign-off",
-                                                                          "%s (%s@%s) has signed off." % (state.nick,
-                                                                                                          state.loginid,
-                                                                                                          state.host)))
+                                                                          "%s (%s) has signed off." % (state.nick, state.address)))
 
                     if info.moderator == session_id:
                         if info.volume != groups.Volume.QUIET:
@@ -359,8 +357,22 @@ class UserSession(Injected):
 
         info = self.groups.get(group)
 
+        is_admin = False
+
+        if state.authenticated:
+            with self.db_connection.enter_scope() as scope:
+                is_admin = self.nickdb.is_admin(scope, state.nick)
+
         if info.control == groups.Control.RESTRICTED:
-            pass # TODO
+            if (info.moderator != session_id
+                and not (info.nick_invited(state.nick, state.authenticated)
+                         or info.address_invited(state.loginid, state.ip, state.host, state.authenticated))):
+                if info.volume == groups.Volume.LOUD:
+                    self.broker.deliver(info.moderator, tld.encode_status_msg("Probe", "%s tried to enter group %s." % (state.nick, group)))
+
+                raise TldErrorException("%s is restricted." % group)
+
+            self.broker.join(session_id, group)
         else:
             if self.broker.join(session_id, group):
                 log.info("Group '%s' created." % group)
@@ -381,18 +393,18 @@ class UserSession(Injected):
 
                 self.groups.set(group, info)
 
-            msg = "You are now in group %s" % group
+        msg = "You are now in group %s" % group
 
-            if info.moderator == session_id:
-                msg += " as moderator"
+        if info.moderator == session_id:
+            msg += " as moderator"
 
-            self.broker.deliver(session_id, tld.encode_status_msg("Status", msg))
+        self.broker.deliver(session_id, tld.encode_status_msg("Status", msg))
 
         if info.volume != groups.Volume.QUIET:
             category = "Sign-on" if not old_group else "Arrive"
             self.broker.to_channel_from(session_id,
                                         group,
-                                        tld.encode_status_msg(category, "%s (%s@%s) entered group" % (state.nick, state.loginid, state.host)))
+                                        tld.encode_status_msg(category, "%s (%s) entered group" % (state.nick, state.address)))
 
         self.session.update(session_id, group=group)
 
@@ -405,7 +417,7 @@ class UserSession(Injected):
                 if info.volume != groups.Volume.QUIET:
                     self.broker.to_channel_from(session_id,
                                                 old_group,
-                                                tld.encode_status_msg("Depart", "%s (%s@%s) just left" % (state.nick, state.loginid, state.host)))
+                                                tld.encode_status_msg("Depart", "%s (%s) just left" % (state.nick, state.address)))
             else:
                 self.groups.delete(old_group)
 
@@ -487,12 +499,11 @@ class UserSession(Injected):
                 for sub_id, sub_state in sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(group)], key=lambda arg: arg[1].nick.lower()):
                     admin_flag = "*" if info.moderator == sub_id else " "
 
-                    self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s@%s" % (admin_flag,
-                                                                                                       sub_state.nick,
-                                                                                                       sub_state.t_recv.elapsed_str(),
-                                                                                                       sub_state.signon.strftime("%Y/%m/%d %H:%M"),
-                                                                                                       sub_state.loginid,
-                                                                                                       sub_state.host),
+                    self.broker.deliver(session_id, tld.encode_co_output("%s  %-16s%-16s%-18s%s" % (admin_flag,
+                                                                                                    sub_state.nick,
+                                                                                                    sub_state.t_recv.elapsed_str(),
+                                                                                                    sub_state.signon.strftime("%Y/%m/%d %H:%M"),
+                                                                                                    sub_state.address),
                                                                          msgid))
 
                 self.broker.deliver(session_id, tld.encode_co_output("", msgid))
@@ -517,6 +528,11 @@ class OpenMessage(Injected):
 
             if info.volume == groups.Volume.QUIET:
                 raise TldErrorException("Open messages are not permitted in quiet groups.")
+
+            if info.control == groups.Control.CONTROLLED:
+                if (not info.nick_can_talk(state.nick, state.authenticated)
+                    and not info.address_can_talk(state.loginid, state.ip, state.host, state.authenticated)):
+                    raise TldErrorException("You do not have permission to talk in this group.")
 
             e = tld.Encoder("b")
 
@@ -604,43 +620,87 @@ class Group(Injected):
 
         for flag in [f.strip() for f in flags.split(" ")]:
             if len(flag) == 1:
-                if (self.__try_change_visibility__(state.nick, name, info, flag)
-                    or self.__try_change_volume__(state.nick, name, info, flag)):
+                if (self.__try_change_visibility__(session_id, state.nick, name, info, flag)
+                    or self.__try_change_volume__(session_id, state.nick, name, info, flag)
+                    or self.__try_change_control__(session_id, state.nick, name, info, flag)):
                     self.groups.set(name, info)
                 else:
                     self.broker.deliver(session_id, tld.encode_str("e", "Option %s is unknown." % flag))
             else:
                 self.broker.deliver(session_id, tld.encode_str("e", "Option %s is unknown." % flag))
 
-    def __try_change_visibility__(self, nick, group, info, flag):
-        changed = False
+    def __try_change_visibility__(self, session_id, nick, group, info, flag):
+        found = True
 
         try:
             visibility = groups.Visibility(ord(flag))
 
-            info.visibility = visibility
+            if info.visibility == visibility:
+                self.broker.deliver(session_id, tld.encode_str("e", "Group is already %s." % str(visibility)))
+            else:
+                info.visibility = visibility
 
-            self.broker.to_channel(group, tld.encode_status_msg("Change", "%s made group %s." % (nick, str(visibility).lower())))
+                self.broker.to_channel(group, tld.encode_status_msg("Change", "%s made group %s." % (nick, str(visibility))))
+        except ValueError:
+            found = False
 
-            changed = True
-        except: pass
+        return found
 
-        return changed
-
-    def __try_change_volume__(self, nick, group, info, flag):
-        changed = False
+    def __try_change_volume__(self, session_id, nick, group, info, flag):
+        found = True
 
         try:
             volume = groups.Volume(ord(flag))
 
-            info.volume = volume
 
-            self.broker.to_channel(group, tld.encode_status_msg("Change", "%s made group %s." % (nick, str(volume).lower())))
+            if info.volume == volume:
+                self.broker.deliver(session_id, tld.encode_str("e", "Group is already %s." % str(volume)))
+            else:
+                info.volume = volume
 
-            changed = True
-        except: pass
+                self.broker.to_channel(group, tld.encode_status_msg("Change", "%s made group %s." % (nick, str(volume))))
+        except ValueError:
+            found = False
 
-        return changed
+        return found
+
+    def __try_change_control__(self, session_id, moderator, group, info, flag):
+        found = True
+
+        try:
+            control = groups.Control(ord(flag))
+
+            if info.control == control:
+                self.broker.deliver(session_id, tld.encode_str("e", "Group is already %s." % str(control)))
+            else:
+                info.control = control
+
+                if control == groups.Control.PUBLIC:
+                    self.broker.to_channel(group, tld.encode_status_msg("Change", "%s made group public." % moderator))
+                else:
+                    self.broker.to_channel(group, tld.encode_status_msg("Change", "%s is now %s." % (moderator, str(control))))
+
+                info.clear_talkers()
+
+                if control == groups.Control.RESTRICTED:
+                    self.__make_restricted__(session_id, group, info)
+                else:
+                    info.clear_invitations()
+        except ValueError:
+            found = False
+
+        return found
+
+    def __make_restricted__(self, session_id, group, info):
+        self.broker.to_channel(group, tld.encode_status_msg("Change", "Group is now restricted."))
+
+        for sub_id in self.broker.get_subscribers(group):
+            sub_state = self.session.get(sub_id)
+
+            self.broker.deliver(session_id, tld.encode_status_msg("FYI", "%s invited" % sub_state.nick))
+            self.broker.deliver(sub_id, tld.encode_status_msg("FYI", "You are invited to group %s by default." % sub_state.nick))
+
+            info.invite_nick(sub_state.nick, sub_state.authenticated)
 
     def status(self, session_id, msgid):
         name, info = self.__get_group__(session_id)
@@ -654,6 +714,24 @@ class Group(Injected):
                                                                                       info.volume),
                             msgid))
 
+        inv_nicks = ", ".join(info.invited_nicks)
+
+        self.__send__wrapped__(session_id, "Nicks invited: ", info.invited_nicks, msgid)
+        self.__send__wrapped__(session_id, "Addresses invited: ", info.invited_addresses, msgid)
+        self.__send__wrapped__(session_id, "Talkers: ", info.talker_nicks, msgid)
+        self.__send__wrapped__(session_id, "Talkers (addresses) ", info.talker_addresses, msgid)
+
+    def __send__wrapped__(self, session_id, prefix, seq, msgid):
+        line = ", ".join(seq)
+
+        if line:
+            parts = wrap(line, 64)
+
+            self.broker.deliver(session_id, tld.encode_co_output("%s%s" % (prefix, parts[0]), msgid))
+
+            for part in parts[1:]:
+                self.broker.deliver(session_id, tld.encode_co_output("%s%s" % (" " * len(prefix), part), msgid))
+
     def __get_group__(self, session_id):
         state = self.session.get(session_id)
         
@@ -665,18 +743,133 @@ class Group(Injected):
     def __get_group_if_can_moderate__(self, session_id):
         name, info = self.__get_group__(session_id)
 
-        log.debug("Group's moderator: %s" % info.moderator)
+        if info.control != groups.Control.PUBLIC:
+            log.debug("Group's moderator: %s" % info.moderator)
 
-        if info.moderator != session_id:
-            log.debug("User isn't moderator, testing administrative privileges.")
+            if info.moderator != session_id:
+                log.debug("User isn't moderator, testing administrative privileges.")
 
-            with self.db_connection.enter_scope() as scope:
-                state = self.session.get(session_id)
+                with self.db_connection.enter_scope() as scope:
+                    state = self.session.get(session_id)
 
-                if not self.nickdb.exists(scope, state.nick) or not self.nickdb.is_admin(scope, state.nick):
-                    raise TldErrorException("You aren't the moderator.")
+                    if not self.nickdb.exists(scope, state.nick) or not self.nickdb.is_admin(scope, state.nick):
+                        raise TldErrorException("You aren't the moderator.")
 
         return name, info
+
+    def invite(self, session_id, invitee, mode="n", quiet=None, registered=None):
+        quiet = bool(quiet)
+        registered = bool(registered)
+
+        name, info = self.__get_group_if_can_moderate__(session_id)
+
+        if not info.control == groups.Control.RESTRICTED:
+            raise TldErrorException("The group isn't restricted.")
+
+        state = self.session.get(session_id)
+        loggedin_session = None
+
+        if mode == "n":
+            if registered:
+                with self.db_connection.enter_scope() as scope:
+                    if not self.nickdb.exists(scope, invitee):
+                        raise TldErrorException("User not found.")
+
+            loggedin_session = self.session.find_nick(invitee)
+
+            if loggedin_session:
+                self.broker.deliver(loggedin_session, tld.encode_status_msg("RSVP", "You are invited to group %s by %s." % (name, state.nick)))
+
+                if registered:
+                    loggedin_state = self.session.get(loggedin_session)
+
+                    if not loggedin_state.authenticated:
+                        self.broker.deliver(loggedin_session, tld.encode_status_msg("RSVP", "You need to be registered to enter group %s." % name))
+            elif not registered:
+                raise TldErrorException("%s is not signed on." % invitee)
+
+            info.invite_nick(invitee, registered)
+        else:
+            info.invite_address(invitee, registered)
+
+        if not quiet:
+            self.broker.deliver(session_id, tld.encode_status_msg("FYI", "%s invited%s" % (invitee, " (registered only)" if registered else "")))
+
+        self.groups.set(name, info)
+
+    def cancel(self, session_id, invitee, mode="n", quiet=None):
+        quiet = bool(quiet)
+
+        name, info = self.__get_group_if_can_moderate__(session_id)
+
+        if not info.control == groups.Control.RESTRICTED:
+            raise TldErrorException("The group isn't restricted.")
+
+        try:
+            if mode == "n":
+                info.cancel_nick(invitee)
+            else:
+                info.cancel_address(invitee)
+        except KeyError:
+            raise TldErrorException("%s isn't invited." % invitee);
+
+        if not quiet:
+            self.broker.deliver(session_id, tld.encode_status_msg("FYI", "%s cancelled." % invitee))
+
+        self.groups.set(name, info)
+
+    def talk(self, session_id, talker, mode="n", delete=None, quiet=None, registered=None):
+        quiet = bool(quiet)
+        delete = bool(delete)
+        registered = bool(registered)
+
+        name, info = self.__get_group_if_can_moderate__(session_id)
+
+        if not info.control == groups.Control.CONTROLLED:
+            raise TldErrorException("The group isn't controlled.")
+
+        if delete:
+            try:
+                if mode == "n":
+                    info.mute_nick(talker)
+                else:
+                    info.mute_address(talker)
+            except KeyError:
+                raise TldErrorException("%s isn't allowed to talk." % talker);
+
+            if not quiet:
+                self.broker.deliver(session_id, tld.encode_status_msg("FYI", "%s removed from talker list." % talker))
+        else:
+            state = self.session.get(session_id)
+            loggedin_session = None
+
+            if mode == "n":
+                if registered:
+                    with self.db_connection.enter_scope() as scope:
+                        if not self.nickdb.exists(scope, talker):
+                            raise TldErrorException("User not found.")
+
+                loggedin_session = self.session.find_nick(talker)
+
+                if loggedin_session:
+                    self.broker.deliver(loggedin_session, tld.encode_status_msg("RSVP", "You can now talk in group %s." % name))
+
+                    if registered:
+                        loggedin_state = self.session.get(loggedin_session)
+
+                        if not loggedin_state.authenticated:
+                            self.broker.deliver(loggedin_session, tld.encode_status_msg("RSVP", "You need to be registered to talk in group %s." % name))
+                elif not registered:
+                    raise TldErrorException("%s is not signed on." % talker)
+
+                info.unmute_nick(talker, registered)
+            else:
+                info.unmute_address(talker, registered)
+
+            if not quiet:
+                self.broker.deliver(session_id, tld.encode_status_msg("FYI", "%s%s can now talk." % (talker, " (registered only)" if registered else "")))
+
+        self.groups.set(name, info)
 
 class Registration(Injected):
     def __init__(self):
@@ -883,7 +1076,7 @@ class Registration(Injected):
         if loggedin_session:
             loggedin_state = self.session.get(loggedin_session)
 
-            login = "%s@%s" % (loggedin_state.loginid, loggedin_state.host)
+            login = loggedin_state.address
             idle = loggedin_state.t_recv.elapsed_str()
 
             if loggedin_state.away:

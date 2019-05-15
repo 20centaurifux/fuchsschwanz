@@ -11,10 +11,13 @@ The project is at a *very* early stage. The following features are implemented:
 * change group
 * change nick
 * public messages
-* change group topic
+* group topics
 * group visibility (visible, secret, invisible)
+* group volume (quiet, normal, loud)
+* group control (public, moderated, restricted, controlled)
 * private messages
 * personal message box
+* "beep" users
 * basic permission management (group moderators & admins)
 * query online users
 * motd

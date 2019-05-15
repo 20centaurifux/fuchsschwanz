@@ -24,7 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 import sys
-import commands, di, broker, validate
+import commands, di, broker, validate, tld
 from utils import Cache, decode_ascii
 from exception import TldStatusException, TldErrorException, TldResponseException
 
@@ -346,6 +346,57 @@ class Status:
             INSTANCE(commands.Group).change_status(session_id, fields[0], msgid(fields))
         else:
             INSTANCE(commands.Group).status(session_id, msgid(fields))
+
+@command("invite")
+class Invite:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        usage = "Usage: invite {-q} {-r} {-n nickname | -s address}"
+
+        try:
+            opts, nick = tld.get_opts(fields[0], quiet="q", registered="r", mode="ns")
+
+            if not nick:
+                raise TldErrorException(usage)
+
+        except Exception as ex:
+            raise TldErrorException(usage)
+
+        INSTANCE(commands.Group).invite(session_id, nick, **opts)
+
+@command("cancel")
+class Cancel:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        usage = "Usage: cancel {-q} {-n nickname | -s address}"
+
+        try:
+            opts, nick = tld.get_opts(fields[0], quiet="q", mode="ns")
+
+            if not nick:
+                raise TldErrorException(usage)
+
+        except Exception as ex:
+            raise TldErrorException(usage)
+
+        INSTANCE(commands.Group).cancel(session_id, nick, **opts)
+
+@command("talk")
+class Talk:
+    @fieldslength(min=1, max=2)
+    def process(self, session_id, fields):
+        usage = "Usage: talk {-q} {-d} {-r} {-n nickname | -s address}"
+
+        try:
+            opts, nick = tld.get_opts(fields[0], quiet="q", delete="d", registered="r", mode="ns")
+
+            if not nick:
+                raise TldErrorException(usage)
+
+        except Exception as ex:
+            raise TldErrorException(usage)
+
+        INSTANCE(commands.Group).talk(session_id, nick, **opts)
 
 COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, type) and "command" in cls.__dict__,
                                                  sys.modules[__name__].__dict__.values())}

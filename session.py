@@ -53,6 +53,10 @@ class State:
         for k, v in kwargs.items():
             setattr(self, k, v)
 
+    @property
+    def address(self):
+        return "%s@%s" % (self.loginid, self.host)
+
 AwayTimeoutTable = NewType("AwayTimeoutTable", TimeoutTable)
 
 class Store:

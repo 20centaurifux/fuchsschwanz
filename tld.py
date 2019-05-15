@@ -124,3 +124,38 @@ def split(payload):
     fields.append(bytearray(field))
 
     return fields
+
+def get_opts(line, **opts):
+    m = {}
+    tail = None
+
+    line = line.strip(" \0")
+
+    i = 0
+    read_opts = False
+
+    while i < len(line) and not tail:
+        c = line[i]
+
+        if read_opts:
+            if line[i] == " ":
+                read_opts = False
+            else:
+                opt = next((kv[0] for kv in opts.items() if c in kv[1]), None)
+
+                if not opt:
+                    raise Exception("Unknown flag: %s" % c)
+
+                if opt in m:
+                    raise Exception("Option '%s' already set." % opt)
+
+                m[opt] = c
+
+        elif c == "-":
+            read_opts = True
+        else:
+            tail = line[i:]
+
+        i += 1
+
+    return m, tail

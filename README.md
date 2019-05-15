@@ -7,6 +7,7 @@ The project is at a *very* early stage. The following features are implemented:
 * user login & authentication (/secure and /nosecure node)
 * user registration
 * setting personal information
+* away status
 * delete users
 * change group
 * change nick

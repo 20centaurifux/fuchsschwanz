@@ -26,7 +26,7 @@
 import config, utils, tld, messages, exception, commands
 import di, broker, session, groups
 import database, nickdb, sqlite
-import asyncore, socket
+import asyncore, socket, traceback
 from transform import transform
 from datetime import datetime
 from logger import log
@@ -135,8 +135,8 @@ class Session(asyncore.dispatcher, di.Injected):
                 self.__broker.deliver(self.__session_id, ex.response)
                 self.__broker.deliver(self.__session_id, tld.encode_empty_cmd("g"))
 
-            except Exception as ex:
-                log.fatal("Unexpected error: session='%s', reason=%s", self.__session_id, str(ex))
+            except Exception:
+                log.fatal(traceback.format_exc())
 
                 raise asyncore.ExitNow()
     

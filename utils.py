@@ -24,6 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from timeit import default_timer as timer
+import inspect
 
 def Cache():
     m = {}
@@ -104,3 +105,24 @@ class TimeoutTable:
                 del sources[source]
 
         self.__m = dict(kv for kv in self.__m.items() if len(kv) > 0)
+
+def tolower(argname=None):
+    def decorator(fn):
+        spec = inspect.getargspec(fn)
+
+        def wrapper(*args):
+            vals = []
+
+            for i in range(len(args)):
+                val = args[i]
+
+                if spec.args[i] == argname:
+                    val = val.lower()
+
+                vals.append(val)
+
+            return fn(*vals)
+
+        return wrapper
+
+    return decorator

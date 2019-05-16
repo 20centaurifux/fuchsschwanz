@@ -87,6 +87,7 @@ class Invitation:
 
 @dataclass
 class GroupInfo:
+    display_name: str = None
     visibility: Visibility = Visibility.VISIBLE
     control: Control = Control.PUBLIC
     volume: Volume = Volume.LOUD
@@ -97,6 +98,13 @@ class GroupInfo:
     __addrs_inv: Dict[str, Invitation] = field(default_factory=dict)
     __talker_nicks: Dict[str, Invitation] = field(default_factory=dict)
     __talker_addrs: Dict[str, Invitation] = field(default_factory=dict)
+
+    def __str__(self):
+        return self.display_name
+
+    @property
+    def key(self):
+        return str(self).lower()
 
     @property
     def invited_nicks(self):
@@ -199,13 +207,13 @@ class MemoryStore(Store):
         self.__m = {}
 
     def get(self, name):
-        return self.__m.get(name, GroupInfo())
+        return self.__m.get(name.lower(), GroupInfo(display_name=name))
 
     def get_groups(self):
-        return self.__m.keys()
+        return sorted([g for g in self.__m.values()], key=lambda g: str(g))
 
-    def set(self, name, info):
-        self.__m[name] = info
+    def update(self, info):
+        self.__m[info.key] = info
 
-    def delete(self, id):
-        del self.__m[id]
+    def delete(self, name):
+        del self.__m[name]

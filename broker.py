@@ -24,6 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from logger import log
+from utils import tolower
 
 class Broker:
     def add_session(self, session_id):
@@ -89,6 +90,7 @@ class Memory(Broker):
 
         self.__channels = {k: v for k, v in self.__channels.items() if len(v) > 0}
 
+    @tolower(argname="channel")
     def join(self, session_id, channel):
         members = self.__channels.get(channel, set())
         members.add(session_id)
@@ -97,6 +99,7 @@ class Memory(Broker):
 
         return len(members) == 1
 
+    @tolower(argname="channel")
     def part(self, session_id, channel):
         members = self.__channels.get(channel)
         members.remove(session_id)
@@ -106,6 +109,7 @@ class Memory(Broker):
 
         return len(members) > 0
 
+    @tolower(argname="channel")
     def get_subscribers(self, channel):
         return self.__channels[channel]
 
@@ -118,6 +122,7 @@ class Memory(Broker):
         else:
             log.warning("Couldn't deliver message, session not registered.")
 
+    @tolower(argname="channel")
     def to_channel_from(self, sender, channel, message):
         count = 0
 
@@ -128,6 +133,7 @@ class Memory(Broker):
 
         return count
 
+    @tolower(argname="channel")
     def to_channel(self, channel, message):
         for session_id in self.__channels[channel]:
             self.deliver(session_id, message)

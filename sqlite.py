@@ -25,6 +25,7 @@
 """
 import sqlite3, database, nickdb, config
 import uuid, secrets, string
+from utils import tolower
 from hashlib import sha256
 from logger import log
 from datetime import datetime
@@ -163,18 +164,21 @@ class NickDb(nickdb.NickDb):
         self.set_password(scope, nick, password)
         self.set_secure(scope, nick, True)
 
+    @tolower(argname="nick")
     def create(self, scope, nick):
         cur = scope.get_handle()
         cur.execute("insert into Nick (Name) values (?)", (nick, ))
 
         return self.lookup(scope, nick)
 
+    @tolower(argname="nick")
     def exists(self, scope, nick):
         cur = scope.get_handle()
         cur.execute("select count(Name) from Nick where Name=?", (nick,))
 
         return cur.fetchone()[0] == 1
 
+    @tolower(argname="nick")
     def lookup(self, scope, nick):
         cur = scope.get_handle()
         cur.execute("select RealName, Phone, Address, Email, Text, WWW from Nick where Name=?", (nick,))
@@ -188,6 +192,7 @@ class NickDb(nickdb.NickDb):
                                   text=m["Text"],
                                   www=m["WWW"])
 
+    @tolower(argname="nick")
     def update(self, scope, nick, details):
         cur = scope.get_handle()
         cur.execute("update Nick set RealName=?, Phone=?, Address=?, Email=?, Text=?, WWW=? where Name=?",
@@ -199,12 +204,14 @@ class NickDb(nickdb.NickDb):
                      details.www,
                      nick))
 
+    @tolower(argname="nick")
     def set_password(self, scope, nick, password):
         cur = scope.get_handle()
 
         salt = secrets.token_hex(20)
         cur.execute("update Nick set Salt=?, Password=? where Name=?", (salt, self.__hash_password__(password, salt), nick))
 
+    @tolower(argname="nick")
     def check_password(self, scope, nick, password):
         cur = scope.get_handle()
         cur.execute("select Salt, Password from Nick where Name=?", (nick,))
@@ -223,26 +230,31 @@ class NickDb(nickdb.NickDb):
     def __hash_password__(self, plain, salt):
         return sha256((plain + salt).encode("ascii")).hexdigest()
 
+    @tolower(argname="nick")
     def is_secure(self, scope, nick):
         cur = scope.get_handle()
         cur.execute("select IsSecure from Nick where Name=?", (nick,))
 
         return bool(cur.fetchone()[0])
 
+    @tolower(argname="nick")
     def set_secure(self, scope, nick, secure):
         cur = scope.get_handle()
         cur.execute("update Nick set IsSecure=? where Name=?", (int(secure), nick))
 
+    @tolower(argname="nick")
     def is_admin(self, scope, nick):
         cur = scope.get_handle()
         cur.execute("select IsAdmin from Nick where Name=?", (nick,))
 
         return bool(cur.fetchone()[0])
 
+    @tolower(argname="nick")
     def set_admin(self, scope, nick, is_admin):
         cur = scope.get_handle()
         cur.execute("update Nick set IsAdmin=? where Name=?", (int(is_admin), nick))
 
+    @tolower(argname="nick")
     def get_lastlogin(self, scope, nick):
         info = None
 
@@ -256,10 +268,12 @@ class NickDb(nickdb.NickDb):
 
         return info
 
+    @tolower(argname="nick")
     def set_lastlogin(self, scope, nick, loginid, host):
         cur = scope.get_handle()
         cur.execute("update Nick set LastLoginID=?, LastLoginHost=? where Name=?", (loginid, host, nick))
 
+    @tolower(argname="nick")
     def get_signon(self, scope, nick):
         signon = None
 
@@ -273,6 +287,7 @@ class NickDb(nickdb.NickDb):
 
         return signon
 
+    @tolower(argname="nick")
     def set_signon(self, scope, nick, timestamp=None):
         cur = scope.get_handle()
 
@@ -281,6 +296,7 @@ class NickDb(nickdb.NickDb):
 
         cur.execute("update Nick set Signon=? where Name=?", (int(timestamp.timestamp()), nick))
 
+    @tolower(argname="nick")
     def get_signoff(self, scope, nick):
         signoff = None
 
@@ -294,6 +310,7 @@ class NickDb(nickdb.NickDb):
 
         return signoff
 
+    @tolower(argname="nick")
     def set_signoff(self, scope, nick, timestamp=None):
         cur = scope.get_handle()
 
@@ -302,6 +319,7 @@ class NickDb(nickdb.NickDb):
 
         cur.execute("update Nick set Signoff=? where Name=?", (int(timestamp.timestamp()), nick))
 
+    @tolower(argname="nick")
     def add_message(self, scope, receiver, sender, text):
         msgid = uuid.uuid4().hex
         timestamp = int(datetime.utcnow().timestamp())
@@ -311,12 +329,14 @@ class NickDb(nickdb.NickDb):
 
         return msgid
 
+    @tolower(argname="nick")
     def count_messages(self, scope, receiver):
         cur = scope.get_handle()
         cur.execute("select count(UUID) from Message where Receiver=?", (receiver,))
 
         return int(cur.fetchone()[0])
 
+    @tolower(argname="nick")
     def get_messages(self, scope, receiver):
         cur = scope.get_handle()
         cur.execute("select * from Message where Receiver=?", (receiver,))
@@ -327,10 +347,12 @@ class NickDb(nickdb.NickDb):
                                text=row["Message"])
                 for row in cur]
 
+    @tolower(argname="nick")
     def delete_message(self, scope, uuid):
         cur = scope.get_handle()
         cur.execute("delete from Message where UUID=?", (uuid.hex,))
 
+    @tolower(argname="nick")
     def delete(self, scope, nick):
         cur = scope.get_handle()
         cur.execute("delete from Nick where Name=?", (nick,))

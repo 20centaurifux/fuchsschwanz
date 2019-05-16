@@ -95,7 +95,7 @@ class MemoryStore(Store):
     def get(self, id):
         return self.__m[id]
 
-    def get_logins(self):
+    def get_nicks(self):
         return {k: v for k, v in self.__m.items() if v.nick}
 
     def update(self, id, **kwargs):
@@ -110,5 +110,5 @@ class MemoryStore(Store):
 
     def find_nick(self, nick):
         for k, v in self.__m.items():
-            if v.nick == nick:
+            if v.nick and v.nick.lower() == nick.lower():
                 return k

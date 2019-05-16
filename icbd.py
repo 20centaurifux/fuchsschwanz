@@ -23,14 +23,26 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import config, utils, tld, messages, exception, commands
-import di, broker, session, groups
-import database, nickdb, sqlite
-import asyncore, socket, traceback
-from transform import transform
+import asyncore
+import socket
+import traceback
 from datetime import datetime
-from logger import log
 from getpass import getuser
+import commands
+from logger import log
+import config
+import utils
+import tld
+import messages
+import exception
+import di
+import broker
+import session
+import groups
+import database
+import nickdb
+import sqlite
+from transform import transform
 
 PROTOCOL_VERSION = "1"
 
@@ -39,7 +51,7 @@ class Server(asyncore.dispatcher, di.Injected):
         asyncore.dispatcher.__init__(self)
         di.Injected.__init__(self)
 
-        log.info("Listening on %s:%d" % address)
+        log.info("Listening on %s:%d", *address)
 
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
@@ -50,10 +62,10 @@ class Server(asyncore.dispatcher, di.Injected):
         self.__signon_server__()
 
     def inject(self,
-               session: session.Store,
+               store: session.Store,
                db_connection: database.Connection,
                nickdb: nickdb.NickDb):
-        self.__session_store = session
+        self.__session_store = store
         self.__db_connection = db_connection
         self.__nickdb = nickdb
 
@@ -61,7 +73,7 @@ class Server(asyncore.dispatcher, di.Injected):
         client_info = self.accept()
 
         if client_info is not None:
-            log.info("Client connected: %s" % (client_info[1], ))
+            log.info("Client connected: %s", client_info[1])
 
             Session(client_info[0], client_info[1])
 
@@ -97,6 +109,7 @@ class Session(asyncore.dispatcher, di.Injected):
         self.__buffer = bytearray()
         self.__decoder = tld.Decoder()
         self.__decoder.add_listener(self.__message_received__)
+        self.__shutdown = False
 
         log.debug("Session created successfully: %s", self.__session_id)
 
@@ -117,7 +130,7 @@ class Session(asyncore.dispatcher, di.Injected):
         return bool(self.__buffer) or self.__shutdown
 
     def handle_write(self):
-        if len(self.__buffer) > 0:
+        if self.__buffer:
             data = self.__buffer[:256]
             sent = self.send(data)
             self.__buffer = self.__buffer[sent:]
@@ -139,7 +152,7 @@ class Session(asyncore.dispatcher, di.Injected):
                 log.fatal(traceback.format_exc())
 
                 raise asyncore.ExitNow()
-    
+
     def handle_close(self):
         self.__shutdown__()
 
@@ -164,7 +177,7 @@ class Session(asyncore.dispatcher, di.Injected):
 
         if not msg:
             self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
-        else: 
+        else:
             msg.process(self.__session_id, tld.split(payload))
             self.__session_store.update(self.__session_id, t_recv=utils.Timer())
 
@@ -177,7 +190,7 @@ class Session(asyncore.dispatcher, di.Injected):
 
         self.__broker.deliver(self.__session_id, e.encode())
 
-if __name__ == "__main__":
+def run():
     log.info("Starting server...")
 
     c = di.default_container
@@ -193,7 +206,7 @@ if __name__ == "__main__":
         c.resolve(nickdb.NickDb).setup(scope)
         scope.complete()
 
-    s = Server(config.SERVER_ADDRESS)
+    Server(config.SERVER_ADDRESS)
 
     try:
         asyncore.loop()
@@ -204,3 +217,6 @@ if __name__ == "__main__":
     with c.resolve(database.Connection).enter_scope() as scope:
         c.resolve(nickdb.NickDb).set_signoff(scope, config.NICKSERV, datetime.utcnow())
         scope.complete()
+
+if __name__ == "__main__":
+    run()

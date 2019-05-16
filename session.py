@@ -26,9 +26,9 @@
 from dataclasses import dataclass
 from enum import Enum
 from secrets import token_hex
-from utils import Timer, TimeoutTable
 from datetime import datetime
 from typing import NewType
+from utils import Timer, TimeoutTable
 
 class BeepMode(Enum):
     OFF = 0
@@ -60,13 +60,13 @@ class State:
 AwayTimeoutTable = NewType("AwayTimeoutTable", TimeoutTable)
 
 class Store:
-    def new(self, *kwargs):
+    def new(self, **kwargs):
         raise NotImplementedError
 
     def get(self, id):
         raise NotImplementedError
 
-    def get_logins(self):
+    def get_nicks(self):
         raise NotImplementedError
 
     def update(self, id, **kwargs):
@@ -109,6 +109,11 @@ class MemoryStore(Store):
         del self.__m[id]
 
     def find_nick(self, nick):
+        session_id = None
+
         for k, v in self.__m.items():
             if v.nick and v.nick.lower() == nick.lower():
-                return k
+                session_id = k
+                break
+
+        return session_id

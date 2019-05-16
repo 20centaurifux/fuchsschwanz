@@ -24,13 +24,17 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 import sys
-import commands, di, broker, validate, tld
+import commands
+import di
+import broker
+import validate
+import tld
 from utils import Cache, decode_ascii
-from exception import TldStatusException, TldErrorException, TldResponseException
+from exception import TldErrorException, TldResponseException
 
-def code(code):
+def code(id):
     def decorator(cls):
-        cls.code = code
+        cls.code = id
 
         return cls
 
@@ -58,16 +62,16 @@ def fieldslength(count=0, min=0, max=0):
     def decorator(fn):
         def wrapper(self, session_id, fields):
             if count > 0 and len(fields) != count:
-                    raise TldErrorException("Malformed message, wrong number of fields.")
-            else:
-                if len(fields) < min:
-                    raise TldErrorException("Malformed message, missing fields.")
+                raise TldErrorException("Malformed message, wrong number of fields.")
 
-                if max > min and len(fields) > max:
-                    raise TldErrorException("Malformed message, too many fields.")
+            if len(fields) < min:
+                raise TldErrorException("Malformed message, missing fields.")
+
+            if max > min and len(fields) > max:
+                raise TldErrorException("Malformed message, too many fields.")
 
             fn(self, session_id, fields)
-            
+
         return wrapper
 
     return decorator
@@ -80,21 +84,21 @@ def arglength(at=0, min=0, max=0, display="Argument"):
             if len(val) < min:
                 if min == 1:
                     raise TldErrorException("%s cannot be empty." % display)
-                else:
-                    raise TldErrorException("%s requires at least %d characters." % (display, min))
+
+                raise TldErrorException("%s requires at least %d characters." % (display, min))
 
             if max > min and len(val) > max:
                 raise TldErrorException("%s exceeds allowed maximum length (%d characters)." % (display, max))
 
             fn(self, session_id, fields)
-            
+
         return wrapper
 
     return decorator
 
-def command(command):
+def command(name):
     def decorator(cls):
-        cls.command = command
+        cls.command = name
 
         return cls
 
@@ -343,7 +347,7 @@ class Status:
     @fieldslength(min=1, max=2)
     def process(self, session_id, fields):
         if fields[0]:
-            INSTANCE(commands.Group).change_status(session_id, fields[0], msgid(fields))
+            INSTANCE(commands.Group).change_status(session_id, fields[0])
         else:
             INSTANCE(commands.Group).status(session_id, msgid(fields))
 
@@ -359,7 +363,7 @@ class Invite:
             if not nick:
                 raise TldErrorException(usage)
 
-        except Exception as ex:
+        except:
             raise TldErrorException(usage)
 
         INSTANCE(commands.Group).invite(session_id, nick, **opts)
@@ -393,7 +397,7 @@ class Talk:
             if not nick:
                 raise TldErrorException(usage)
 
-        except Exception as ex:
+        except:
             raise TldErrorException(usage)
 
         INSTANCE(commands.Group).talk(session_id, nick, **opts)

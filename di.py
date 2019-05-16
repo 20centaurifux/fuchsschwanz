@@ -49,5 +49,3 @@ class Injected:
             vals.append(container.resolve(T))
 
         self.inject(*vals)
-
-    def inject(self): pass

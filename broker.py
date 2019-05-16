@@ -82,9 +82,9 @@ class Memory(Broker):
     def remove_session(self, session_id):
         del self.__sessions[session_id]
 
-        for _, c in self.__channels.items():
+        for _, channel in self.__channels.items():
             try:
-                c.remove(session_id)
+                channel.remove(session_id)
             except KeyError:
                 pass
 
@@ -104,7 +104,7 @@ class Memory(Broker):
         members = self.__channels.get(channel)
         members.remove(session_id)
 
-        if len(members) == 0:
+        if not members:
             del self.__channels[channel]
 
         return len(members) > 0
@@ -145,5 +145,9 @@ class Memory(Broker):
             self.deliver(session_id, message)
 
     def pop(self, session_id):
-        if len(self.__sessions[session_id]) > 0:
-            return self.__sessions[session_id].pop(0)
+        msg = None
+
+        if self.__sessions[session_id]:
+            msg = self.__sessions[session_id].pop(0)
+
+        return msg

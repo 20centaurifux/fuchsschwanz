@@ -23,7 +23,8 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import logging, config
+import logging
+import config
 
 log = None
 
@@ -38,4 +39,3 @@ if log is None:
 
     log.setLevel(logging.DEBUG)
     log.addHandler(handler)
-

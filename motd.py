@@ -23,9 +23,9 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+import os
+import subprocess
 import config
-import os, subprocess
-from textwrap import wrap
 
 class Stdout:
     def __init__(self, filename):
@@ -47,10 +47,14 @@ class Stdout:
             yield l
 
 def read_motd():
+    reader = None
+
     if os.access(config.MOTD_PATH, os.X_OK):
-        return Stdout(config.MOTD_PATH)
+        reader = Stdout(config.MOTD_PATH)
     else:
-        return open(config.MOTD_PATH)
+        reader = open(config.MOTD_PATH)
+
+    return reader
 
 def load():
     with read_motd() as f:

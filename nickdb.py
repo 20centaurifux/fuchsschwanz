@@ -42,7 +42,7 @@ class Message:
     sender: str = None
     date: datetime = None
     text: str = None
-    
+
 class NickDb:
     def setup(self, scope):
         raise NotImplementedError
@@ -104,7 +104,7 @@ class NickDb:
     def get_messages(self, scope, receiver):
         raise NotImplementedError
 
-    def delete_message(self, scope, uuid):
+    def delete_message(self, scope, msgid):
         raise NotImplementedError
 
     def delete(self, scope, nick):

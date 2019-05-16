@@ -23,7 +23,8 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import config, tld
+import config
+import tld
 from utils import decode_ascii
 from logger import log
 
@@ -48,6 +49,6 @@ def transform(type_id, payload):
 
                 payload.append(0)
 
-                log.debug("Message transformed: type='%s', command='%s'" % (type_id, args[1]))
+                log.debug("Message transformed: type='%s', command='%s'", type_id, args[1])
 
     return type_id, payload

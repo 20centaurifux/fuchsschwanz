@@ -67,7 +67,7 @@ class Timer:
 class TimeoutTable:
     def __init__(self):
         self.__m = {}
-        
+
     def is_alive(self, target, source):
         alive = False
 
@@ -83,7 +83,7 @@ class TimeoutTable:
             if not alive:
                 del sources[source]
 
-                if len(sources) == 0:
+                if not sources:
                     del self.__m[target]
 
         return alive
@@ -100,7 +100,7 @@ class TimeoutTable:
             del self.__m[target]
 
     def remove_source(self, source):
-        for target, sources in self.__m.items():
+        for sources in self.__m.values():
             if source in sources:
                 del sources[source]
 
@@ -108,7 +108,7 @@ class TimeoutTable:
 
 def tolower(argname=None):
     def decorator(fn):
-        spec = inspect.getargspec(fn)
+        spec = inspect.getfullargspec(fn)
 
         def wrapper(*args):
             vals = []

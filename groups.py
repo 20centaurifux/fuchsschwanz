@@ -32,17 +32,18 @@ class Visibility(Enum):
     SECRET = 115
     INVISIBLE = 105
 
-    def __init__(self, val):
+    def __init__(self, _):
         super().__init__()
 
         self.__names = {118: "visible",
                         115: "secret",
                         105: "invisible"}
+
     def __str__(self):
         return self.__names[self.value]
 
 class Control(Enum):
-    def __init__(self, val):
+    def __init__(self, _):
         super().__init__()
 
         self.__names = {112: "public",
@@ -63,7 +64,7 @@ class Volume(Enum):
     NORMAL = 110
     LOUD = 108
 
-    def __init__(self, val):
+    def __init__(self, _):
         super().__init__()
 
         self.__names = {113: "quiet",
@@ -142,7 +143,7 @@ class GroupInfo:
         del self.__nicks_inv[nick.lower()]
 
     def cancel_address(self, address):
-        del self.__addrs_inv[nick.lower()]
+        del self.__addrs_inv[address.lower()]
 
     def clear_talkers(self):
         self.__talker_nicks.clear()
@@ -166,10 +167,12 @@ class GroupInfo:
     def mute_address(self, addr):
         del self.__talker_addrs[addr.lower()]
 
-    def __invitations__(self, m):
+    @staticmethod
+    def __invitations__(m):
         return sorted([str(inv) for inv in m.values()], key=lambda s: s.lower())
 
-    def __invite__(self, m, name, registered):
+    @staticmethod
+    def __invite__(m, name, registered):
         k = name.lower()
 
         added = not k in m
@@ -179,7 +182,8 @@ class GroupInfo:
 
         return added
 
-    def __is_invited__(self, m, name, authenticated):
+    @staticmethod
+    def __is_invited__(m, name, authenticated):
         k = name.lower()
 
         return k in m and (not m[k].registered or authenticated)
@@ -193,7 +197,7 @@ class Store:
     def get(self, name):
         raise NotImplementedError
 
-    def set(self, name, info):
+    def update(self, info):
         raise NotImplementedError
 
     def get_groups(self):
@@ -215,5 +219,5 @@ class MemoryStore(Store):
     def update(self, info):
         self.__m[info.key] = info
 
-    def delete(self, name):
-        del self.__m[name]
+    def delete(self, id):
+        del self.__m[id]

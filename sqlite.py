@@ -23,12 +23,17 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import sqlite3, database, nickdb, config
-import uuid, secrets, string
-from utils import tolower
+import sqlite3
+import uuid
+import secrets
+import string
 from hashlib import sha256
-from logger import log
 from datetime import datetime
+import database
+import nickdb
+import config
+from logger import log
+from utils import tolower
 
 class TransactionScope(database.TransactionScope):
     def __init__(self, db):
@@ -49,14 +54,14 @@ class TransactionScope(database.TransactionScope):
         return self.__cursor
 
 class Connection(database.Connection):
-    def __init__(self, db, **kwargs):
-        database.Connection.__init__(self)
+    def __init__(self, db):
+        super().__init__()
 
         self.__conn = None
         self.__db = db
 
     def __connect__(self):
-        if self.__conn == None:
+        if not self.__conn:
             self.__conn = sqlite3.connect(self.__db)
             self.__conn.row_factory = sqlite3.Row
 
@@ -86,13 +91,13 @@ class NickDb(nickdb.NickDb):
         if revision == 0:
             self.__create_tables__(scope)
 
-            log.debug("Creating server account: nick='%s'" % config.NICKSERV)
+            log.debug("Creating server account: nick='%s'", config.NICKSERV)
 
             self.__create_user__(scope, nick=config.NICKSERV, password=self.__generate_password__(), is_admin=False)
 
             password = self.__generate_password__()
 
-            log.debug("Creating admin account: nick='admin', password='%s'" % password)
+            log.debug("Creating admin account: nick='admin', password='%s'", password)
 
             self.__create_user__(scope, nick="admin", password=password, is_admin=True)
 
@@ -100,7 +105,8 @@ class NickDb(nickdb.NickDb):
         elif revision > 1:
             raise Exception("Unsupported database version.")
 
-    def __get_revision__(self, scope):
+    @staticmethod
+    def __get_revision__(scope):
         revision = 0
 
         cur = scope.get_handle()
@@ -112,7 +118,8 @@ class NickDb(nickdb.NickDb):
 
         return revision
 
-    def __create_tables__(self, scope):
+    @staticmethod
+    def __create_tables__(scope):
         log.info("Creating initial database.")
 
         cur = scope.get_handle()
@@ -154,7 +161,8 @@ class NickDb(nickdb.NickDb):
 
         cur.execute("create index foobar on Message (Receiver, Timestamp)")
 
-    def __generate_password__(self):
+    @staticmethod
+    def __generate_password__():
         return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(8)])
 
     def __create_user__(self, scope, nick, password, is_admin):
@@ -227,7 +235,8 @@ class NickDb(nickdb.NickDb):
 
         return success
 
-    def __hash_password__(self, plain, salt):
+    @staticmethod
+    def __hash_password__(plain, salt):
         return sha256((plain + salt).encode("ascii")).hexdigest()
 
     @tolower(argname="nick")
@@ -325,7 +334,8 @@ class NickDb(nickdb.NickDb):
         timestamp = int(datetime.utcnow().timestamp())
 
         cur = scope.get_handle()
-        cur.execute("insert into Message (UUID, Sender, Receiver, Timestamp, Message) values (?, ?, ?, ?, ?)", (msgid, sender, receiver, timestamp, text))
+        cur.execute("insert into Message (UUID, Sender, Receiver, Timestamp, Message) values (?, ?, ?, ?, ?)",
+                    (msgid, sender, receiver, timestamp, text))
 
         return msgid
 
@@ -348,9 +358,9 @@ class NickDb(nickdb.NickDb):
                 for row in cur]
 
     @tolower(argname="nick")
-    def delete_message(self, scope, uuid):
+    def delete_message(self, scope, msgid):
         cur = scope.get_handle()
-        cur.execute("delete from Message where UUID=?", (uuid.hex,))
+        cur.execute("delete from Message where UUID=?", (msgid.hex,))
 
     @tolower(argname="nick")
     def delete(self, scope, nick):

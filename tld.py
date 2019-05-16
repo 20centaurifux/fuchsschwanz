@@ -29,7 +29,7 @@ class Encoder:
         self.__d = bytearray()
 
     def add_field(self, data):
-        if len(self.__d) > 0:
+        if self.__d:
             self.__d.append(1)
 
         self.__d.extend(data)
@@ -64,7 +64,7 @@ def encode_status_msg(category, message):
 
     e.add_field_str(category, append_null=False)
     e.add_field_str(message, append_null=True)
-    
+
     return e.encode()
 
 def encode_empty_cmd(T):
@@ -97,7 +97,7 @@ class Decoder:
     def write(self, data):
         self.__buffer.extend(data)
         self.__process__()
-    
+
     def __process__(self):
         length = len(self.__buffer)
 
@@ -120,7 +120,7 @@ def split(payload):
             field = []
         else:
             field.append(b)
-    
+
     fields.append(bytearray(field))
 
     return fields

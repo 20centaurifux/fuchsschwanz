@@ -405,6 +405,11 @@ class UserSession(Injected):
                     info.visibility = groups.Visibility.VISIBLE
                     info.volume = groups.Volume.QUIET
                     info.topic = config.IDLE_TOPIC
+                elif group == config.BOOT_GROUP:
+                    info.control = groups.Control.PUBLIC
+                    info.visibility = groups.Visibility.VISIBLE
+                    info.volume = groups.Volume.LOUD
+                    info.topic = config.BOOT_TOPIC
                 else:
                     info.control = groups.Control.MODERATED
                     info.moderator = session_id
@@ -611,9 +616,6 @@ class Group(Injected):
     def set_topic(self, session_id, topic):
         info = self.__get_group_if_can_moderate__(session_id)
 
-        if info.key in [config.DEFAULT_GROUP, config.IDLE_GROUP]:
-            raise TldErrorException("You can't change this group's topic.")
-
         if not validate.is_valid_topic(topic):
             raise TldErrorException("Topic is invalid.")
 
@@ -698,7 +700,7 @@ class Group(Injected):
                 if control == groups.Control.PUBLIC:
                     self.broker.to_channel(str(info), tld.encode_status_msg("Change", "%s made group public." % moderator))
                 else:
-                    self.broker.to_channel(str(info), tld.encode_status_msg("Change", "%s is now %s." % (moderator, str(control))))
+                    self.broker.to_channel(str(info), tld.encode_status_msg("Change", "%s is now %s." % (str(info), str(control))))
 
                 info.clear_talkers()
 
@@ -712,8 +714,6 @@ class Group(Injected):
         return found
 
     def __make_restricted__(self, session_id, info):
-        self.broker.to_channel(str(info), tld.encode_status_msg("Change", "Group is now restricted."))
-
         for sub_id in self.broker.get_subscribers(str(info)):
             sub_state = self.session.get(sub_id)
 
@@ -750,31 +750,6 @@ class Group(Injected):
 
             for part in parts[1:]:
                 self.broker.deliver(session_id, tld.encode_co_output("%s%s" % (" " * len(prefix), part), msgid))
-
-    def __get_group__(self, session_id):
-        state = self.session.get(session_id)
-
-        if not state.group:
-            raise TldErrorException("Login required.")
-
-        return self.groups.get(state.group)
-
-    def __get_group_if_can_moderate__(self, session_id):
-        info = self.__get_group__(session_id)
-
-        if info.control != groups.Control.PUBLIC:
-            log.debug("Group's moderator: %s", info.moderator)
-
-            if info.moderator != session_id:
-                log.debug("User isn't moderator, testing administrative privileges.")
-
-                with self.db_connection.enter_scope() as scope:
-                    state = self.session.get(session_id)
-
-                    if not self.nickdb.exists(scope, state.nick) or not self.nickdb.is_admin(scope, state.nick):
-                        raise TldErrorException("You aren't the moderator.")
-
-        return info
 
     def invite(self, session_id, invitee, mode="n", quiet=None, registered=None):
         quiet = bool(quiet)
@@ -895,6 +870,76 @@ class Group(Injected):
                                                           "%s%s can now talk." % (talker, " (registered only)" if registered else "")))
 
         self.groups.update(info)
+
+    def boot(self, session_id, nick):
+        info = self.__get_group_if_can_moderate__(session_id)
+
+        loggedin_session = self.session.find_nick(nick)
+
+        if loggedin_session == session_id:
+            raise TldErrorException("You cannot boot yourself.")
+
+        if not loggedin_session:
+            raise TldErrorException("%s is not in your group." % nick)
+
+        state = self.session.get(session_id)
+        loggedin_state = self.session.get(loggedin_session)
+
+        if loggedin_state.authenticated:
+            with self.db_connection.enter_scope() as scope:
+                if self.nickdb.is_admin(scope, nick):
+                    self.broker.deliver(loggedin_session, tld.encode_status_msg("Boot", "%s tried to boot you." % state.nick))
+
+                    raise TldErrorException("You cannot boot an admin!")
+
+        try:
+            info.cancel_nick(loggedin_state.nick)
+
+            self.broker.deliver(session_id, tld.encode_status_msg("FYI", "%s cancelled." % nick))
+        except KeyError: pass
+
+        try:
+            info.mute_nick(loggedin_state.nick)
+
+            self.broker.deliver(session_id, tld.encode_status_msg("FYI", "%s removed from talker list." % nick))
+        except KeyError: pass
+
+        self.broker.to_channel(info.key, tld.encode_status_msg("Boot", "%s was booted." % nick))
+        self.broker.deliver(loggedin_session, tld.encode_status_msg("Boot", "%s booted you." % state.nick))
+
+        INSTANCE(UserSession).join(loggedin_session, config.BOOT_GROUP)
+
+    def __get_group__(self, session_id):
+        state = self.session.get(session_id)
+
+        if not state.group:
+            raise TldErrorException("Login required.")
+
+        return self.groups.get(state.group)
+
+    def __get_group_if_can_moderate__(self, session_id):
+        info = self.__get_group__(session_id)
+
+        if self.__is_protected_group__(info.key):
+            raise TldErrorException("You aren't the moderator.")
+
+        if info.control != groups.Control.PUBLIC:
+            log.debug("Group's moderator: %s", info.moderator)
+
+            if info.moderator != session_id:
+                log.debug("User isn't moderator, testing administrative privileges.")
+
+                with self.db_connection.enter_scope() as scope:
+                    state = self.session.get(session_id)
+
+                    if not self.nickdb.exists(scope, state.nick) or not self.nickdb.is_admin(scope, state.nick):
+                        raise TldErrorException("You aren't the moderator.")
+
+        return info
+
+    @staticmethod
+    def __is_protected_group__(name):
+        return name.lower() in [p.lower() for p in [config.DEFAULT_GROUP, config.IDLE_GROUP, config.BOOT_GROUP]]
 
 class Registration(Injected):
     def __init__(self):

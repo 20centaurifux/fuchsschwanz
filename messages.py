@@ -433,6 +433,16 @@ class Talk:
 
         INSTANCE(commands.Group).talk(session_id, nick, **opts)
 
+@command("boot")
+class Boot:
+    @staticmethod
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if not fields[0]:
+            raise TldErrorException("Usage: /boot nick")
+
+        INSTANCE(commands.Group).boot(session_id, fields[0])
+
 COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, type) and "command" in cls.__dict__,
                                                  sys.modules[__name__].__dict__.values())}
 

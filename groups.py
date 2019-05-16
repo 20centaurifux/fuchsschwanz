@@ -136,7 +136,7 @@ class GroupInfo:
     def nick_invited(self, nick, authenticated):
         return self.__is_invited__(self.__nicks_inv, nick, authenticated)
 
-    def addresses_invited(self, loginid, ip, host, authenticated):
+    def address_invited(self, loginid, ip, host, authenticated):
         return self.__address_is_invited__(self.__addrs_inv, loginid, ip, host, authenticated)
 
     def cancel_nick(self, nick):

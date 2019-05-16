@@ -43,6 +43,9 @@ DEFAULT_GROUP = "1"
 IDLE_GROUP = "~IDLE~"
 IDLE_TOPIC = "Be Quiet and Drive (Far Away)"
 
+BOOT_GROUP = "~OUTLAWS~"
+BOOT_TOPIC = "Rebel Without a Cause"
+
 SQLITE_DB = "./icbd.db"
 
 ENABLE_UNSECURE_LOGIN = False

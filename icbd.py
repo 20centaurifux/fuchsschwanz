@@ -96,8 +96,8 @@ class Server(asyncore.dispatcher, di.Injected):
 
             scope.complete()
 
-MESSAGES = {cls.code: cls() for cls in filter(lambda cls: isinstance(cls, type) and "code" in cls.__dict__,
-                                              messages.__dict__.values())}
+MESSAGES = {cls.code: cls for cls in filter(lambda cls: isinstance(cls, type) and "code" in cls.__dict__,
+                                            messages.__dict__.values())}
 
 class Session(asyncore.dispatcher, di.Injected):
     def __init__(self, sock, address):

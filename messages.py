@@ -41,15 +41,15 @@ def code(id):
     return decorator
 
 def textfields(fn):
-    def wrapper(self, session_id, fields):
-        fn(self, session_id, [decode_ascii(b).strip(" \0") for b in fields])
+    def wrapper(session_id, fields):
+        fn(session_id, [decode_ascii(b).strip(" \0") for b in fields])
 
     return wrapper
 
 def catchtldexceptions(fn):
-    def wrapper(self, session_id, fields):
+    def wrapper(session_id, fields):
         try:
-            fn(self, session_id, fields)
+            fn(session_id, fields)
 
         except TldResponseException as ex:
             b = di.default_container.resolve(broker.Broker)
@@ -60,7 +60,7 @@ def catchtldexceptions(fn):
 
 def fieldslength(count=0, min=0, max=0):
     def decorator(fn):
-        def wrapper(self, session_id, fields):
+        def wrapper(session_id, fields):
             if count > 0 and len(fields) != count:
                 raise TldErrorException("Malformed message, wrong number of fields.")
 
@@ -70,7 +70,7 @@ def fieldslength(count=0, min=0, max=0):
             if max > min and len(fields) > max:
                 raise TldErrorException("Malformed message, too many fields.")
 
-            fn(self, session_id, fields)
+            fn(session_id, fields)
 
         return wrapper
 
@@ -78,7 +78,7 @@ def fieldslength(count=0, min=0, max=0):
 
 def arglength(at=0, min=0, max=0, display="Argument"):
     def decorator(fn):
-        def wrapper(self, session_id, fields):
+        def wrapper(session_id, fields):
             val = fields[at]
 
             if len(val) < min:
@@ -90,7 +90,7 @@ def arglength(at=0, min=0, max=0, display="Argument"):
             if max > min and len(val) > max:
                 raise TldErrorException("%s exceeds allowed maximum length (%d characters)." % (display, max))
 
-            fn(self, session_id, fields)
+            fn(session_id, fields)
 
         return wrapper
 
@@ -108,9 +108,10 @@ INSTANCE = Cache()
 
 @code("a")
 class Login:
+    @staticmethod
     @textfields
     @fieldslength(min=5, max=7)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         fn = None
         args = []
 
@@ -128,36 +129,41 @@ class Login:
 
 @code("b")
 class OpenMessage:
+    @staticmethod
     @textfields
     @catchtldexceptions
     @fieldslength(count=1)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.OpenMessage).send(session_id, fields[0])
 
 @command("g")
 class ChangeGroup:
+    @staticmethod
     @fieldslength(count=1)
     @arglength(display="Group name", min=validate.GROUP_MIN, max=validate.GROUP_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.UserSession).join(session_id, fields[0])
 
 @command("name")
 class Rename:
+    @staticmethod
     @fieldslength(count=1)
     @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.UserSession).rename(session_id, fields[0])
 
 @command("p")
 class Register:
+    @staticmethod
     @fieldslength(count=1)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).register(session_id, fields[0])
 
 @command("cp")
 class ChangePassword:
+    @staticmethod
     @fieldslength(count=1)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         msg_fields = fields[0].split(" ")
 
         if len(msg_fields) == 2:
@@ -172,75 +178,86 @@ def msgid(fields):
 
 @command("secure")
 class EnableSecurity:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).set_security_mode(session_id, enabled=True, msgid=msgid(fields))
 
 @command("nosecure")
 class DisableSecurity:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).set_security_mode(session_id, enabled=False, msgid=msgid(fields))
 
 @command("rname")
 class ChangeRealname:
+    @staticmethod
     @fieldslength(min=1, max=2)
     @arglength(display="Real Name", min=validate.REALNAME_MIN, max=validate.REALNAME_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "real_name", fields[0], msgid=msgid(fields))
 
 @command("addr")
 class ChangeAddress:
+    @staticmethod
     @fieldslength(min=1, max=2)
     @arglength(display="Address", min=validate.ADDRESS_MIN, max=validate.ADDRESS_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "address", fields[0], msgid=msgid(fields))
 
 @command("phone")
 class ChangePhone:
+    @staticmethod
     @fieldslength(min=1, max=2)
     @arglength(display="Phone Number", min=validate.PHONE_MIN, max=validate.PHONE_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "phone", fields[0], msgid=msgid(fields))
 
 @command("email")
 class ChangeEmail:
+    @staticmethod
     @fieldslength(min=1, max=2)
     @arglength(display="E-Mail address", min=validate.EMAIL_MIN, max=validate.EMAIL_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "email", fields[0], msgid=msgid(fields))
 
 @command("text")
 class ChangeText:
+    @staticmethod
     @fieldslength(min=1, max=2)
     @arglength(display="Text", min=validate.TEXT_MIN, max=validate.TEXT_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "text", fields[0], msgid=msgid(fields))
 
 @command("www")
 class ChangeWebsite:
+    @staticmethod
     @fieldslength(min=1, max=2)
     @arglength(display="WWW", min=validate.WWW_MIN, max=validate.WWW_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).change_field(session_id, "www", fields[0], msgid=msgid(fields))
 
 @command("delete")
 class DeleteNick:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).delete(session_id, fields[0], msgid=msgid(fields))
 
 @command("whois")
 class Whois:
+    @staticmethod
     @fieldslength(min=1, max=2)
     @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Registration).whois(session_id, fields[0], msgid=msgid(fields))
 
 @command("write")
 class WriteMessage:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         msg_fields = fields[0].split(" ", 1)
 
         if len(msg_fields) == 2:
@@ -252,8 +269,9 @@ class WriteMessage:
 
 @command("m")
 class WritePrivateMessage:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         msg_fields = fields[0].split(" ", 1)
 
         if len(msg_fields) == 2:
@@ -265,8 +283,9 @@ class WritePrivateMessage:
 
 @command("read")
 class ReadMessages:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         if fields[0]:
             raise TldErrorException("Usage: /read")
 
@@ -274,8 +293,9 @@ class ReadMessages:
 
 @command("whereis")
 class Whereis:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         if not fields[0]:
             raise TldErrorException("Usage: /whereis nick")
 
@@ -283,8 +303,9 @@ class Whereis:
 
 @command("beep")
 class Beep:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         if not fields[0]:
             raise TldErrorException("Usage: /beep nick")
 
@@ -292,8 +313,9 @@ class Beep:
 
 @command("nobeep")
 class NoBeep:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         if not fields[0]:
             raise TldErrorException("Usage: /nobeep on/off/verbose")
 
@@ -301,14 +323,16 @@ class NoBeep:
 
 @command("away")
 class Away:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Away).away(session_id, fields[0])
 
 @command("noaway")
 class NoAway:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         if fields[0]:
             raise TldErrorException("Usage: /noaway")
 
@@ -316,8 +340,9 @@ class NoAway:
 
 @command("w")
 class Userlist:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         if fields[0]:
             raise TldErrorException("Usage: /w")
 
@@ -325,8 +350,9 @@ class Userlist:
 
 @command("motd")
 class Motd:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         if fields[0]:
             raise TldErrorException("Usage: /motd")
 
@@ -334,9 +360,10 @@ class Motd:
 
 @command("topic")
 class ChangeTopic:
+    @staticmethod
     @fieldslength(count=1)
     @arglength(display="Topic", min=validate.TOPIC_MIN, max=validate.TOPIC_MAX)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         if fields[0]:
             INSTANCE(commands.Group).set_topic(session_id, fields[0])
         else:
@@ -344,8 +371,9 @@ class ChangeTopic:
 
 @command("status")
 class Status:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         if fields[0]:
             INSTANCE(commands.Group).change_status(session_id, fields[0])
         else:
@@ -353,8 +381,9 @@ class Status:
 
 @command("invite")
 class Invite:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         usage = "Usage: invite {-q} {-r} {-n nickname | -s address}"
 
         try:
@@ -370,8 +399,9 @@ class Invite:
 
 @command("cancel")
 class Cancel:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         usage = "Usage: cancel {-q} {-n nickname | -s address}"
 
         try:
@@ -387,8 +417,9 @@ class Cancel:
 
 @command("talk")
 class Talk:
+    @staticmethod
     @fieldslength(min=1, max=2)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         usage = "Usage: talk {-q} {-d} {-r} {-n nickname | -s address}"
 
         try:
@@ -407,10 +438,11 @@ COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, typ
 
 @code("h")
 class Command:
+    @staticmethod
     @textfields
     @catchtldexceptions
     @fieldslength(min=1, max=3)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         cmd = COMMANDS.get(fields[0])
 
         if not cmd:
@@ -420,8 +452,9 @@ class Command:
 
 @code("l")
 class Ping:
+    @staticmethod
     @textfields
     @catchtldexceptions
     @fieldslength(min=0, max=1)
-    def process(self, session_id, fields):
+    def process(session_id, fields):
         INSTANCE(commands.Ping).ping(session_id, fields[0] if len(fields) == 1 else "")

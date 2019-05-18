@@ -93,13 +93,13 @@ class NickDb(nickdb.NickDb):
 
             log.debug("Creating server account: nick='%s'", config.NICKSERV)
 
-            self.__create_user__(scope, nick=config.NICKSERV, password=self.__generate_password__(), is_admin=False)
+            self.__create_user__(scope, nick=config.NICKSERV, password=self.__generate_password__(), is_admin=False, mbox_limit=0)
 
             password = self.__generate_password__()
 
             log.debug("Creating admin account: nick='admin', password='%s'", password)
 
-            self.__create_user__(scope, nick="admin", password=password, is_admin=True)
+            self.__create_user__(scope, nick="admin", password=password, is_admin=True, mbox_limit=config.DEFAULT_MBOX_LIMIT)
 
             print("Initial admin created with password '%s'." % password)
         elif revision > 1:
@@ -145,6 +145,7 @@ class NickDb(nickdb.NickDb):
                          LastLoginHost varchar(32),
                          Signon integer,
                          Signoff integer,
+                         MBoxLimit integer not null default 0,
                          primary key (Name))""")
 
         cur.execute("""create table Message (
@@ -165,12 +166,13 @@ class NickDb(nickdb.NickDb):
     def __generate_password__():
         return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(8)])
 
-    def __create_user__(self, scope, nick, password, is_admin):
+    def __create_user__(self, scope, nick, password, is_admin, mbox_limit):
         self.create(scope, nick)
 
         self.set_admin(scope, nick, is_admin)
         self.set_password(scope, nick, password)
         self.set_secure(scope, nick, True)
+        self.set_mbox_limit(scope, nick, mbox_limit)
 
     @tolower(argname="nick")
     def create(self, scope, nick):
@@ -329,27 +331,40 @@ class NickDb(nickdb.NickDb):
         cur.execute("update Nick set Signoff=? where Name=?", (int(timestamp.timestamp()), nick))
 
     @tolower(argname="nick")
-    def add_message(self, scope, receiver, sender, text):
+    def get_mbox_limit(self, scope, nick):
+        cur = scope.get_handle()
+        cur.execute("select MBoxLimit from Nick where Name=?", (nick,))
+
+        row = cur.fetchone()
+
+        return int(row[0])
+
+    def set_mbox_limit(self, scope, nick, limit):
+        cur = scope.get_handle()
+        cur.execute("update Nick set MBoxLimit=? where Name=?", (limit, nick))
+
+    @tolower(argname="nick")
+    def add_message(self, scope, nick, sender, text):
         msgid = uuid.uuid4().hex
         timestamp = int(datetime.utcnow().timestamp())
 
         cur = scope.get_handle()
         cur.execute("insert into Message (UUID, Sender, Receiver, Timestamp, Message) values (?, ?, ?, ?, ?)",
-                    (msgid, sender, receiver, timestamp, text))
+                    (msgid, sender, nick, timestamp, text))
 
         return msgid
 
     @tolower(argname="nick")
-    def count_messages(self, scope, receiver):
+    def count_messages(self, scope, nick):
         cur = scope.get_handle()
-        cur.execute("select count(UUID) from Message where Receiver=?", (receiver,))
+        cur.execute("select count(UUID) from Message where Receiver=?", (nick,))
 
         return int(cur.fetchone()[0])
 
     @tolower(argname="nick")
-    def get_messages(self, scope, receiver):
+    def get_messages(self, scope, nick):
         cur = scope.get_handle()
-        cur.execute("select * from Message where Receiver=?", (receiver,))
+        cur.execute("select * from Message where Receiver=?", (nick,))
 
         return [nickdb.Message(uuid=uuid.UUID(row["UUID"]),
                                sender=row["Sender"],
@@ -357,7 +372,6 @@ class NickDb(nickdb.NickDb):
                                text=row["Message"])
                 for row in cur]
 
-    @tolower(argname="nick")
     def delete_message(self, scope, msgid):
         cur = scope.get_handle()
         cur.execute("delete from Message where UUID=?", (msgid.hex,))

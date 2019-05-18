@@ -95,13 +95,19 @@ class NickDb:
     def set_signoff(self, scope, nick, timestamp):
         raise NotImplementedError
 
-    def add_message(self, scope, receiver, sender, text):
+    def get_mbox_limit(self, scope, nick):
         raise NotImplementedError
 
-    def count_messages(self, scope, receiver):
+    def set_mbox_limit(self, scope, nick, limit):
         raise NotImplementedError
 
-    def get_messages(self, scope, receiver):
+    def add_message(self, scope, nick, sender, text):
+        raise NotImplementedError
+
+    def count_messages(self, scope, nick):
+        raise NotImplementedError
+
+    def get_messages(self, scope, nick):
         raise NotImplementedError
 
     def delete_message(self, scope, msgid):

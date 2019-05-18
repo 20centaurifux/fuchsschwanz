@@ -975,6 +975,7 @@ class Registration(Injected):
                 self.nickdb.set_secure(scope, state.nick, True)
                 self.nickdb.set_admin(scope, state.nick, False)
                 self.nickdb.set_password(scope, state.nick, password)
+                self.nickdb.set_mbox_limit(scope, state.nick, config.DEFAULT_MBOX_LIMIT)
 
                 registered = True
 
@@ -1006,12 +1007,13 @@ class Registration(Injected):
 
             if self.nickdb.exists(scope, state.nick):
                 count = self.nickdb.count_messages(scope, state.nick)
+                limit = self.nickdb.get_mbox_limit(scope, state.nick)
 
                 if count > 0:
                     self.broker.deliver(session_id,
                                         tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
 
-                if count >= config.MBOX_QUOTAS.get(state.nick, config.MBOX_DEFAULT_LIMIT):
+                if count >= limit:
                     self.broker.deliver(session_id, tld.encode_status_msg("Message", "User mailbox is full."))
 
     def change_password(self, session_id, old_pwd, new_pwd):
@@ -1236,10 +1238,9 @@ class MessageBox(Injected):
                 raise TldErrorException("%s is not registered." % receiver)
 
             count = self.nickdb.count_messages(scope, receiver) + 1
+            limit = self.nickdb.get_mbox_limit(scope, receiver)
 
             loggedin_session = self.session.find_nick(receiver)
-
-            limit = config.MBOX_QUOTAS.get(receiver, config.MBOX_DEFAULT_LIMIT)
 
             if count > limit:
                 if loggedin_session:

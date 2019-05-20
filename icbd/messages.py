@@ -24,12 +24,22 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 import sys
-import commands
 import di
 import broker
 import validate
 import tld
-from utils import Cache, decode_ascii
+from actions import ACTION
+import actions.away
+import actions.beep
+import actions.group
+import actions.messagebox
+import actions.motd
+import actions.openmessage
+import actions.ping
+import actions.privatemessage
+import actions.registration
+import actions.usersession
+from textutils import decode_ascii
 from exception import TldErrorException, TldResponseException
 
 def code(id):
@@ -104,8 +114,6 @@ def command(name):
 
     return decorator
 
-INSTANCE = Cache()
-
 @code("a")
 class Login:
     @staticmethod
@@ -116,10 +124,10 @@ class Login:
         args = []
 
         if fields[3] == "login":
-            fn = INSTANCE(commands.UserSession).login
+            fn = ACTION(actions.usersession.UserSession).login
             args = [session_id, fields[0], fields[1], fields[4] if len(fields) >= 5 else "", fields[2]]
         elif fields[3] == "w":
-            fn = INSTANCE(commands.UserSession).list_and_quit
+            fn = ACTION(actions.usersession.UserSession).list_and_quit
             args = [session_id]
 
         if not fn:
@@ -134,7 +142,7 @@ class OpenMessage:
     @catchtldexceptions
     @fieldslength(count=1)
     def process(session_id, fields):
-        INSTANCE(commands.OpenMessage).send(session_id, fields[0])
+        ACTION(actions.openmessage.OpenMessage).send(session_id, fields[0])
 
 @command("g")
 class ChangeGroup:
@@ -142,7 +150,7 @@ class ChangeGroup:
     @fieldslength(count=1)
     @arglength(display="Group name", min=validate.GROUP_MIN, max=validate.GROUP_MAX)
     def process(session_id, fields):
-        INSTANCE(commands.UserSession).join(session_id, fields[0])
+        ACTION(actions.usersession.UserSession).join(session_id, fields[0])
 
 @command("name")
 class Rename:
@@ -150,14 +158,14 @@ class Rename:
     @fieldslength(count=1)
     @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(session_id, fields):
-        INSTANCE(commands.UserSession).rename(session_id, fields[0])
+        ACTION(actions.usersession.UserSession).rename(session_id, fields[0])
 
 @command("p")
 class Register:
     @staticmethod
     @fieldslength(count=1)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).register(session_id, fields[0])
+        ACTION(actions.registration.Registration).register(session_id, fields[0])
 
 @command("cp")
 class ChangePassword:
@@ -169,7 +177,7 @@ class ChangePassword:
         if len(msg_fields) == 2:
             old_pwd, new_pwd = msg_fields
 
-            INSTANCE(commands.Registration).change_password(session_id, old_pwd, new_pwd)
+            ACTION(actions.registration.Registration).change_password(session_id, old_pwd, new_pwd)
         else:
             raise TldErrorException("Usage: /cp old_password new_password")
 
@@ -181,14 +189,14 @@ class EnableSecurity:
     @staticmethod
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).set_security_mode(session_id, enabled=True, msgid=msgid(fields))
+        ACTION(actions.registration.Registration).set_security_mode(session_id, enabled=True, msgid=msgid(fields))
 
 @command("nosecure")
 class DisableSecurity:
     @staticmethod
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).set_security_mode(session_id, enabled=False, msgid=msgid(fields))
+        ACTION(actions.registration.Registration).set_security_mode(session_id, enabled=False, msgid=msgid(fields))
 
 @command("rname")
 class ChangeRealname:
@@ -196,7 +204,7 @@ class ChangeRealname:
     @fieldslength(min=1, max=2)
     @arglength(display="Real Name", min=validate.REALNAME_MIN, max=validate.REALNAME_MAX)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).change_field(session_id, "real_name", fields[0], msgid=msgid(fields))
+        ACTION(actions.registration.Registration).change_field(session_id, "real_name", fields[0], msgid=msgid(fields))
 
 @command("addr")
 class ChangeAddress:
@@ -204,7 +212,7 @@ class ChangeAddress:
     @fieldslength(min=1, max=2)
     @arglength(display="Address", min=validate.ADDRESS_MIN, max=validate.ADDRESS_MAX)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).change_field(session_id, "address", fields[0], msgid=msgid(fields))
+        ACTION(actions.registration.Registration).change_field(session_id, "address", fields[0], msgid=msgid(fields))
 
 @command("phone")
 class ChangePhone:
@@ -212,7 +220,7 @@ class ChangePhone:
     @fieldslength(min=1, max=2)
     @arglength(display="Phone Number", min=validate.PHONE_MIN, max=validate.PHONE_MAX)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).change_field(session_id, "phone", fields[0], msgid=msgid(fields))
+        ACTION(actions.registration.Registration).change_field(session_id, "phone", fields[0], msgid=msgid(fields))
 
 @command("email")
 class ChangeEmail:
@@ -220,7 +228,7 @@ class ChangeEmail:
     @fieldslength(min=1, max=2)
     @arglength(display="E-Mail address", min=validate.EMAIL_MIN, max=validate.EMAIL_MAX)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).change_field(session_id, "email", fields[0], msgid=msgid(fields))
+        ACTION(actions.registration.Registration).change_field(session_id, "email", fields[0], msgid=msgid(fields))
 
 @command("text")
 class ChangeText:
@@ -228,7 +236,7 @@ class ChangeText:
     @fieldslength(min=1, max=2)
     @arglength(display="Text", min=validate.TEXT_MIN, max=validate.TEXT_MAX)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).change_field(session_id, "text", fields[0], msgid=msgid(fields))
+        ACTION(actions.registration.Registration).change_field(session_id, "text", fields[0], msgid=msgid(fields))
 
 @command("www")
 class ChangeWebsite:
@@ -236,14 +244,14 @@ class ChangeWebsite:
     @fieldslength(min=1, max=2)
     @arglength(display="WWW", min=validate.WWW_MIN, max=validate.WWW_MAX)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).change_field(session_id, "www", fields[0], msgid=msgid(fields))
+        ACTION(actions.registration.Registration).change_field(session_id, "www", fields[0], msgid=msgid(fields))
 
 @command("delete")
 class DeleteNick:
     @staticmethod
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).delete(session_id, fields[0], msgid=msgid(fields))
+        ACTION(actions.registration.Registration).delete(session_id, fields[0], msgid=msgid(fields))
 
 @command("whois")
 class Whois:
@@ -251,7 +259,7 @@ class Whois:
     @fieldslength(min=1, max=2)
     @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(session_id, fields):
-        INSTANCE(commands.Registration).whois(session_id, fields[0], msgid=msgid(fields))
+        ACTION(actions.registration.Registration).whois(session_id, fields[0], msgid=msgid(fields))
 
 @command("write")
 class WriteMessage:
@@ -265,7 +273,7 @@ class WriteMessage:
         else:
             raise TldErrorException("Usage: /write nick message text")
 
-        INSTANCE(commands.MessageBox).send_message(session_id, receiver, message)
+        ACTION(actions.messagebox.MessageBox).send_message(session_id, receiver, message)
 
 @command("m")
 class WritePrivateMessage:
@@ -279,7 +287,7 @@ class WritePrivateMessage:
         else:
             raise TldErrorException("Usage: /m nick message text")
 
-        INSTANCE(commands.PrivateMessage).send(session_id, receiver, message)
+        ACTION(actions.privatemessage.PrivateMessage).send(session_id, receiver, message)
 
 @command("read")
 class ReadMessages:
@@ -289,7 +297,7 @@ class ReadMessages:
         if fields[0]:
             raise TldErrorException("Usage: /read")
 
-        INSTANCE(commands.MessageBox).read_messages(session_id, msgid=msgid(fields))
+        ACTION(actions.messagebox.MessageBox).read_messages(session_id, msgid=msgid(fields))
 
 @command("whereis")
 class Whereis:
@@ -299,7 +307,7 @@ class Whereis:
         if not fields[0]:
             raise TldErrorException("Usage: /whereis nick")
 
-        INSTANCE(commands.UserSession).whereis(session_id, fields[0], msgid(fields))
+        ACTION(actions.usersession.UserSession).whereis(session_id, fields[0], msgid(fields))
 
 @command("beep")
 class Beep:
@@ -309,7 +317,7 @@ class Beep:
         if not fields[0]:
             raise TldErrorException("Usage: /beep nick")
 
-        INSTANCE(commands.Beep).beep(session_id, fields[0])
+        ACTION(actions.beep.Beep).beep(session_id, fields[0])
 
 @command("nobeep")
 class NoBeep:
@@ -319,14 +327,14 @@ class NoBeep:
         if not fields[0]:
             raise TldErrorException("Usage: /nobeep on/off/verbose")
 
-        INSTANCE(commands.Beep).set_mode(session_id, fields[0])
+        ACTION(actions.beep.Beep).set_mode(session_id, fields[0])
 
 @command("away")
 class Away:
     @staticmethod
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        INSTANCE(commands.Away).away(session_id, fields[0])
+        ACTION(actions.away.Away).away(session_id, fields[0])
 
 @command("noaway")
 class NoAway:
@@ -336,7 +344,7 @@ class NoAway:
         if fields[0]:
             raise TldErrorException("Usage: /noaway")
 
-        INSTANCE(commands.Away).noaway(session_id)
+        ACTION(actions.away.Away).noaway(session_id)
 
 @command("w")
 class Userlist:
@@ -346,7 +354,7 @@ class Userlist:
         if fields[0]:
             raise TldErrorException("Usage: /w")
 
-        INSTANCE(commands.UserSession).list(session_id, msgid(fields))
+        ACTION(actions.usersession.UserSession).list(session_id, msgid(fields))
 
 @command("motd")
 class Motd:
@@ -356,7 +364,7 @@ class Motd:
         if fields[0]:
             raise TldErrorException("Usage: /motd")
 
-        INSTANCE(commands.Motd).receive(session_id, msgid(fields))
+        ACTION(actions.motd.Motd).receive(session_id, msgid(fields))
 
 @command("topic")
 class ChangeTopic:
@@ -365,9 +373,9 @@ class ChangeTopic:
     @arglength(display="Topic", min=validate.TOPIC_MIN, max=validate.TOPIC_MAX)
     def process(session_id, fields):
         if fields[0]:
-            INSTANCE(commands.Group).set_topic(session_id, fields[0])
+            ACTION(actions.group.Group).set_topic(session_id, fields[0])
         else:
-            INSTANCE(commands.Group).topic(session_id, msgid(fields))
+            ACTION(actions.group.Group).topic(session_id, msgid(fields))
 
 @command("status")
 class Status:
@@ -375,9 +383,9 @@ class Status:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
-            INSTANCE(commands.Group).change_status(session_id, fields[0])
+            ACTION(actions.group.Group).change_status(session_id, fields[0])
         else:
-            INSTANCE(commands.Group).status(session_id, msgid(fields))
+            ACTION(actions.group.Group).status(session_id, msgid(fields))
 
 @command("invite")
 class Invite:
@@ -395,7 +403,7 @@ class Invite:
         except:
             raise TldErrorException(usage)
 
-        INSTANCE(commands.Group).invite(session_id, nick, **opts)
+        ACTION(actions.group.Group).invite(session_id, nick, **opts)
 
 @command("cancel")
 class Cancel:
@@ -410,10 +418,10 @@ class Cancel:
             if not nick:
                 raise TldErrorException(usage)
 
-        except Exception as ex:
+        except:
             raise TldErrorException(usage)
 
-        INSTANCE(commands.Group).cancel(session_id, nick, **opts)
+        ACTION(actions.group.Group).cancel(session_id, nick, **opts)
 
 @command("talk")
 class Talk:
@@ -431,7 +439,7 @@ class Talk:
         except:
             raise TldErrorException(usage)
 
-        INSTANCE(commands.Group).talk(session_id, nick, **opts)
+        ACTION(actions.group.Group).talk(session_id, nick, **opts)
 
 @command("boot")
 class Boot:
@@ -441,7 +449,7 @@ class Boot:
         if not fields[0]:
             raise TldErrorException("Usage: /boot nick")
 
-        INSTANCE(commands.Group).boot(session_id, fields[0])
+        ACTION(actions.group.Group).boot(session_id, fields[0])
 
 COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, type) and "command" in cls.__dict__,
                                                  sys.modules[__name__].__dict__.values())}
@@ -467,4 +475,4 @@ class Ping:
     @catchtldexceptions
     @fieldslength(min=0, max=1)
     def process(session_id, fields):
-        INSTANCE(commands.Ping).ping(session_id, fields[0] if len(fields) == 1 else "")
+        ACTION(actions.ping.Ping).ping(session_id, fields[0] if len(fields) == 1 else "")

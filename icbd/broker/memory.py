@@ -23,50 +23,20 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from logger import log
-from utils import tolower
+from logging import Logger
+import broker
+import di
+from textutils import tolower
 
-class Broker:
-    def add_session(self, session_id):
-        raise NotImplementedError
-
-    def session_exists(self, session_id):
-        raise NotImplementedError
-
-    def remove_session(self, session_id):
-        raise NotImplementedError
-
-    def join(self, session_id, channel):
-        raise NotImplementedError
-
-    def part(self, session_id, channel):
-        raise NotImplementedError
-
-    def get_subscribers(self, channel):
-        raise NotImplementedError
-
-    def get_channels(self, session_id):
-        raise NotImplementedError
-
-    def deliver(self, receiver, message):
-        raise NotImplementedError
-
-    def to_channel(self, channel, message):
-        raise NotImplementedError
-
-    def to_channel_from(self, sender, channel, message):
-        raise NotImplementedError
-
-    def broadcast(self, message):
-        raise NotImplementedError
-
-    def pop(self, session_id):
-        raise NotImplementedError
-
-class Memory(Broker):
+class Broker(broker.Broker, di.Injected):
     def __init__(self):
+        super(Broker, self).__init__()
+
         self.__sessions = {}
         self.__channels = {}
+
+    def inject(self, log: Logger):
+        self.log = log
 
     def add_session(self, session_id):
         added = session_id not in self.__sessions
@@ -120,7 +90,7 @@ class Memory(Broker):
         if receiver in self.__sessions:
             self.__sessions[receiver].append(message)
         else:
-            log.warning("Couldn't deliver message, session not registered.")
+            self.log.warning("Couldn't deliver message, session not registered.")
 
     @tolower(argname="channel")
     def to_channel_from(self, sender, channel, message):

@@ -26,6 +26,6 @@ The project is at a *very* early stage. The following features are implemented:
 
 You need Python 3.7 to start the server.
 
-	$ python3.7 ./icbd.py
+	$ ./run.sh
 
-Configure network address & database path in the ./config.py file.
+Configure network address & database path in the ./icbd/data/config.json file.

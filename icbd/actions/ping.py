@@ -23,19 +23,12 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import logging
-import config
+from actions import Injected
+import tld
 
-log = None
+class Ping(Injected):
+    def ping(self, session_id, message_id=""):
+        state = self.session.get(session_id)
 
-if log is None:
-    formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(module)s - %(message)s')
-
-    handler = logging.StreamHandler()
-    handler.setFormatter(formatter)
-    handler.setLevel(config.LOG_LEVEL)
-
-    log = logging.getLogger('')
-
-    log.setLevel(logging.DEBUG)
-    log.addHandler(handler)
+        if state.group:
+            self.broker.deliver(session_id, tld.encode_str("m", message_id))

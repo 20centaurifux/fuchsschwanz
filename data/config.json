@@ -1,0 +1,29 @@
+{
+	"server":
+	{
+		"address": "127.0.0.1",
+		"port": 7326,
+		"hostname": "localhost",
+		"unsecureLogin": false
+	},
+	"motd":
+	{
+		"filename": "motd"
+	},
+	"logging":
+	{
+		"verbosity": 4
+	},
+	"mbox":
+	{
+		"limit": 20
+	},
+	"timeouts":
+	{
+		"awayMessage": 30.0
+	},
+	"database":
+	{
+		"filename": "icbd.db"
+	}
+}

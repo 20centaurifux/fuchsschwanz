@@ -23,33 +23,32 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import logging
+from dataclasses import dataclass
+import copy
+from core import Verbosity
 
-SERVER_ADDRESS = ("127.0.0.1", 7326)
+@dataclass
+class Config:
+    server_address: str = "127.0.0.1"
+    server_port: int = 7326
+    server_hostname: str = "localhost"
+    server_unsecure_login: bool = False
+    motd_filename: str = "./motd"
+    logging_verbosity: Verbosity = Verbosity.INFO
+    mbox_limit: int = 20
+    timeouts_away_message: float = 30.0
+    database_filename: str = None
 
-HOSTNAME = "localhost"
-SERVER_ID = "localhost v0.1.0"
+def transform_map(m):
+    m = copy.deepcopy(m)
 
-NICKSERV = "server"
+    try:
+        m["logging_verbosity"] = Verbosity(m["logging_verbosity"])
+    except KeyError: pass
 
-#MOTD_PATH = "/usr/bin/fortune"
-MOTD_PATH = "./motd"
+    return m
 
-LOG_LEVEL = logging.DEBUG
+def from_mapping(m):
+    m = transform_map(m)
 
-DEFAULT_TOPIC = "If You Don't See the Fnord it Can't Eat You"
-DEFAULT_GROUP = "1"
-
-IDLE_GROUP = "~IDLE~"
-IDLE_TOPIC = "Be Quiet and Drive (Far Away)"
-
-BOOT_GROUP = "~OUTLAWS~"
-BOOT_TOPIC = "Rebel Without a Cause"
-
-SQLITE_DB = "./icbd.db"
-
-ENABLE_UNSECURE_LOGIN = False
-
-DEFAULT_MBOX_LIMIT = 20
-
-AWAY_MSG_TIMEOUT = 30.0
+    return Config(**m)

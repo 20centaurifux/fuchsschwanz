@@ -23,39 +23,40 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import os
-import subprocess
-import config
 
-class Stdout:
-    def __init__(self, filename):
-        self.__filename = filename
-        self.__stdout = ""
+class Broker:
+    def add_session(self, session_id):
+        raise NotImplementedError
 
-    def __enter__(self):
-        result = subprocess.run(self.__filename, stdout=subprocess.PIPE)
+    def session_exists(self, session_id):
+        raise NotImplementedError
 
-        if result.returncode == 0:
-            self.__stdout = result.stdout.decode("ascii", "ignore")
+    def remove_session(self, session_id):
+        raise NotImplementedError
 
-        return self
+    def join(self, session_id, channel):
+        raise NotImplementedError
 
-    def __exit__(self, type, value, traceback): pass
+    def part(self, session_id, channel):
+        raise NotImplementedError
 
-    def __iter__(self):
-        for l in self.__stdout.split("\n")[:-1]:
-            yield l
+    def get_subscribers(self, channel):
+        raise NotImplementedError
 
-def read_motd():
-    reader = None
+    def get_channels(self, session_id):
+        raise NotImplementedError
 
-    if os.access(config.MOTD_PATH, os.X_OK):
-        reader = Stdout(config.MOTD_PATH)
-    else:
-        reader = open(config.MOTD_PATH)
+    def deliver(self, receiver, message):
+        raise NotImplementedError
 
-    return reader
+    def to_channel(self, channel, message):
+        raise NotImplementedError
 
-def load():
-    with read_motd() as f:
-        return [l.rstrip() for l in f]
+    def to_channel_from(self, sender, channel, message):
+        raise NotImplementedError
+
+    def broadcast(self, message):
+        raise NotImplementedError
+
+    def pop(self, session_id):
+        raise NotImplementedError

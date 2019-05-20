@@ -29,11 +29,12 @@ import secrets
 import string
 from hashlib import sha256
 from datetime import datetime
+from logging import Logger
 import database
 import nickdb
-import config
-from logger import log
-from utils import tolower
+import core
+import di
+from textutils import tolower
 
 class TransactionScope(database.TransactionScope):
     def __init__(self, db):
@@ -84,24 +85,30 @@ class Connection(database.Connection):
         if self.__conn is not None:
             self.__conn.close()
 
-class NickDb(nickdb.NickDb):
+class NickDb(nickdb.NickDb, di.Injected):
+    def __init__(self):
+        super(NickDb, self).__init__()
+
+    def inject(self, log: Logger):
+        self.log = log
+
     def setup(self, scope):
         revision = self.__get_revision__(scope)
 
         if revision == 0:
             self.__create_tables__(scope)
 
-            log.debug("Creating server account: nick='%s'", config.NICKSERV)
+            self.log.debug("Creating server account: nick='%s'", core.NICKSERV)
 
-            self.__create_user__(scope, nick=config.NICKSERV, password=self.__generate_password__(), is_admin=False, mbox_limit=0)
+            self.__create_user__(scope, nick=core.NICKSERV, password=self.__generate_password__(), is_admin=False)
 
             password = self.__generate_password__()
 
-            log.debug("Creating admin account: nick='admin', password='%s'", password)
+            self.log.debug("Creating admin account: nick='admin'")
 
-            self.__create_user__(scope, nick="admin", password=password, is_admin=True, mbox_limit=config.DEFAULT_MBOX_LIMIT)
+            self.__create_user__(scope, nick="admin", password=password, is_admin=True)
 
-            print("Initial admin created with password '%s'." % password)
+            self.log.info("Initial admin created with password '%s'." % password)
         elif revision > 1:
             raise Exception("Unsupported database version.")
 
@@ -118,9 +125,8 @@ class NickDb(nickdb.NickDb):
 
         return revision
 
-    @staticmethod
-    def __create_tables__(scope):
-        log.info("Creating initial database.")
+    def __create_tables__(self, scope):
+        self.log.info("Creating initial database.")
 
         cur = scope.get_handle()
 
@@ -166,13 +172,12 @@ class NickDb(nickdb.NickDb):
     def __generate_password__():
         return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(8)])
 
-    def __create_user__(self, scope, nick, password, is_admin, mbox_limit):
+    def __create_user__(self, scope, nick, password, is_admin):
         self.create(scope, nick)
 
         self.set_admin(scope, nick, is_admin)
         self.set_password(scope, nick, password)
         self.set_secure(scope, nick, True)
-        self.set_mbox_limit(scope, nick, mbox_limit)
 
     @tolower(argname="nick")
     def create(self, scope, nick):

@@ -23,32 +23,59 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import config
-import tld
-from utils import decode_ascii
-from logger import log
+from dataclasses import dataclass
+from enum import Enum
+from datetime import datetime
+from typing import NewType
+from timer import Timer, TimeoutTable
 
-def transform(type_id, payload):
-    # tranform private message to server to command:
-    if type_id == "h":
-        fields = [decode_ascii(f).strip() for f in tld.split(payload)]
+class BeepMode(Enum):
+    OFF = 0
+    ON = 1
+    VERBOSE = 2
 
-        if len(fields) >= 2 and fields[0] == "m":
-            args = [arg.rstrip(" \0") for arg in fields[1].split(" ", 2)]
+@dataclass
+class State:
+    loginid: str = None
+    ip: str = None
+    host: str = None
+    nick: str = None
+    group: str = None
+    authenticated: bool = False
+    signon: datetime = datetime.utcnow()
+    t_recv: Timer = None
+    beep: BeepMode = BeepMode.ON
+    away: str = None
+    t_away: Timer = None
 
-            if args[0] == config.NICKSERV:
-                type_id = "h"
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            setattr(self, k, v)
 
-                payload = bytearray()
+    @property
+    def address(self):
+        return "%s@%s" % (self.loginid, self.host)
 
-                payload.extend(args[1].encode())
-                payload.append(1)
+AwayTimeoutTable = NewType("AwayTimeoutTable", TimeoutTable)
 
-                if len(args) == 3:
-                    payload.extend(args[2].encode())
+class Store:
+    def new(self, **kwargs):
+        raise NotImplementedError
 
-                payload.append(0)
+    def get(self, id):
+        raise NotImplementedError
 
-                log.debug("Message transformed: type='%s', command='%s'", type_id, args[1])
+    def get_nicks(self):
+        raise NotImplementedError
 
-    return type_id, payload
+    def update(self, id, **kwargs):
+        raise NotImplementedError
+
+    def set(self, id, state):
+        raise NotImplementedError
+
+    def delete(self, id):
+        raise NotImplementedError
+
+    def find_nick(self, nick):
+        raise NotImplementedError

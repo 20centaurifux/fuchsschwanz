@@ -205,19 +205,3 @@ class Store:
 
     def delete(self, id):
         raise NotImplementedError
-
-class MemoryStore(Store):
-    def __init__(self):
-        self.__m = {}
-
-    def get(self, name):
-        return self.__m.get(name.lower(), GroupInfo(display_name=name))
-
-    def get_groups(self):
-        return sorted([g for g in self.__m.values()], key=lambda g: str(g))
-
-    def update(self, info):
-        self.__m[info.key] = info
-
-    def delete(self, id):
-        del self.__m[id]

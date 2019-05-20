@@ -23,72 +23,17 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from dataclasses import dataclass
-from enum import Enum
 from secrets import token_hex
-from datetime import datetime
-from typing import NewType
-from utils import Timer, TimeoutTable
+import session
 
-class BeepMode(Enum):
-    OFF = 0
-    ON = 1
-    VERBOSE = 2
-
-@dataclass
-class State:
-    loginid: str = None
-    ip: str = None
-    host: str = None
-    nick: str = None
-    group: str = None
-    authenticated: bool = False
-    signon: datetime = datetime.utcnow()
-    t_recv: Timer = None
-    beep: BeepMode = BeepMode.ON
-    away: str = None
-    t_away: Timer = None
-
-    def __init__(self, **kwargs):
-        for k, v in kwargs.items():
-            setattr(self, k, v)
-
-    @property
-    def address(self):
-        return "%s@%s" % (self.loginid, self.host)
-
-AwayTimeoutTable = NewType("AwayTimeoutTable", TimeoutTable)
-
-class Store:
-    def new(self, **kwargs):
-        raise NotImplementedError
-
-    def get(self, id):
-        raise NotImplementedError
-
-    def get_nicks(self):
-        raise NotImplementedError
-
-    def update(self, id, **kwargs):
-        raise NotImplementedError
-
-    def set(self, id, state):
-        raise NotImplementedError
-
-    def delete(self, id):
-        raise NotImplementedError
-
-    def find_nick(self, nick):
-        raise NotImplementedError
-
-class MemoryStore(Store):
+class Store(session.Store):
     def __init__(self):
         self.__m = {}
 
     def new(self, **kwargs):
         id = token_hex(20)
 
-        self.__m[id] = State(**kwargs)
+        self.__m[id] = session.State(**kwargs)
 
         return id
 

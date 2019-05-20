@@ -23,35 +23,44 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+import logging
 import asyncore
 import socket
 import traceback
 from datetime import datetime
 from getpass import getuser
-import commands
-from logger import log
+import getopt
+import sys
+import os
+import core
 import config
-import utils
-import tld
-import messages
-import exception
+import config.json
+import log
 import di
-import broker
 import session
-import groups
+import session.memory
+import broker
+import broker.memory
+import group
+import group.memory
 import database
 import nickdb
-import sqlite
-from transform import transform
+import nickdb.sqlite
+import timer
+from actions import ACTION
+import actions.usersession
+import tld
+import messages
+from transform import Transform
 
-PROTOCOL_VERSION = "1"
+import exception
 
 class Server(asyncore.dispatcher, di.Injected):
     def __init__(self, address):
         asyncore.dispatcher.__init__(self)
         di.Injected.__init__(self)
 
-        log.info("Listening on %s:%d", *address)
+        self.__log.info("Listening on %s:%d", *address)
 
         self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
         self.set_reuse_addr()
@@ -62,9 +71,13 @@ class Server(asyncore.dispatcher, di.Injected):
         self.__signon_server__()
 
     def inject(self,
+               log: logging.Logger,
+               config: config.Config,
                store: session.Store,
                db_connection: database.Connection,
                nickdb: nickdb.NickDb):
+        self.__log = log
+        self.__config = config
         self.__session_store = store
         self.__db_connection = db_connection
         self.__nickdb = nickdb
@@ -73,7 +86,7 @@ class Server(asyncore.dispatcher, di.Injected):
         client_info = self.accept()
 
         if client_info is not None:
-            log.info("Client connected: %s", client_info[1])
+            self.__log.info("Client connected: %s", client_info[1])
 
             Session(client_info[0], client_info[1])
 
@@ -81,12 +94,12 @@ class Server(asyncore.dispatcher, di.Injected):
         now = datetime.utcnow()
 
         session_id = self.__session_store.new(loginid=getuser(),
-                                              ip=config.SERVER_ADDRESS[0],
-                                              host=socket.getfqdn(config.SERVER_ADDRESS[0]),
-                                              nick=config.NICKSERV,
+                                              ip=self.__config.server_address,
+                                              host=socket.getfqdn(self.__config.server_address),
+                                              nick=core.NICKSERV,
                                               authenticated=True,
                                               signon=now,
-                                              t_recv=utils.Timer())
+                                              t_recv=timer.Timer())
 
         with self.__db_connection.enter_scope() as scope:
             state = self.__session_store.get(session_id)
@@ -109,13 +122,21 @@ class Session(asyncore.dispatcher, di.Injected):
         self.__buffer = bytearray()
         self.__decoder = tld.Decoder()
         self.__decoder.add_listener(self.__message_received__)
+        self.__transform = Transform()
         self.__shutdown = False
 
-        log.debug("Session created successfully: %s", self.__session_id)
+        self.__log.debug("Session created successfully: %s", self.__session_id)
 
         self.__write_protocol_info__()
 
-    def inject(self, broker: broker.Broker, session_store: session.Store, away_table: session.AwayTimeoutTable):
+    def inject(self,
+               log: logging.Logger,
+               config: config.Config,
+               broker: broker.Broker,
+               session_store: session.Store,
+               away_table: session.AwayTimeoutTable):
+        self.__log = log
+        self.__config = config
         self.__broker = broker
         self.__session_store = session_store
         self.__away_table = away_table
@@ -149,7 +170,7 @@ class Session(asyncore.dispatcher, di.Injected):
                 self.__broker.deliver(self.__session_id, tld.encode_empty_cmd("g"))
 
             except Exception:
-                log.fatal(traceback.format_exc())
+                self.__log.fatal(traceback.format_exc())
 
                 raise asyncore.ExitNow()
 
@@ -157,9 +178,9 @@ class Session(asyncore.dispatcher, di.Injected):
         self.__shutdown__()
 
     def __shutdown__(self):
-        log.info("Closing session: '%s'", self.__session_id)
+        self.__log.info("Closing session: '%s'", self.__session_id)
 
-        commands.UserSession().sign_off(self.__session_id)
+        ACTION(actions.usersession.UserSession).sign_off(self.__session_id)
 
         self.__broker.remove_session(self.__session_id)
         self.__session_store.delete(self.__session_id)
@@ -169,9 +190,9 @@ class Session(asyncore.dispatcher, di.Injected):
         self.close()
 
     def __message_received__(self, type_id, payload):
-        log.debug("Received message: type='%s', session='%s', payload (size)=%d", type_id, self.__session_id, len(payload))
+        self.__log.debug("Received message: type='%s', session='%s', payload (size)=%d", type_id, self.__session_id, len(payload))
 
-        type_id, payload = transform(type_id, payload)
+        type_id, payload = self.__transform.transform(type_id, payload)
 
         msg = MESSAGES.get(type_id)
 
@@ -179,44 +200,76 @@ class Session(asyncore.dispatcher, di.Injected):
             self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
         else:
             msg.process(self.__session_id, tld.split(payload))
-            self.__session_store.update(self.__session_id, t_recv=utils.Timer())
+            self.__session_store.update(self.__session_id, t_recv=timer.Timer())
 
     def __write_protocol_info__(self):
         e = tld.Encoder("j")
 
-        e.add_field_str(PROTOCOL_VERSION)
-        e.add_field_str(config.HOSTNAME, append_null=False)
-        e.add_field_str(config.SERVER_ID, append_null=True)
+        e.add_field_str(core.PROTOCOL_VERSION)
+        e.add_field_str(self.__config.server_hostname, append_null=False)
+        e.add_field_str("%s %s" % (self.__config.server_hostname, core.VERSION), append_null=True)
 
         self.__broker.deliver(self.__session_id, e.encode())
 
-def run():
-    log.info("Starting server...")
+def get_opts(argv):
+    options, _ = getopt.getopt(argv, '-c:w:', ['config=', 'working-dir='])
+    m = {}
 
-    c = di.default_container
+    for opt, arg in options:
+        if opt in ('-c', '--config'):
+            m["config"] = arg
+        if opt in ('-w', '--working-dir'):
+            m["working_dir"] = arg
 
-    c.register(broker.Broker, broker.Memory())
-    c.register(session.Store, session.MemoryStore())
-    c.register(session.AwayTimeoutTable, utils.TimeoutTable())
-    c.register(groups.Store, groups.MemoryStore())
-    c.register(database.Connection, sqlite.Connection(config.SQLITE_DB))
-    c.register(nickdb.NickDb, sqlite.NickDb)
+    if not m.get("config"):
+        raise getopt.GetoptError("--config option is mandatory")
 
-    with c.resolve(database.Connection).enter_scope() as scope:
-        c.resolve(nickdb.NickDb).setup(scope)
+    return m
+
+def run(opts):
+    working_dir = opts.get("working_dir")
+
+    if working_dir:
+        os.chdir(working_dir)
+
+    mapping = config.json.load(opts["config"])
+    preferences = config.from_mapping(mapping)
+
+    logger = log.new_logger(preferences.logging_verbosity)
+
+    logger.info("Starting server...")
+
+    container = di.default_container
+
+    container.register(logging.Logger, logger)
+    container.register(config.Config, preferences)
+    container.register(broker.Broker, broker.memory.Broker())
+    container.register(session.Store, session.memory.Store())
+    container.register(session.AwayTimeoutTable, timer.TimeoutTable())
+    container.register(group.Store, group.memory.Store())
+    container.register(database.Connection, nickdb.sqlite.Connection(preferences.database_filename))
+    container.register(nickdb.NickDb, nickdb.sqlite.NickDb)
+
+    with container.resolve(database.Connection).enter_scope() as scope:
+        container.resolve(nickdb.NickDb).setup(scope)
         scope.complete()
 
-    Server(config.SERVER_ADDRESS)
+    Server((preferences.server_address, preferences.server_port))
 
     try:
         asyncore.loop()
 
     except (KeyboardInterrupt, Exception):
-        log.info("Server finished.")
+        logger.info("Server finished.")
 
-    with c.resolve(database.Connection).enter_scope() as scope:
-        c.resolve(nickdb.NickDb).set_signoff(scope, config.NICKSERV, datetime.utcnow())
+    with container.resolve(database.Connection).enter_scope() as scope:
+        container.resolve(nickdb.NickDb).set_signoff(scope, core.NICKSERV, datetime.utcnow())
         scope.complete()
 
 if __name__ == "__main__":
-    run()
+    try:
+        opts = get_opts(sys.argv[1:])
+
+        run(opts)
+    except getopt.GetoptError as ex:
+        print(str(ex))

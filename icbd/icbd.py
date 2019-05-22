@@ -199,11 +199,19 @@ class Session(asyncore.dispatcher, di.Injected):
 
         msg = MESSAGES.get(type_id)
 
-        if not msg:
-            self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
+        state = self.__session_store.get(self.__session_id)
+
+        elapsed = state.t_recv.elapsed() if state.t_recv else None
+
+        self.__session_store.update(self.__session_id, t_recv=timer.Timer())
+
+        if not elapsed or elapsed > self.__config.protection_time_between_messages:
+            if not msg:
+                self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
+            else:
+                msg.process(self.__session_id, tld.split(payload))
         else:
-            msg.process(self.__session_id, tld.split(payload))
-            self.__session_store.update(self.__session_id, t_recv=timer.Timer())
+            self.__log.debug("Time between messages too short.")
 
     def __write_protocol_info__(self):
         e = tld.Encoder("j")

@@ -6,6 +6,10 @@
 		"hostname": "localhost",
 		"unsecureLogin": false
 	},
+	"protection":
+	{
+		"timeBetweenMessages": 0.5
+	},
 	"motd":
 	{
 		"filename": "motd"

@@ -23,42 +23,48 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+
 import logging
-import config
-import session
-import reputation
-import broker
-import group
-import database
-import nickdb
 import di
 
-class Injected(di.Injected):
-    def inject(self,
-               log: logging.Logger,
-               config: config.Config,
-               session: session.Store,
-               reputation: reputation.Reputation,
-               away_table: session.AwayTimeoutTable,
-               notification_table: session.NotificationTimeoutTable,
-               broker: broker.Broker,
-               groups: group.Store,
-               db_connection: database.Connection,
-               nickdb: nickdb.NickDb):
+class Reputation(di.Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.__m = {}
+
+    def inject(self, log: logging.Logger):
         self.log = log
-        self.config = config
-        self.session = session
-        self.reputation = reputation
-        self.away_table = away_table
-        self.notification_table = notification_table
-        self.broker = broker
-        self.groups = groups
-        self.db_connection = db_connection
-        self.nickdb = nickdb
 
-def cache():
-    m = {}
+    def add_session(self, session_id):
+        self.__m[session_id] = 1.0
 
-    return lambda T: m.get(T, T())
+    def remove_session(self, session_id):
+        del self.__m[session_id]
 
-ACTION = cache()
+    def ok(self, session_id):
+        self.__add__(session_id, 0.05)
+
+    def good(self, session_id):
+        self.__add__(session_id, 0.1)
+
+    def warning(self, session_id):
+        self.__add__(session_id, -0.1)
+
+    def critical(self, session_id):
+        self.__add__(session_id, -0.2)
+
+    def fatal(self, session_id):
+        self.__add__(session_id, -0.4)
+
+    def get(self, session_id):
+        return self.__m[session_id]
+
+    def __add__(self, session_id, value):
+        old_value = self.__m[session_id]
+        new_value = round(max(min(1.0, old_value + value), 0.0), 2)
+
+        if old_value != new_value:
+            self.log.debug("Reputation of session '%s' changed from %.2f to %.2f.", session_id, old_value, new_value)
+
+            self.__m[session_id] = new_value

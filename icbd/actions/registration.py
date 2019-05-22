@@ -49,6 +49,8 @@ class Registration(Injected):
                 self.log.debug("Nick found, validating password.")
 
                 if not self.nickdb.check_password(scope, state.nick, password):
+                    self.reputation.fatal(session_id)
+
                     raise TldErrorException("Authorization failure.")
 
                 registered = True
@@ -88,6 +90,8 @@ class Registration(Injected):
 
             self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered."))
 
+            self.reputation.good(session_id)
+
             scope.complete()
 
     def notify_messagebox(self, session_id):
@@ -120,6 +124,8 @@ class Registration(Injected):
             self.log.debug("Nick found, validating password.")
 
             if not self.nickdb.check_password(scope, state.nick, old_pwd):
+                self.reputation.fatal(session_id)
+
                 raise TldErrorException("Authorization failure.")
 
             self.nickdb.set_password(scope, state.nick, new_pwd)

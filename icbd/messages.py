@@ -39,6 +39,7 @@ import actions.ping
 import actions.privatemessage
 import actions.registration
 import actions.usersession
+import actions.admin
 from textutils import decode_ascii
 from exception import TldErrorException, TldResponseException
 
@@ -451,6 +452,16 @@ class Boot:
             raise TldErrorException("Usage: /boot nick")
 
         ACTION(actions.group.Group).boot(session_id, fields[0])
+
+@command("reputation")
+class Reputation:
+    @staticmethod
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if not fields[0]:
+            raise TldErrorException("Usage: /reputation nick")
+
+        ACTION(actions.admin.Admin).get_reputation(session_id, fields[0], msgid(fields))
 
 COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, type) and "command" in cls.__dict__,
                                                  sys.modules[__name__].__dict__.values())}

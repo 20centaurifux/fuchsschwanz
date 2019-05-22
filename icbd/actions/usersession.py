@@ -156,6 +156,8 @@ class UserSession(Injected):
             if not registered:
                 self.log.debug("Password is invalid.")
 
+                self.reputation.critical(session_id)
+
                 self.broker.deliver(session_id, tld.encode_str("e", "Authorization failure."))
                 self.broker.deliver(session_id, tld.encode_status_msg("Register",
                                                                       "Send password to authenticate your nickname."))
@@ -254,6 +256,8 @@ class UserSession(Injected):
             was_authenticated = state.authenticated
 
             if self.session.find_nick(nick):
+                self.reputation.warning(session_id)
+
                 raise TldErrorException("Nick already in use.")
 
             if state.group:
@@ -306,6 +310,8 @@ class UserSession(Injected):
                 self.broker.deliver(session_id,
                                     tld.encode_str("e",
                                                    "Registration failed, administrative account requires a password."))
+
+                self.reputation.fatal(session_id)
 
                 self.__auto_rename__(session_id)
             else:
@@ -396,6 +402,7 @@ class UserSession(Injected):
                     self.broker.deliver(info.moderator,
                                         tld.encode_status_msg("Probe",
                                                               "%s tried to enter group %s." % (state.nick, group_name)))
+                self.reputation.warning(session_id)
 
                 raise TldErrorException("%s is restricted." % group_name)
 

@@ -41,6 +41,8 @@ import session
 import session.memory
 import broker
 import broker.memory
+import reputation
+import reputation.memory
 import group
 import group.memory
 import database
@@ -52,8 +54,7 @@ import actions.usersession
 import tld
 import messages
 from transform import Transform
-
-import exception
+from exception import TldResponseException, TldErrorException
 
 class Server(asyncore.dispatcher, di.Injected):
     def __init__(self, address):
@@ -119,6 +120,7 @@ class Session(asyncore.dispatcher, di.Injected):
 
         self.__session_id = self.__session_store.new(ip=address[0], host=socket.getfqdn(address[0]))
         self.__broker.add_session(self.__session_id)
+        self.__reputation.add_session(self.__session_id)
         self.__buffer = bytearray()
         self.__decoder = tld.Decoder()
         self.__decoder.add_listener(self.__message_received__)
@@ -135,13 +137,15 @@ class Session(asyncore.dispatcher, di.Injected):
                broker: broker.Broker,
                session_store: session.Store,
                away_table: session.AwayTimeoutTable,
-               notification_table: session.NotificationTimeoutTable):
+               notification_table: session.NotificationTimeoutTable,
+               reputation: reputation.Reputation):
         self.__log = log
         self.__config = config
         self.__broker = broker
         self.__session_store = session_store
         self.__away_table = away_table
         self.__notification_table = away_table
+        self.__reputation = reputation
 
     def writable(self):
         msg = self.__broker.pop(self.__session_id)
@@ -167,7 +171,7 @@ class Session(asyncore.dispatcher, di.Injected):
             try:
                 self.__decoder.write(data)
 
-            except exception.TldResponseException as ex:
+            except TldResponseException as ex:
                 self.__broker.deliver(self.__session_id, ex.response)
                 self.__broker.deliver(self.__session_id, tld.encode_empty_cmd("g"))
 
@@ -189,6 +193,7 @@ class Session(asyncore.dispatcher, di.Injected):
         self.__away_table.remove_source(self.__session_id)
         self.__away_table.remove_target(self.__session_id)
         self.__notification_table.remove_target(self.__session_id)
+        self.__reputation.remove_session(self.__session_id)
 
         self.close()
 
@@ -197,21 +202,36 @@ class Session(asyncore.dispatcher, di.Injected):
 
         type_id, payload = self.__transform.transform(type_id, payload)
 
-        msg = MESSAGES.get(type_id)
-
         state = self.__session_store.get(self.__session_id)
 
         elapsed = state.t_recv.elapsed() if state.t_recv else None
 
+        old_reputation = self.__reputation.get(self.__session_id)
+
         self.__session_store.update(self.__session_id, t_recv=timer.Timer())
 
+        msg = None
+
         if not elapsed or elapsed > self.__config.protection_time_between_messages:
+            msg = MESSAGES.get(type_id)
+
             if not msg:
                 self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
-            else:
-                msg.process(self.__session_id, tld.split(payload))
         else:
             self.__log.debug("Time between messages too short.")
+
+        if msg:
+            msg.process(self.__session_id, tld.split(payload))
+
+            new_reputation = self.__reputation.get(self.__session_id)
+
+            if old_reputation == new_reputation:
+                self.__reputation.ok(self.__session_id)
+        else:
+            self.__reputation.warning(self.__session_id)
+
+        if self.__reputation.get(self.__session_id) == 0.0:
+            raise TldErrorException("Suspicious activity detected.")
 
     def __write_protocol_info__(self):
         e = tld.Encoder("j")
@@ -258,6 +278,7 @@ def run(opts):
     container.register(session.Store, session.memory.Store())
     container.register(session.AwayTimeoutTable, timer.TimeoutTable())
     container.register(session.NotificationTimeoutTable, timer.TimeoutTable())
+    container.register(reputation.Reputation, reputation.memory.Reputation())
     container.register(group.Store, group.memory.Store())
     container.register(database.Connection, nickdb.sqlite.Connection(preferences.database_filename))
     container.register(nickdb.NickDb, nickdb.sqlite.NickDb)

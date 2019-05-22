@@ -43,6 +43,8 @@ class OpenMessage(Injected):
             if info.control == group.Control.CONTROLLED:
                 if (not info.nick_can_talk(state.nick, state.authenticated)
                         and not info.address_can_talk(state.loginid, state.ip, state.host, state.authenticated)):
+                    self.reputation.warning(session_id)
+
                     raise TldErrorException("You do not have permission to talk in this group.")
 
             max_len = 254 - validate.NICK_MAX - 2

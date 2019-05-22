@@ -331,6 +331,8 @@ class Group(Injected):
                 if self.nickdb.is_admin(scope, nick):
                     self.broker.deliver(loggedin_session, tld.encode_status_msg("Boot", "%s tried to boot you." % state.nick))
 
+                    self.reputation.fatal(session_id)
+
                     raise TldErrorException("You cannot boot an admin.")
 
         try:
@@ -362,6 +364,8 @@ class Group(Injected):
         info = self.__get_group__(session_id)
 
         if self.__is_protected_group__(info.key):
+            self.reputation.critical(session_id)
+
             raise TldErrorException("You aren't the moderator.")
 
         if info.control != group.Control.PUBLIC:
@@ -374,6 +378,8 @@ class Group(Injected):
                     state = self.session.get(session_id)
 
                     if not self.nickdb.exists(scope, state.nick) or not self.nickdb.is_admin(scope, state.nick):
+                        self.reputation.critical(session_id)
+
                         raise TldErrorException("You aren't the moderator.")
 
         return info

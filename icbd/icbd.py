@@ -134,12 +134,14 @@ class Session(asyncore.dispatcher, di.Injected):
                config: config.Config,
                broker: broker.Broker,
                session_store: session.Store,
-               away_table: session.AwayTimeoutTable):
+               away_table: session.AwayTimeoutTable,
+               notification_table: session.NotificationTimeoutTable):
         self.__log = log
         self.__config = config
         self.__broker = broker
         self.__session_store = session_store
         self.__away_table = away_table
+        self.__notification_table = away_table
 
     def writable(self):
         msg = self.__broker.pop(self.__session_id)
@@ -186,6 +188,7 @@ class Session(asyncore.dispatcher, di.Injected):
         self.__session_store.delete(self.__session_id)
         self.__away_table.remove_source(self.__session_id)
         self.__away_table.remove_target(self.__session_id)
+        self.__notification_table.remove_target(self.__session_id)
 
         self.close()
 
@@ -246,6 +249,7 @@ def run(opts):
     container.register(broker.Broker, broker.memory.Broker())
     container.register(session.Store, session.memory.Store())
     container.register(session.AwayTimeoutTable, timer.TimeoutTable())
+    container.register(session.NotificationTimeoutTable, timer.TimeoutTable())
     container.register(group.Store, group.memory.Store())
     container.register(database.Connection, nickdb.sqlite.Connection(preferences.database_filename))
     container.register(nickdb.NickDb, nickdb.sqlite.NickDb)

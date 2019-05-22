@@ -54,7 +54,7 @@ class Away(Injected):
         state = self.session.get(session_id)
 
         if not state.away:
-            raise TldStatusException("Away", "No away message set!")
+            raise TldStatusException("Away", "No away message set.")
 
         self.session.update(session_id, away=None, t_away=None)
 

@@ -57,6 +57,7 @@ class State:
         return "%s@%s" % (self.loginid, self.host)
 
 AwayTimeoutTable = NewType("AwayTimeoutTable", TimeoutTable)
+NotificationTimeoutTable = NewType("NotificationTimeoutTable", TimeoutTable)
 
 class Store:
     def new(self, **kwargs):

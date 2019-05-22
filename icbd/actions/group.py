@@ -23,10 +23,13 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+from textwrap import wrap
 from actions import Injected, ACTION
+import actions.usersession
 import core
 import tld
 import validate
+import group
 from exception import TldErrorException
 
 class Group(Injected):
@@ -34,7 +37,8 @@ class Group(Injected):
         info = self.__get_group_if_can_moderate__(session_id)
 
         if not validate.is_valid_topic(topic):
-            raise TldErrorException("Topic is invalid.")
+            raise TldErrorException("Topic must consist of %d and %d characters."
+                                    % (validate.TOP_MIN, validate.TOPIC_MAX))
 
         info.topic = topic
 
@@ -49,7 +53,7 @@ class Group(Injected):
         info = self.__get_group__(session_id)
 
         if info.topic:
-            self.broker.deliver(session_id, tld.encode_co_output("The topic is: %s" % info.topic, msgid))
+            self.broker.deliver(session_id, tld.encode_co_output("The topic is: '%s'." % info.topic, msgid))
         else:
             self.broker.deliver(session_id, tld.encode_co_output("The topic is not set.", msgid))
 
@@ -134,7 +138,7 @@ class Group(Injected):
         for sub_id in self.broker.get_subscribers(str(info)):
             sub_state = self.session.get(sub_id)
 
-            self.broker.deliver(session_id, tld.encode_status_msg("FYI", "%s invited" % sub_state.nick))
+            self.broker.deliver(session_id, tld.encode_status_msg("FYI", "%s invited." % sub_state.nick))
             self.broker.deliver(sub_id, tld.encode_status_msg("FYI", "You are invited to group %s by default." % sub_state.nick))
 
             info.invite_nick(sub_state.nick, sub_state.authenticated)
@@ -207,7 +211,7 @@ class Group(Injected):
 
         if not quiet:
             self.broker.deliver(session_id,
-                                tld.encode_status_msg("FYI", "%s invited%s" % (invitee, " (registered only)" if registered else "")))
+                                tld.encode_status_msg("FYI", "%s invited%s." % (invitee, " (registered only)" if registered else "")))
 
         self.groups.update(info)
 
@@ -222,6 +226,15 @@ class Group(Injected):
         try:
             if mode == "n":
                 info.cancel_nick(invitee)
+
+                loggedin_session = self.session.find_nick(invitee)
+
+                if loggedin_session:
+                    loggedin_state = self.session.get(loggedin_session)
+                    state = self.session.get(session_id)
+
+                    self.broker.deliver(loggedin_session,
+                                        tld.encode_status_msg("FYI", "Invitation to group %s cancelled by %s." % (state.group, state.nick)))
             else:
                 info.cancel_address(invitee)
         except KeyError:
@@ -246,6 +259,14 @@ class Group(Injected):
             try:
                 if mode == "n":
                     info.mute_nick(talker)
+
+                    loggedin_session = self.session.find_nick(talker)
+
+                    if loggedin_session:
+                        state = self.session.get(session_id)
+
+                        self.broker.deliver(loggedin_session,
+                                            tld.encode_status_msg("FYI", "You cannot talk in group %s anymore." % state.group))
                 else:
                     info.mute_address(talker)
             except KeyError:
@@ -297,17 +318,20 @@ class Group(Injected):
             raise TldErrorException("You cannot boot yourself.")
 
         if not loggedin_session:
-            raise TldErrorException("%s is not in your group." % nick)
+            raise TldErrorException("%s is not signed on." % nick)
 
         state = self.session.get(session_id)
         loggedin_state = self.session.get(loggedin_session)
+
+        if loggedin_state.group.lower() != state.group.lower():
+            raise TldErrorException("%s is not in your group." % nick)
 
         if loggedin_state.authenticated:
             with self.db_connection.enter_scope() as scope:
                 if self.nickdb.is_admin(scope, nick):
                     self.broker.deliver(loggedin_session, tld.encode_status_msg("Boot", "%s tried to boot you." % state.nick))
 
-                    raise TldErrorException("You cannot boot an admin!")
+                    raise TldErrorException("You cannot boot an admin.")
 
         try:
             info.cancel_nick(loggedin_state.nick)
@@ -324,7 +348,7 @@ class Group(Injected):
         self.broker.to_channel(info.key, tld.encode_status_msg("Boot", "%s was booted." % nick))
         self.broker.deliver(loggedin_session, tld.encode_status_msg("Boot", "%s booted you." % state.nick))
 
-        ACTION(UserSession).join(loggedin_session, config.BOOT_GROUP)
+        ACTION(actions.usersession.UserSession).join(loggedin_session, core.BOOT_GROUP)
 
     def __get_group__(self, session_id):
         state = self.session.get(session_id)

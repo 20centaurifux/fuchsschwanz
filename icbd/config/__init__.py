@@ -37,6 +37,7 @@ class Config:
     logging_verbosity: Verbosity = Verbosity.INFO
     mbox_limit: int = 20
     timeouts_away_message: float = 30.0
+    timeouts_mbox_full_message: float = 30.0
     database_filename: str = None
 
 def transform_map(m):

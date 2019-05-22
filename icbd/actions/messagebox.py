@@ -39,10 +39,10 @@ class MessageBox(Injected):
             raise TldErrorException("You must be registered to write a message.")
 
         if not validate.is_valid_nick(receiver):
-            raise TldErrorException("'%s' is not a valid nick name." % receiver)
+            raise TldErrorException("%s is not a valid nick name." % receiver)
 
         if not validate.is_valid_message(text):
-            raise TldErrorException("Message text not valid. Length has be between %d and %d characters."
+            raise TldErrorException("Message text not valid. Length has to be between %d and %d characters."
                                     % (validate.MESSAGE_MIN, validate.MESSAGE_MAX))
 
         with self.db_connection.enter_scope() as scope:
@@ -55,10 +55,11 @@ class MessageBox(Injected):
             loggedin_session = self.session.find_nick(receiver)
 
             if count > limit:
-                if loggedin_session:
+                if loggedin_session and not self.notification_table.is_alive(loggedin_session, "mbox_full"):
                     self.broker.deliver(loggedin_session, tld.encode_str("e", "User mailbox is full."))
+                    self.notification_table.set_alive(loggedin_session, "mbox_full", self.config.timeouts_mbox_full_message)
 
-                raise TldErrorException("User mailbox full")
+                raise TldErrorException("User mailbox full.")
 
             uuid = self.nickdb.add_message(scope, receiver, state.nick, text)
 
@@ -69,8 +70,9 @@ class MessageBox(Injected):
                 self.broker.deliver(loggedin_session,
                                     tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
 
-                if count == limit:
+                if count == limit and not self.notification_table.is_alive(loggedin_session, "mbox_full"):
                     self.broker.deliver(loggedin_session, tld.encode_str("e", "User mailbox is full."))
+                    self.notification_table.set_alive(loggedin_session, "mbox_full", self.config.timeouts_mbox_full_message)
 
             scope.complete()
 
@@ -82,10 +84,10 @@ class MessageBox(Injected):
 
         with self.db_connection.enter_scope() as scope:
             if self.nickdb.count_messages(scope, state.nick) == 0:
-                raise TldErrorException("No messages")
+                raise TldErrorException("No messages.")
 
             for msg in self.nickdb.get_messages(scope, state.nick):
-                self.broker.deliver(session_id, tld.encode_co_output("Message left at %s (UTC)" % msg.date, msgid))
+                self.broker.deliver(session_id, tld.encode_co_output("Message left at %s (UTC)." % msg.date, msgid))
 
                 e = tld.Encoder("c")
 
@@ -97,3 +99,5 @@ class MessageBox(Injected):
                 self.nickdb.delete_message(scope, msg.uuid)
 
             scope.complete()
+
+            self.notification_table.remove_entry(session_id, "mbox_full")

@@ -4,7 +4,7 @@
 		"address": "127.0.0.1",
 		"port": 7326,
 		"hostname": "localhost",
-		"unsecureLogin": false
+		"unsecureLogin": true
 	},
 	"motd":
 	{

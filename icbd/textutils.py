@@ -53,3 +53,6 @@ def tolower(argname=None):
         return wrapper
 
     return decorator
+
+def hide_password(password):
+    return len(password) * "*"

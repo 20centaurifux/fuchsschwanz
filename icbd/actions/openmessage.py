@@ -23,9 +23,11 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+from textwrap import wrap
 from actions import Injected
 import group
 import tld
+import validate
 from exception import TldErrorException
 
 class OpenMessage(Injected):
@@ -43,13 +45,16 @@ class OpenMessage(Injected):
                         and not info.address_can_talk(state.loginid, state.ip, state.host, state.authenticated)):
                     raise TldErrorException("You do not have permission to talk in this group.")
 
-            e = tld.Encoder("b")
+            max_len = 254 - validate.NICK_MAX - 2
 
-            e.add_field_str(state.nick, append_null=False)
-            e.add_field_str(message, append_null=True)
+            for part in wrap(message, max_len):
+                e = tld.Encoder("b")
 
-            if self.broker.to_channel_from(session_id, state.group, e.encode()) == 0:
-                raise TldErrorException("No one else in group!")
+                e.add_field_str(state.nick, append_null=False)
+                e.add_field_str(part, append_null=True)
+
+                if self.broker.to_channel_from(session_id, state.group, e.encode()) == 0:
+                    raise TldErrorException("No one else in group.")
         else:
             self.log.warning("Cannot send open message, session '%s' not logged in.", session_id)
 

@@ -23,8 +23,10 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+from textwrap import wrap
 from actions import Injected
 import tld
+import validate
 from exception import TldErrorException
 
 class PrivateMessage(Injected):
@@ -34,20 +36,23 @@ class PrivateMessage(Injected):
         if loggedin_session:
             state = self.session.get(session_id)
 
-            e = tld.Encoder("c")
+            max_len = 254 - validate.NICK_MAX - 2
 
-            e.add_field_str(state.nick, append_null=False)
-            e.add_field_str(message, append_null=True)
+            for part in wrap(message, max_len):
+                e = tld.Encoder("c")
 
-            self.broker.deliver(loggedin_session, e.encode())
+                e.add_field_str(state.nick, append_null=False)
+                e.add_field_str(part, append_null=True)
+
+                self.broker.deliver(loggedin_session, e.encode())
 
             loggedin_state = self.session.get(loggedin_session)
 
             if loggedin_state.away:
                 if not self.away_table.is_alive(session_id, receiver):
                     self.broker.deliver(session_id, tld.encode_status_msg("Away",
-                                                                          "%s (since %s)" % (loggedin_state.away,
-                                                                                             loggedin_state.t_away.elapsed_str())))
+                                                                          "%s (since %s)." % (loggedin_state.away,
+                                                                                              loggedin_state.t_away.elapsed_str())))
                     self.away_table.set_alive(session_id, receiver, self.config.timeouts_away_message)
         else:
             raise TldErrorException("%s is not signed on." % receiver)

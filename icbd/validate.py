@@ -32,7 +32,7 @@ NICK_MIN = 1
 NICK_MAX = 12
 
 def is_valid_nick(nick):
-    return has_valid_length(nick, NICK_MIN, NICK_MAX)
+    return re.match("^[A-Za-z0-9\\-]{1,12}$", nick)
 
 LOGINID_MIN = 1
 LOGINID_MAX = 12

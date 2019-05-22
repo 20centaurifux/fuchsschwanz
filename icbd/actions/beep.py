@@ -36,7 +36,7 @@ class Beep(Injected):
         loggedin_session = self.session.find_nick(receiver)
 
         if not loggedin_session:
-            raise TldErrorException("%s not signed on." % receiver)
+            raise TldErrorException("%s is not signed on." % receiver)
 
         loggedin_state = self.session.get(loggedin_session)
 
@@ -45,7 +45,7 @@ class Beep(Injected):
         if loggedin_state.beep != session.BeepMode.ON:
             if loggedin_state.beep == session.BeepMode.VERBOSE:
                 self.broker.deliver(loggedin_session,
-                                    tld.encode_status_msg("No-Beep", "%s attempted (and failed) to beep you" % state.nick))
+                                    tld.encode_status_msg("No-Beep", "%s attempted (and failed) to beep you." % state.nick))
 
             raise TldStatusException("Beep", "User has nobeep enabled.")
 
@@ -55,7 +55,7 @@ class Beep(Injected):
             if not self.away_table.is_alive(session_id, receiver):
                 self.broker.deliver(session_id,
                                     tld.encode_status_msg("Away",
-                                                          "%s (since %s)" % (loggedin_state.away, loggedin_state.t_away.elapsed_str())))
+                                                          "%s (since %s)." % (loggedin_state.away, loggedin_state.t_away.elapsed_str())))
 
                 self.away_table.set_alive(session_id, receiver, self.config.timeouts_away_message)
 
@@ -72,4 +72,4 @@ class Beep(Injected):
 
         self.session.update(session_id, beep=real_mode)
 
-        self.broker.deliver(session_id, tld.encode_status_msg("No-Beep", "No-Beep %s" % mode))
+        self.broker.deliver(session_id, tld.encode_status_msg("No-Beep", "No-Beep is now %s." % mode))

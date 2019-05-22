@@ -49,15 +49,15 @@ class Registration(Injected):
                 self.log.debug("Nick found, validating password.")
 
                 if not self.nickdb.check_password(scope, state.nick, password):
-                    raise TldErrorException("Authorization failure")
+                    raise TldErrorException("Authorization failure.")
 
                 registered = True
             else:
-                self.log.info("Creating new user profile for '%s'.", state.nick)
+                self.log.debug("Creating new user profile for %s.", state.nick)
 
                 if not validate.is_valid_password(password):
                     raise TldStatusException("Register",
-                                             "Password format not valid. Passwords length must be between %d and %d characters."
+                                             "Password format not valid. Password length must be between %d and %d characters."
                                              % (validate.PASSWORD_MIN, validate.PASSWORD_MAX))
 
                 self.nickdb.create(scope, state.nick)
@@ -86,7 +86,7 @@ class Registration(Injected):
 
             self.session.update(session_id, signon=now, authenticated=True)
 
-            self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered"))
+            self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered."))
 
             scope.complete()
 
@@ -115,16 +115,16 @@ class Registration(Injected):
 
         with self.db_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, state.nick):
-                raise TldErrorException("Authorization failure")
+                raise TldErrorException("Authorization failure.")
 
             self.log.debug("Nick found, validating password.")
 
             if not self.nickdb.check_password(scope, state.nick, old_pwd):
-                raise TldErrorException("Authorization failure")
+                raise TldErrorException("Authorization failure.")
 
             self.nickdb.set_password(scope, state.nick, new_pwd)
 
-            self.broker.deliver(session_id, tld.encode_status_msg("Pass", "Password changed"))
+            self.broker.deliver(session_id, tld.encode_status_msg("Pass", "Password changed."))
 
             scope.complete()
 
@@ -161,7 +161,10 @@ class Registration(Injected):
 
             self.nickdb.update(scope, state.nick, details)
 
-            self.broker.deliver(session_id, tld.encode_co_output("%s set to '%s'" % (self.__map_field__(field), text), msgid))
+            if text:
+                self.broker.deliver(session_id, tld.encode_co_output("%s set to '%s'." % (self.__map_field__(field), text), msgid))
+            else:
+                self.broker.deliver(session_id, tld.encode_co_output("%s unset." % self.__map_field__(field), msgid))
 
             scope.complete()
 
@@ -170,17 +173,17 @@ class Registration(Injected):
         name = None
 
         if field == "real_name":
-            name = "Real Name"
+            name = "Real name"
         elif field == "address":
             name = "Address"
         elif field == "phone":
-            name = "Phone Number"
+            name = "Phone number"
         elif field == "email":
             name = "E-Mail"
         elif field == "text":
             name = "Message text"
         elif field == "www":
-            name = "WWW"
+            name = "Website"
         else:
             raise ValueError
 
@@ -214,7 +217,7 @@ class Registration(Injected):
             raise TldErrorException("You must be registered to delete your entry.")
 
         if not password:
-            raise TldErrorException("Password required.")
+            raise TldErrorException("Usage: /delete password")
 
         with self.db_connection.enter_scope() as scope:
             if not self.nickdb.check_password(scope, state.nick, password):
@@ -222,7 +225,7 @@ class Registration(Injected):
 
             self.nickdb.delete(scope, state.nick)
 
-            self.broker.deliver(session_id, tld.encode_co_output("Record Deleted", msgid))
+            self.broker.deliver(session_id, tld.encode_co_output("Record deleted.", msgid))
 
             self.session.update(session_id, authentication=False)
 
@@ -230,11 +233,11 @@ class Registration(Injected):
 
     def whois(self, session_id, nick, msgid=""):
         if not nick:
-            raise TldErrorException("Nickname to lookup not specified.")
+            raise TldErrorException("Usage: /whois nickname")
 
         with self.db_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, nick):
-                raise TldErrorException("%s is not in the database." % nick)
+                raise TldErrorException("%s not found." % nick)
 
             signon = self.nickdb.get_signon(scope, nick)
             signoff = self.nickdb.get_signoff(scope, nick)

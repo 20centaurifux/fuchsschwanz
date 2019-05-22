@@ -74,10 +74,10 @@ class TimeoutTable:
 
         return alive
 
-    def set_alive(self, target, tag, timeout_seconds):
+    def set_alive(self, target, source, timeout_seconds):
         m = self.__m.get(target, {})
 
-        m[tag] = (Timer(), timeout_seconds)
+        m[source] = (Timer(), timeout_seconds)
 
         self.__m[target] = m
 
@@ -91,3 +91,8 @@ class TimeoutTable:
                 del sources[source]
 
         self.__m = dict(kv for kv in self.__m.items() if len(kv) > 0)
+
+    def remove_entry(self, target, source):
+        try:
+            del self.__m[target][source]
+        except KeyError: pass

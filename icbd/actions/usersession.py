@@ -33,18 +33,19 @@ import core
 import group
 import validate
 import tld
+from textutils import hide_password
 from exception import TldErrorException, TldStatusException
 
 class UserSession(Injected):
     def login(self, session_id, loginid, nick, password, group_name):
-        self.log.debug("User login: loginid='%s', nick='%s', password='%s'", loginid, nick, password)
+        self.log.debug("User login: loginid=%s, nick=%s, password=%s", loginid, nick, hide_password(password))
 
         if not validate.is_valid_loginid(loginid):
-            raise TldErrorException("loginid is invalid. Length must be between %d and %d characters)."
+            raise TldErrorException("loginid must consist of %d and %d alphanumeric characters."
                                     % (validate.LOGINID_MIN, validate.LOGINID_MAX))
 
         if not validate.is_valid_nick(nick):
-            raise TldErrorException("Nickname is invalid. Length must be between %d and %d characters)."
+            raise TldErrorException("Nickname must consist of %d and %d alphanumeric characters."
                                     % (validate.NICK_MIN, validate.NICK_MAX))
 
         self.broker.deliver(session_id, tld.encode_empty_cmd("a"))
@@ -88,13 +89,18 @@ class UserSession(Injected):
                 if not self.nickdb.is_secure(scope, nick):
                     self.log.debug("Nick allows auto-register.")
 
-                    lastlogin = self.nickdb.get_lastlogin(scope, nick)
+                    if not self.nickdb.is_admin(scope, nick):
+                        lastlogin = self.nickdb.get_lastlogin(scope, nick)
 
-                    if lastlogin:
-                        state = self.session.get(session_id)
-                        registered = (lastlogin[0] == loginid and lastlogin[1] == state.host)
+                        if lastlogin:
+                            self.log.debug("Last login: %s@%s", lastlogin[0], lastlogin[1])
+
+                            state = self.session.get(session_id)
+                            registered = (lastlogin[0] == loginid and lastlogin[1] == state.host)
+                        else:
+                            self.log.debug("First login, skipping auto-register.")
                     else:
-                        self.log.debug("First login, skipping auto-register.")
+                        self.log.debug("Cannot auto-register administrative users.")
                 else:
                     self.log.debug("Nick doesn't allow auto-register.")
 
@@ -114,7 +120,7 @@ class UserSession(Injected):
         loggedin_session = self.session.find_nick(nick)
 
         if loggedin_session:
-            self.log.debug("'%s' already logged in, aborting login.", nick)
+            self.log.debug("%s already logged in, aborting login.", nick)
 
             raise TldStatusException("Register", "Nick already in use.")
 
@@ -135,7 +141,7 @@ class UserSession(Injected):
         self.session.update(session_id, loginid=loginid, nick=nick)
 
     def __login_password__(self, session_id, loginid, nick, password):
-        self.log.debug("Password set, trying to authenticate '%s'.", nick)
+        self.log.debug("Password set, trying to authenticate %s.", nick)
 
         registered = False
         is_admin = False
@@ -148,7 +154,7 @@ class UserSession(Injected):
             if not registered:
                 self.log.debug("Password is invalid.")
 
-                self.broker.deliver(session_id, tld.encode_str("e", "Authorization failure"))
+                self.broker.deliver(session_id, tld.encode_str("e", "Authorization failure."))
                 self.broker.deliver(session_id, tld.encode_status_msg("Register",
                                                                       "Send password to authenticate your nickname."))
 
@@ -158,7 +164,7 @@ class UserSession(Injected):
         loggedin_session = self.session.find_nick(nick)
 
         if loggedin_session and not registered:
-            self.log.debug("'%s' already logged in, aborting login.", nick)
+            self.log.debug("%s already logged in, aborting login.", nick)
 
             raise TldStatusException("Register", "Nick already in use.")
 
@@ -172,6 +178,8 @@ class UserSession(Injected):
     def __auto_rename__(self, session_id):
         state = self.session.get(session_id)
 
+        self.log.debug("Renaming logged in user: %s", state.nick)
+
         prefix, _ = self.__split_name__(state.nick)
         new_nick = self.__guess_nick__(prefix, 1)
 
@@ -180,7 +188,12 @@ class UserSession(Injected):
             new_nick = self.__guess_nick__(prefix, 1)
 
         while not new_nick:
-            new_nick = self.__guess_nick__(secrets.token_hex(8), 1)
+            new_nick = secrets.token_hex(6)
+
+            self.log.debug("Testing guessed nickname: %s" % new_nick)
+
+            if self.session.find_nick(new_nick):
+                new_nick = None
 
         self.rename(session_id, new_nick)
 
@@ -201,6 +214,8 @@ class UserSession(Injected):
         nick = "%s-%d" % (name, suffix)
         guessed = None
 
+        self.log.debug("Testing guessed nickname: %s" % nick)
+
         if validate.is_valid_nick(nick):
             if not self.session.find_nick(nick):
                 guessed = nick
@@ -211,7 +226,7 @@ class UserSession(Injected):
 
     def rename(self, session_id, nick):
         if not validate.is_valid_nick(nick):
-            raise TldErrorException("Nick is invalid.")
+            raise TldErrorException("Nickname is invalid.")
 
         state = self.session.get(session_id)
 
@@ -219,7 +234,7 @@ class UserSession(Injected):
         was_authenticated = False
 
         if old_nick:
-            self.log.info("Renaming '%s' to '%s'", old_nick, nick)
+            self.log.debug("Renaming %s to %s.", old_nick, nick)
 
             was_authenticated = state.authenticated
 
@@ -227,11 +242,11 @@ class UserSession(Injected):
                 raise TldErrorException("Nick already in use.")
 
             if state.group:
-                self.log.debug("Renaming '%s' to '%s' in channel '%s'.", old_nick, nick, state.group)
+                self.log.debug("Renaming %s to %s in channel %s.", old_nick, nick, state.group)
 
                 self.broker.to_channel(state.group,
                                        tld.encode_status_msg("Name",
-                                                             "%s changed nickname to %s" % (old_nick, nick)))
+                                                             "%s changed nickname to %s." % (old_nick, nick)))
 
                 if self.groups.get(state.group).moderator == session_id:
                     self.broker.to_channel(state.group,
@@ -266,20 +281,16 @@ class UserSession(Injected):
                 else:
                     self.broker.deliver(session_id,
                                         tld.encode_status_msg("No-Pass",
-                                                              "To register your nickname type /m server p password"))
+                                                              "To register your nickname type /m server p password."))
 
             registration = ACTION(Registration)
-            change_failed = False
 
             if registered:
                 registration.mark_registered(session_id)
-            else:
-                change_failed = is_admin
-
-            if change_failed:
+            elif is_admin:
                 self.broker.deliver(session_id,
                                     tld.encode_str("e",
-                                                   "Registration failed, please login to admin account with password."))
+                                                   "Registration failed, administrative account requires a password."))
 
                 self.__auto_rename__(session_id)
             else:
@@ -290,7 +301,7 @@ class UserSession(Injected):
         state = self.session.get(session_id)
 
         if state.nick:
-            self.log.debug("Dropping session: '%s'", session_id)
+            self.log.debug("Dropping session: %s", session_id)
 
             if state.authenticated:
                 with self.db_connection.enter_scope() as scope:
@@ -299,7 +310,7 @@ class UserSession(Injected):
                     scope.complete()
 
             if state.group:
-                self.log.debug("Removing '%s' from channel '%s'.", state.nick, state.group)
+                self.log.debug("Removing %s from channel %s.", state.nick, state.group)
 
                 if self.broker.part(session_id, state.group):
                     info = self.groups.get(state.group)
@@ -315,7 +326,9 @@ class UserSession(Injected):
                             self.broker.to_channel_from(session_id,
                                                         state.group,
                                                         tld.encode_status_msg("Sign-off",
-                                                                              "Your group moderator signed off. (No timeout)"))
+                                                                              "Your group moderator signed off (no timeout)."))
+
+                        self.log.debug("Selecting new moderator.")
 
                         new_mod = {}
                         min_elapsed = -1
@@ -324,9 +337,13 @@ class UserSession(Injected):
                             sub_state = self.session.get(sub_id)
                             elapsed = sub_state.t_recv.elapsed()
 
+                            self.log.debug("Found subscriber: %s, elapsed milliseconds: %f", sub_state.nick, elapsed)
+
                             if min_elapsed == -1 or elapsed < min_elapsed:
                                 min_elapsed = elapsed
                                 new_mod = [sub_id, sub_state.nick]
+
+                        self.log.debug("New mod: %s", new_mod[1])
 
                         self.broker.to_channel(state.group, tld.encode_status_msg("Pass", "%s is now mod." % new_mod[1]))
 
@@ -334,14 +351,14 @@ class UserSession(Injected):
                 else:
                     self.groups.delete(state.group)
 
-            self.log.debug("Removing nick '%s' from session '%s'.", state.nick, session_id)
+            self.log.debug("Removing nick %s from session %s.", state.nick, session_id)
 
             self.session.update(session_id, nick=None, authenticated=False)
 
     def join(self, session_id, group_name):
         state = self.session.get(session_id)
 
-        self.log.info("'%s' joins group '%s'.", state.nick, group_name)
+        self.log.debug("%s joins group %s.", state.nick, group_name)
 
         old_group = state.group
 
@@ -370,7 +387,7 @@ class UserSession(Injected):
             self.broker.join(session_id, group_name)
         else:
             if self.broker.join(session_id, group_name):
-                self.log.info("Group '%s' created.", group_name)
+                self.log.debug("Group %s created.", group_name)
 
                 info.visibility = visibility
 
@@ -398,6 +415,8 @@ class UserSession(Injected):
         if info.moderator == session_id:
             msg += " as moderator"
 
+        msg += "."
+
         self.broker.deliver(session_id, tld.encode_status_msg("Status", msg))
 
         if info.volume != group.Volume.QUIET:
@@ -405,21 +424,21 @@ class UserSession(Injected):
             self.broker.to_channel_from(session_id,
                                         group_name,
                                         tld.encode_status_msg(category,
-                                                              "%s (%s) entered group" % (state.nick, state.address)))
+                                                              "%s (%s) entered group." % (state.nick, state.address)))
 
         self.session.update(session_id, group=info.key)
 
         if old_group:
             info = self.groups.get(old_group)
 
-            self.log.debug("Removing '%s' from channel '%s'.", state.nick, old_group)
+            self.log.debug("Removing %s from channel %s.", state.nick, old_group)
 
             if self.broker.part(session_id, old_group):
                 if info.volume != group.Volume.QUIET:
                     self.broker.to_channel_from(session_id,
                                                 old_group,
                                                 tld.encode_status_msg("Depart",
-                                                                      "%s (%s) just left" % (state.nick, state.address)))
+                                                                      "%s (%s) just left." % (state.nick, state.address)))
             else:
                 self.groups.delete(old_group)
 
@@ -460,7 +479,7 @@ class UserSession(Injected):
 
             self.broker.deliver(session_id, tld.encode_co_output("%-16s %s (%s)" % (nick, state.host, state.ip), msgid))
         else:
-            self.broker.deliver(session_id, tld.encode_co_output("Nickname not found.", msgid))
+            self.broker.deliver(session_id, tld.encode_co_output("User not found.", msgid))
 
     def list_and_quit(self, session_id, msgid=""):
         self.list(session_id, msgid)
@@ -528,5 +547,5 @@ class UserSession(Injected):
         groups_suffix = "" if groups_n == 1 else "s"
 
         self.broker.deliver(session_id,
-                            tld.encode_co_output("Total: %d user%s in %d group%s" % (logins_n, logins_suffix, groups_n, groups_suffix),
+                            tld.encode_co_output("Total: %d user%s in %d group%s." % (logins_n, logins_suffix, groups_n, groups_suffix),
                                                  msgid))

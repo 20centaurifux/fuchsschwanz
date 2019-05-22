@@ -324,6 +324,7 @@ class NoBeep:
     @staticmethod
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
+        print("NOBEEP")
         if not fields[0]:
             raise TldErrorException("Usage: /nobeep on/off/verbose")
 

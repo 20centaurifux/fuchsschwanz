@@ -38,6 +38,7 @@ class Injected(di.Injected):
                config: config.Config,
                session: session.Store,
                away_table: session.AwayTimeoutTable,
+               notification_table: session.NotificationTimeoutTable,
                broker: broker.Broker,
                groups: group.Store,
                db_connection: database.Connection,
@@ -46,6 +47,7 @@ class Injected(di.Injected):
         self.config = config
         self.session = session
         self.away_table = away_table
+        self.notification_table = notification_table
         self.broker = broker
         self.groups = groups
         self.db_connection = db_connection

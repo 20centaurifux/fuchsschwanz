@@ -70,6 +70,8 @@ class UserSession(Injected):
         if registered:
             registration.mark_registered(session_id)
 
+        self.__test_connection_limit__(session_id)
+
         registration.notify_messagebox(session_id)
 
         if not group_name:
@@ -223,6 +225,19 @@ class UserSession(Injected):
                 guessed = self.__guess_nick__(name, suffix + 1)
 
         return guessed
+
+    def __test_connection_limit__(self, session_id):
+        if len(self.session) - 1 > self.config.server_max_logins:
+            self.log.warning("Connection limit (%d) reached.", self.config.server_max_logins)
+
+            state = self.session.get(session_id)
+
+            if state.authenticated:
+                with self.db_connection.enter_scope() as scope:
+                    if not self.nickdb.is_admin(scope, state.nick):
+                        raise TldErrorException("Connection limit reached.")
+            else:
+                raise TldErrorException("Connection limit reached.")
 
     def rename(self, session_id, nick):
         if not validate.is_valid_nick(nick):

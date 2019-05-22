@@ -4,7 +4,7 @@
 		"address": "127.0.0.1",
 		"port": 7326,
 		"hostname": "localhost",
-		"unsecureLogin": true
+		"unsecureLogin": false
 	},
 	"motd":
 	{
@@ -20,7 +20,8 @@
 	},
 	"timeouts":
 	{
-		"awayMessage": 30.0
+		"awayMessage": 30.0,
+		"mboxFullMessage": 30.0
 	},
 	"database":
 	{

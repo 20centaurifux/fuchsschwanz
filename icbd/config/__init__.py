@@ -33,6 +33,7 @@ class Config:
     server_port: int = 7326
     server_hostname: str = "localhost"
     server_unsecure_login: bool = False
+    server_max_logins: int = 100
     motd_filename: str = "./motd"
     logging_verbosity: Verbosity = Verbosity.INFO
     mbox_limit: int = 20

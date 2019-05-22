@@ -62,3 +62,6 @@ class Store(session.Store):
                 break
 
         return session_id
+
+    def __len__(self):
+        return len(self.__m)

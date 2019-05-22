@@ -41,6 +41,7 @@ class Config:
     timeouts_mbox_full_message: float = 30.0
     database_filename: str = None
     protection_time_between_messages: float = 0.8
+    help_path: str = None
 
 def transform_map(m):
     m = copy.deepcopy(m)

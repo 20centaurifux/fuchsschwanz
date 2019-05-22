@@ -48,6 +48,8 @@ import group.memory
 import database
 import nickdb
 import nickdb.sqlite
+import manual
+import manual.plaintext
 import timer
 from actions import ACTION
 import actions.usersession
@@ -282,6 +284,7 @@ def run(opts):
     container.register(group.Store, group.memory.Store())
     container.register(database.Connection, nickdb.sqlite.Connection(preferences.database_filename))
     container.register(nickdb.NickDb, nickdb.sqlite.NickDb)
+    container.register(manual.Manual, manual.plaintext.Manual(preferences.help_path))
 
     with container.resolve(database.Connection).enter_scope() as scope:
         container.resolve(nickdb.NickDb).setup(scope)

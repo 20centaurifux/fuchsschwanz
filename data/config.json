@@ -10,6 +10,10 @@
 	{
 		"timeBetweenMessages": 0.5
 	},
+	"help":
+	{
+		"path": "help"
+	},
 	"motd":
 	{
 		"filename": "motd"

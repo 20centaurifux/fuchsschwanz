@@ -40,6 +40,7 @@ import actions.privatemessage
 import actions.registration
 import actions.usersession
 import actions.admin
+import actions.help
 from textutils import decode_ascii
 from exception import TldErrorException, TldResponseException
 
@@ -462,6 +463,16 @@ class Reputation:
             raise TldErrorException("Usage: /reputation nick")
 
         ACTION(actions.admin.Admin).get_reputation(session_id, fields[0], msgid(fields))
+
+@command("help")
+class Help:
+    @staticmethod
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if fields[0]:
+            ACTION(actions.help.Help).topic(session_id, fields[0], msgid(fields))
+        else:
+            ACTION(actions.help.Help).introduction(session_id, msgid(fields))
 
 COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, type) and "command" in cls.__dict__,
                                                  sys.modules[__name__].__dict__.values())}

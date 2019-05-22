@@ -23,11 +23,11 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-
 import logging
+import reputation
 import di
 
-class Reputation(di.Injected):
+class Reputation(reputation.Reputation, di.Injected):
     def __init__(self):
         super().__init__()
 

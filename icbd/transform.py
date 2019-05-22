@@ -34,7 +34,12 @@ class Transform(di.Injected):
         self.log = log
 
     def transform(self, type_id, payload):
-        # tranform private message to server to command:
+        type_id, payload = self.__private_message_to_command__(type_id, payload)
+        type_id, payload = self.__questionmark_to_help__(type_id, payload)
+
+        return type_id, payload
+
+    def __private_message_to_command__(self, type_id, payload):
         if type_id == "h":
             fields = [decode_ascii(f).strip() for f in tld.split(payload)]
 
@@ -55,5 +60,21 @@ class Transform(di.Injected):
                     payload.append(0)
 
                     self.log.debug("Message transformed: type='%s', command='%s'", type_id, args[1])
+
+        return type_id, payload
+
+    def __questionmark_to_help__(self, type_id, payload):
+        if type_id == "h":
+            fields = [decode_ascii(f).strip() for f in tld.split(payload)]
+
+            if len(fields) >= 2 and fields[0] == "?":
+                    payload = bytearray()
+
+                    payload.extend("help\1".encode())
+
+                    for field in fields[1:]:
+                        payload.extend(field.encode())
+
+            self.log.debug("Message transformed: type='h', command='help'")
 
         return type_id, payload

@@ -23,45 +23,26 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import logging
-import config
-import session
-import reputation
-import broker
-import group
-import database
-import nickdb
+import os.path
 import manual
-import di
 
-class Injected(di.Injected):
-    def inject(self,
-               log: logging.Logger,
-               config: config.Config,
-               session: session.Store,
-               reputation: reputation.Reputation,
-               away_table: session.AwayTimeoutTable,
-               notification_table: session.NotificationTimeoutTable,
-               broker: broker.Broker,
-               groups: group.Store,
-               db_connection: database.Connection,
-               nickdb: nickdb.NickDb,
-               manual: manual.Manual):
-        self.log = log
-        self.config = config
-        self.session = session
-        self.reputation = reputation
-        self.away_table = away_table
-        self.notification_table = notification_table
-        self.broker = broker
-        self.groups = groups
-        self.db_connection = db_connection
-        self.nickdb = nickdb
-        self.manual = manual
+class Manual(manual.Manual):
+    def __init__(self, path):
+        self.__path = path
 
-def cache():
-    m = {}
+    def introduction(self):
+        return self.__load_file__("introduction.txt")
 
-    return lambda T: m.get(T, T())
+    def topic(self, topic):
+        return self.__load_file__(os.path.join("topics", "%s.txt" % topic.lower()))
 
-ACTION = cache()
+    def __load_file__(self, filename):
+        contents = None
+
+        if not "." in filename[:-4]:
+            path = os.path.join(self.__path, filename)
+
+            with open(path) as f:
+                contents = f.read()
+
+        return contents

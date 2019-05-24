@@ -1,0 +1,25 @@
+USAGE
+     /talk  {-q} {-d} {-r} {-n nickname | -s address}
+
+DESCRIPTION
+     Adds a nickname (-n) or address (-s) to the list of allowed talkers in a
+     controlled group. Use the -r option if the user has to be registered to
+     talk. The -d option removes an entry from the list.
+
+     Set the -q option if you don't want to receive a confirmation.
+
+EXAMPLES:
+     Allow alice to talk, registration required:
+
+          /talk -rn alice
+
+     Remove the address bob@darkstar from the list of allowed talkers:
+
+          /talk -d -s bob@darkstar
+
+     Allow users with the IP address 192.168.1.5 to talk:
+
+          /talk -s 192.168.1.5
+
+SEE ALSO
+     group control

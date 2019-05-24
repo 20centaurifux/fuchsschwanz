@@ -1,0 +1,11 @@
+USAGE
+     /topic {topic}
+     /topic
+
+DESCRIPTION
+     Sets the group's topic.
+
+     With no argument the topic is shown.
+
+SEE ALSO
+     group

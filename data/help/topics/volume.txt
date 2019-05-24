@@ -1,0 +1,13 @@
+VOLUME (GROUP)
+     There are 3 volume levels:
+
+          Flag  Name       Description
+          -------------------------------------------------
+          l     loud       all messages are delivered
+          n     normal     a few status message are ignored
+          q     quiet      no messages at all
+
+     Change the volume with the /status command.
+
+SEE ALSO
+     group /status

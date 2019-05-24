@@ -23,6 +23,7 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+import re
 import os.path
 import manual
 
@@ -34,15 +35,22 @@ class Manual(manual.Manual):
         return self.__load_file__("introduction.txt")
 
     def topic(self, topic):
-        return self.__load_file__(os.path.join("topics", "%s.txt" % topic.lower()))
+        return self.__load_file__(os.path.join("topics", "%s.txt" % self.__filter_query__(topic)))
+
+    def command(self, cmd):
+        return self.__load_file__(os.path.join("commands", "%s.txt" % self.__filter_query__(cmd)))
+
+    @staticmethod
+    def __filter_query__(q):
+        return re.sub('[^0-9a-zA-Z~_\\-]+', '_', q).lower()
 
     def __load_file__(self, filename):
+        print("FILE: '%s'" % filename)
         contents = None
 
-        if not "." in filename[:-4]:
-            path = os.path.join(self.__path, filename)
+        path = os.path.join(self.__path, filename)
 
-            with open(path) as f:
-                contents = f.read()
+        with open(path) as f:
+            contents = f.read()
 
         return contents

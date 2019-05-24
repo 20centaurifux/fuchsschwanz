@@ -1,0 +1,11 @@
+USAGE
+     /p {password}
+
+DESCRIPTION
+     Registers your nickname.
+
+     A new record is created if you register a nickname for the very first
+     time. Otherwise the password is checked.
+
+SEE ALSO
+     registration /cp /delete /whois

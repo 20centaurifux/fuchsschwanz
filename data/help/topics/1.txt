@@ -1,0 +1,6 @@
+1 (GROUP)
+     1 is the default group of this server. Topic and status cannot be
+     changed.
+
+SEE ALSO
+     group /topic /status ~IDLE~ ~OUTLAWS~

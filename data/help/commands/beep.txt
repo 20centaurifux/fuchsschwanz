@@ -1,0 +1,8 @@
+USAGE
+     /beep {nickname}
+
+DESCRIPTION
+     Notifies a user.
+
+SEE ALSO
+     /nobeep

@@ -1,0 +1,28 @@
+CONTROL (GROUP)
+     There are 4 control levels:
+
+          p     public
+                     * there aren't any restrictions
+
+          m     moderated
+                     * only the moderator can modify the group and boot
+                       members
+
+          r     restricted
+                     * only the moderator can modify the group and boot
+                       members
+                     * only invited nicks/addresses can join the group
+                     * only the moderator is allowed to invite or cancel
+                       nicks/addresses
+
+          c     controlled
+                     * only the moderator can modify the group and boot
+                       members
+                     * only nicks/addresses from the list of talkers are
+                       allowed to speak
+                     * only the moderator can manage the list of talkers
+
+     Change the control level with the /status command.
+
+SEE ALSO
+     group /topic /status /boot /invite /cancel /talk

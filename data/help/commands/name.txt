@@ -1,0 +1,5 @@
+USAGE
+     /name {new nickname}
+
+DESCRIPTION
+     Changes your nickname.

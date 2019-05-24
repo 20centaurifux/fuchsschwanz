@@ -30,3 +30,6 @@ class Manual:
 
     def topic(self, topic):
         raise NotImplementedError
+
+    def command(self, cmd):
+        raise NotImplementedError

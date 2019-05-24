@@ -1,0 +1,9 @@
+USAGE
+     /cancel  {-q} {-n nickname | -s address}
+
+DESCRIPTION
+     Cancel an invitation. Use the -q option if you don't want to receive a
+     confirmation.
+
+SEE ALSO
+     group control /invite

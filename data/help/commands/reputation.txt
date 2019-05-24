@@ -1,0 +1,6 @@
+USAGE
+     /reputation {nickname}
+
+DESCRIPTION
+     Displays the reputation value (0.0..1.0) of a logged in user.
+

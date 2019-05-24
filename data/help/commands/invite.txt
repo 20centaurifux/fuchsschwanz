@@ -1,0 +1,24 @@
+USAGE
+     /invite  {-q} {-r} {-n nickname | -s address}
+
+DESCRIPTION
+     Invites a nickname (-n) or address (-s) to a restricted group. Use the
+     -r option if the invited user has to be registered to join.
+
+     Set the -q option if you don't want to receive a confirmation.
+
+EXAMPLES:
+     Invite alice, registration required:
+
+          /invite -qrn alice
+
+     Invite registered user with address bob@darkstar:
+
+          /invite -r -s bob@darkstar
+
+     Invite all users with ip address 192.168.1.5:
+
+          /invite -s 192.168.1.5
+
+SEE ALSO
+     group control /cancel

@@ -1,0 +1,14 @@
+USAGE
+     /nobeep {mode}
+
+DESCRIPTION
+     Changes the beep mode of the current session.
+
+          Mode        Description
+          ---------------------------------------------------------
+          on          ignore beep messages
+          off         receive beep messages
+          verbose     ignore beep messages, but show a notification
+
+SEE ALSO
+     /beep

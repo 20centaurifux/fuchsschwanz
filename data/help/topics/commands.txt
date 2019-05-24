@@ -1,0 +1,18 @@
+COMMANDS
+     0-9  ?
+     A    /addr, /away
+     B    /beep, /boot
+     C    /cancel, /cp
+     D    /delete
+     E    /email
+     G    /g
+     H    /help
+     I    /invite
+     M    /m, /motd
+     N    /name, /noaway, /nobeep
+     P    /p, /phone
+     R    /read, /reputation, /rname
+     S    /secure, /status
+     T    /talk, /text, /topic
+     U    /unsecure
+     W    /w, /whereis, /whois, /write, /www

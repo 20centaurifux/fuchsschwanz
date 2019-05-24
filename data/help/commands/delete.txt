@@ -1,0 +1,8 @@
+USAGE
+     /delete {password}
+
+DESCRIPTION
+     Deletes your registered nickname.
+
+SEE ALSO
+     registration /p

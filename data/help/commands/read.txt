@@ -1,0 +1,9 @@
+USAGE
+     /read
+
+DESCRIPTION
+     Reads the messages from your personal inbox. Messages get deleted as soon
+     as they are being received.
+
+SEE ALSO
+     registration inbox /read

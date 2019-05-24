@@ -1,0 +1,5 @@
+USAGE
+     /w
+
+DESCRIPTION
+     Displays a list of available groups and their member.

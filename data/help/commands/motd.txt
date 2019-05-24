@@ -1,0 +1,5 @@
+USAGE
+     /motd
+
+DESCRIPTION
+     Displays the message of the day.

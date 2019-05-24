@@ -1,0 +1,28 @@
+USAGE
+     /status {flags}
+     /status
+
+DESCRIPTION
+     Sets visibility, volume and control flags.
+
+     The following flags are available:
+
+          Flag  Name
+          ----------------
+          v     visible
+          s     secret
+          i     invisible
+
+          p     public
+          m     moderated
+          r     restricted
+          c     controlled
+
+          q     quiet
+          n     normal
+          l     loud
+
+     With no argument the status is displayed.
+
+SEE ALSO
+     group visibility volume control

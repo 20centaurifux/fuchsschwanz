@@ -1,0 +1,8 @@
+USAGE:
+     /write {nickname} {message}
+
+DESCRIPTION
+     Writes a message to a user. Messages are stored in a personal inbox.
+
+SEE ALSO
+     inbox /read

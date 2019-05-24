@@ -1,0 +1,15 @@
+USAGE
+     /addr {street address}
+     /addr
+
+DESCRIPTION
+     Sets the street address of the registered user. You can use a pipe as
+     delimiter.
+
+     Without an argument the street address is unset.
+
+EXAMPLE
+     /addr Jeremy Martinson, Jr. | 455 Larkspur Dr. Apt 23 | Baviera, CA 92908
+
+SEE ALSO
+     registration /rname /phone /email /text /www /whois

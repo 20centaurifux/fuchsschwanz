@@ -1,0 +1,6 @@
+USAGE
+     /help
+     /help {topic|command}
+
+DESCRIPTION
+     Displays a help page.

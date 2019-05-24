@@ -1,0 +1,11 @@
+USAGE
+     /phone {phone number}
+     /phone
+
+DESCRIPTION
+     Sets the phone number of the registered user.
+
+     Without an argument the phone number is unset.
+
+SEE ALSO
+     registration /rname /addr /email /text /www /whois

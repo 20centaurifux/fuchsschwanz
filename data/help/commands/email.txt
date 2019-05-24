@@ -1,0 +1,11 @@
+USAGE
+     /email {email address}
+     /email
+
+DESCRIPTION
+     Sets the email address of the registered user.
+
+     Without an argument the email address is unset.
+
+SEE ALSO
+     registration /rname /addr /phone /text /www /whois

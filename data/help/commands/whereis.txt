@@ -1,0 +1,8 @@
+USAGE
+     /whereis {nickname}
+
+DESCRIPTION
+     Displays the address of a user.
+
+SEE ALSO
+     user

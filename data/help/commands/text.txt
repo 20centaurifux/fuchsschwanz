@@ -1,0 +1,12 @@
+USAGE
+     /text {text}
+     /text
+
+DESCRIPTION
+     Sets the arbitrary text of the registered user profile.
+
+     Without an argument the text is unset.
+
+SEE ALSO
+     registration /rname /addr /phone /email /www /whois
+

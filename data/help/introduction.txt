@@ -1,0 +1,14 @@
+INTRODUCTION
+     Welcome to ICB (Internet Citizen's Band).
+
+     Type in /m server ? {topic|command} to learn about a specific topic.
+
+     The topics listed below are available.
+
+          registration     register your nickname
+          user             find and chat with other users
+          group            join groups and talk with other people
+          inbox            send and receive messages
+          commands         list of available commands
+
+     If you don't know what's going on type in /m server ? icb.

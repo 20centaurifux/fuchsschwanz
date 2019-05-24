@@ -1,0 +1,10 @@
+GROUP
+     Every user is member of a group. They can be listed with /w.
+
+     Groups have a moderator which can set topic and status. The latter
+     affects visibility, volume and control.
+
+     Change your group membership with /g.
+ 
+SEE ALSO
+     /w /topic /status visibility volume control /g 1 ~IDLE~ ~OUTLAWS~

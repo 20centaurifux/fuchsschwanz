@@ -1,0 +1,11 @@
+USAGE
+     /rname {real name}
+     /rname
+
+DESCRIPTION
+     Sets the real name of the registered user.
+
+     Without an argument the real name is unset.
+
+SEE ALSO
+     registration /addr /phone /email /text /www /whois

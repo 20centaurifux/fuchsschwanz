@@ -1,0 +1,11 @@
+USAGE
+     /www {website}
+     /www
+
+DESCRIPTION
+     Sets the website of the registered user.
+
+     Without an argument the website is unset.
+
+SEE ALSO
+     registration /rname /addr /phone /text /text /whois

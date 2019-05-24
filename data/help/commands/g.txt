@@ -1,0 +1,23 @@
+USAGE
+     /g {group}
+
+DESCRIPTION
+     Joins another group.
+     
+     If the group doesn't already exist it will be created. When the group
+     name isn't protected (e.g. 1) you'll be the moderator.
+
+     You can also join the same group as a known user:
+
+     /g @alice
+
+     Prepend dot(s) to the group name if you want to change its initial
+     visibility:
+
+          Prefix Description
+          -------------------
+          .      secret group
+          ..     hidden group
+
+SEE ALSO
+     group visibility 1 ~IDLE~ ~OUTLAWS~

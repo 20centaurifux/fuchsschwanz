@@ -1,0 +1,11 @@
+USAGE
+     /secure
+
+DESCRIPTION
+     When this mode is activated a password is mandatory to register the
+     nickname. Otherwise the nickname will be registered automatically if
+     the address of the last successful registration matches your current
+     address.
+
+SEE ALSO
+     registration /unsecure /name

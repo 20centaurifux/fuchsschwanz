@@ -1,0 +1,11 @@
+INBOX
+     Registered nicks have a personal inbox.
+
+     You are able to send and receive messages with the /write and
+     /read commands after registration.
+
+     Messages are stored in an inbox even when the receiver isn't
+     logged in.
+
+SEE ALSO
+     registration /p /write /read

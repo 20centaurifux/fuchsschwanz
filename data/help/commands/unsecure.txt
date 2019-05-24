@@ -1,0 +1,10 @@
+USAGE
+     /unsecure
+
+DESCRIPTION
+     When this mode is activated the server tries to register your nickname
+     automatically. This happens if the address of the last successful
+     registration matches your current address.
+
+SEE ALSO
+     registration /secure /name

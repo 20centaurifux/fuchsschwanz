@@ -1,0 +1,8 @@
+USAGE
+     /noaway
+
+DESCRIPTION
+     Removes the away status.
+
+SEE ALSO
+     user /away

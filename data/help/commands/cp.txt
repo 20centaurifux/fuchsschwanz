@@ -1,0 +1,8 @@
+USAGE
+     /cp {current password} {new password}
+
+DESCRIPTION
+     Sets a new password for your registered nickname.
+
+SEE ALSO
+     registration /p

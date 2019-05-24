@@ -37,11 +37,18 @@ class Help(Injected):
 
         self.__send_contents__(session_id, contents, msgid)
 
-    def topic(self, session_id, topic, msgid=""):
-        contents = self.__read_contents__(lambda: self.manual.topic(topic))
+    def query(self, session_id, q, msgid=""):
+        domain = None
+
+        if q.startswith("/"):
+            domain = "Command"
+            contents = self.__read_contents__(lambda: self.manual.command(q[1:]))
+        else:
+            domain = "Topic"
+            contents = self.__read_contents__(lambda: self.manual.topic(q))
 
         if not contents:
-            raise TldErrorException("Topic '%s' not found." % topic)
+            raise TldErrorException("%s '%s' not found." % (domain, q))
 
         self.__send_contents__(session_id, contents, msgid)
 

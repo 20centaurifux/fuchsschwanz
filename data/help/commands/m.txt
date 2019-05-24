@@ -1,0 +1,19 @@
+USAGE
+     /m {nickname} {message}
+
+DESCRIPTION
+     Sends a private message to a user.
+
+     Private messages sent to "server" are interpreted as command.
+
+EXAMPLE
+     Write a private message to alice:
+
+          /m alice Hi Alice, this is Bob. 
+
+     Write a private message to server:
+
+          /m server ? /m
+
+SEE ALSO
+     /beep

@@ -1,0 +1,10 @@
+USAGE
+     /away {message}
+     /away
+
+DESCRIPTION
+     Sets the away status or displays your away message when no argument is
+     given.
+
+SEE ALSO
+     away /noaway

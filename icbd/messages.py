@@ -470,7 +470,7 @@ class Help:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
-            ACTION(actions.help.Help).topic(session_id, fields[0], msgid(fields))
+            ACTION(actions.help.Help).query(session_id, fields[0], msgid(fields))
         else:
             ACTION(actions.help.Help).introduction(session_id, msgid(fields))
 

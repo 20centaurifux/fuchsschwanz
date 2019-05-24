@@ -33,14 +33,14 @@ class Config:
     server_port: int = 7326
     server_hostname: str = "localhost"
     server_unsecure_login: bool = False
-    server_max_logins: int = 100
+    server_max_logins: int = 500
     motd_filename: str = "./motd"
     logging_verbosity: Verbosity = Verbosity.INFO
-    mbox_limit: int = 20
+    mbox_limit: int = 25
     timeouts_away_message: float = 30.0
     timeouts_mbox_full_message: float = 30.0
     database_filename: str = None
-    protection_time_between_messages: float = 0.8
+    protection_time_between_messages: float = 0.5
     help_path: str = None
 
 def transform_map(m):

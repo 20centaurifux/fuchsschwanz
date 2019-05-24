@@ -25,7 +25,7 @@
 """
 
 class Broker:
-    def add_session(self, session_id):
+    def add_session(self, session_id, handler):
         raise NotImplementedError
 
     def session_exists(self, session_id):
@@ -56,7 +56,4 @@ class Broker:
         raise NotImplementedError
 
     def broadcast(self, message):
-        raise NotImplementedError
-
-    def pop(self, session_id):
         raise NotImplementedError

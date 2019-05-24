@@ -38,11 +38,11 @@ class Broker(broker.Broker, di.Injected):
     def inject(self, log: Logger):
         self.log = log
 
-    def add_session(self, session_id):
+    def add_session(self, session_id, handler):
         added = session_id not in self.__sessions
 
         if added:
-            self.__sessions[session_id] = []
+            self.__sessions[session_id] = handler
 
         return added
 
@@ -88,7 +88,7 @@ class Broker(broker.Broker, di.Injected):
 
     def deliver(self, receiver, message):
         if receiver in self.__sessions:
-            self.__sessions[receiver].append(message)
+            self.__sessions[receiver](message)
         else:
             self.log.warning("Couldn't deliver message, session not registered.")
 

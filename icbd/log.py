@@ -33,7 +33,7 @@ LOG_LEVELS = {Verbosity.DEBUG: logging.DEBUG,
               Verbosity.CRITICAL: logging.CRITICAL}
 
 def new_logger(verbosity):
-    formatter = logging.Formatter(fmt='%(asctime)s - %(pathname)s, line %(lineno)d - %(message)s')
+    formatter = logging.Formatter(fmt='%(asctime)s - %(levelname)s - %(pathname)s, line %(lineno)d - %(message)s')
 
     handler = logging.StreamHandler()
     handler.setFormatter(formatter)

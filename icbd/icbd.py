@@ -24,7 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 import logging
-import asyncore
+import asyncio
 import socket
 import traceback
 from datetime import datetime
@@ -58,81 +58,10 @@ import messages
 from transform import Transform
 from exception import TldResponseException, TldErrorException
 
-class Server(asyncore.dispatcher, di.Injected):
-    def __init__(self, address):
-        asyncore.dispatcher.__init__(self)
-        di.Injected.__init__(self)
-
-        self.__log.info("Listening on %s:%d", *address)
-
-        self.create_socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.set_reuse_addr()
-        self.bind(address)
-        self.address = self.socket.getsockname()
-        self.listen(5)
-
-        self.__signon_server__()
-
-    def inject(self,
-               log: logging.Logger,
-               config: config.Config,
-               store: session.Store,
-               db_connection: database.Connection,
-               nickdb: nickdb.NickDb):
-        self.__log = log
-        self.__config = config
-        self.__session_store = store
-        self.__db_connection = db_connection
-        self.__nickdb = nickdb
-
-    def handle_accept(self):
-        client_info = self.accept()
-
-        if client_info is not None:
-            self.__log.info("Client connected: %s", client_info[1])
-
-            Session(client_info[0], client_info[1])
-
-    def __signon_server__(self):
-        now = datetime.utcnow()
-
-        session_id = self.__session_store.new(loginid=getuser(),
-                                              ip=self.__config.server_address,
-                                              host=socket.getfqdn(self.__config.server_address),
-                                              nick=core.NICKSERV,
-                                              authenticated=True,
-                                              signon=now,
-                                              t_recv=timer.Timer())
-
-        with self.__db_connection.enter_scope() as scope:
-            state = self.__session_store.get(session_id)
-
-            self.__nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
-            self.__nickdb.set_signon(scope, state.nick, now)
-
-            scope.complete()
-
 MESSAGES = {cls.code: cls for cls in filter(lambda cls: isinstance(cls, type) and "code" in cls.__dict__,
                                             messages.__dict__.values())}
 
-class Session(asyncore.dispatcher, di.Injected):
-    def __init__(self, sock, address):
-        di.Injected.__init__(self)
-        asyncore.dispatcher.__init__(self, sock)
-
-        self.__session_id = self.__session_store.new(ip=address[0], host=socket.getfqdn(address[0]))
-        self.__broker.add_session(self.__session_id)
-        self.__reputation.add_session(self.__session_id)
-        self.__buffer = bytearray()
-        self.__decoder = tld.Decoder()
-        self.__decoder.add_listener(self.__message_received__)
-        self.__transform = Transform()
-        self.__shutdown = False
-
-        self.__log.debug("Session created successfully: %s", self.__session_id)
-
-        self.__write_protocol_info__()
-
+class ICBServerProtocol(asyncio.Protocol, di.Injected):
     def inject(self,
                log: logging.Logger,
                config: config.Config,
@@ -149,27 +78,31 @@ class Session(asyncore.dispatcher, di.Injected):
         self.__notification_table = away_table
         self.__reputation = reputation
 
-    def writable(self):
-        msg = self.__broker.pop(self.__session_id)
+    def connection_made(self, transport):
+        address = transport.get_extra_info("peername")
 
-        if msg:
-            self.__buffer.extend(msg)
-            self.__shutdown = (len(msg) >= 2 and msg[1] == 103) # quit message ("g")
+        self.__log.info("Client connected: %s:%d", address[0], address[1])
 
-        return bool(self.__buffer) or self.__shutdown
+        self.__transport = transport
+        self.__session_id = self.__session_store.new(ip=address[0], host=socket.getfqdn(address[0]))
+        self.__broker.add_session(self.__session_id, self.__handle_write__)
+        self.__reputation.add_session(self.__session_id)
+        self.__buffer = bytearray()
+        self.__decoder = tld.Decoder()
+        self.__decoder.add_listener(self.__message_received__)
+        self.__transform = Transform()
+        self.__shutdown = False
 
-    def handle_write(self):
-        if self.__buffer:
-            data = self.__buffer[:256]
-            sent = self.send(data)
-            self.__buffer = self.__buffer[sent:]
-        elif self.__shutdown:
-            self.__shutdown__()
+        self.__log.debug("Session created successfully: %s", self.__session_id)
 
-    def handle_read(self):
+        self.__write_protocol_info__()
+
+    def __handle_write__(self, message):
+        self.__transport.write(message)
+        self.__shutdown = (len(message) >= 2 and message[1] == 103) # quit message ("g")
+
+    def data_received(self, data):
         if not self.__shutdown:
-            data = self.recv(256)
-
             try:
                 self.__decoder.write(data)
 
@@ -178,11 +111,19 @@ class Session(asyncore.dispatcher, di.Injected):
                 self.__broker.deliver(self.__session_id, tld.encode_empty_cmd("g"))
 
             except Exception:
-                self.__log.fatal(traceback.format_exc())
+                self.__abort__()
 
-                raise asyncore.ExitNow()
+    def __abort__(self):
+        self.__log.fatal(traceback.format_exc())
 
-    def handle_close(self):
+        loop = asyncio.get_running_loop()
+
+        loop.stop()
+
+    def connection_lost(self, ex):
+        if ex:
+            self.__log.info(ex)
+
         self.__shutdown__()
 
     def __shutdown__(self):
@@ -197,7 +138,7 @@ class Session(asyncore.dispatcher, di.Injected):
         self.__notification_table.remove_target(self.__session_id)
         self.__reputation.remove_session(self.__session_id)
 
-        self.close()
+        self.__transport.abort()
 
     def __message_received__(self, type_id, payload):
         self.__log.debug("Received message: type='%s', session='%s', payload (size)=%d", type_id, self.__session_id, len(payload))
@@ -244,22 +185,51 @@ class Session(asyncore.dispatcher, di.Injected):
 
         self.__broker.deliver(self.__session_id, e.encode())
 
-def get_opts(argv):
-    options, _ = getopt.getopt(argv, '-c:w:', ['config=', 'working-dir='])
-    m = {}
+class Server(di.Injected):
+    async def run(self, address):
+        self.__log.info("Listening on %s:%d", address[0], address[1])
 
-    for opt, arg in options:
-        if opt in ('-c', '--config'):
-            m["config"] = arg
-        if opt in ('-w', '--working-dir'):
-            m["working_dir"] = arg
+        loop = asyncio.get_running_loop()
 
-    if not m.get("config"):
-        raise getopt.GetoptError("--config option is mandatory")
+        server = await loop.create_server(lambda: ICBServerProtocol(), *address)
 
-    return m
+        self.__signon_server__()
 
-def run(opts):
+        async with server:
+            await server.serve_forever()
+
+    def inject(self,
+               log: logging.Logger,
+               config: config.Config,
+               store: session.Store,
+               db_connection: database.Connection,
+               nickdb: nickdb.NickDb):
+        self.__log = log
+        self.__config = config
+        self.__session_store = store
+        self.__db_connection = db_connection
+        self.__nickdb = nickdb
+
+    def __signon_server__(self):
+        now = datetime.utcnow()
+
+        session_id = self.__session_store.new(loginid=getuser(),
+                                              ip=self.__config.server_address,
+                                              host=socket.getfqdn(self.__config.server_address),
+                                              nick=core.NICKSERV,
+                                              authenticated=True,
+                                              signon=now,
+                                              t_recv=timer.Timer())
+
+        with self.__db_connection.enter_scope() as scope:
+            state = self.__session_store.get(session_id)
+
+            self.__nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
+            self.__nickdb.set_signon(scope, state.nick, now)
+
+            scope.complete()
+
+async def run(opts):
     working_dir = opts.get("working_dir")
 
     if working_dir:
@@ -290,22 +260,37 @@ def run(opts):
         container.resolve(nickdb.NickDb).setup(scope)
         scope.complete()
 
-    Server((preferences.server_address, preferences.server_port))
+    address = (preferences.server_address, preferences.server_port)
+    server = Server()
 
-    try:
-        asyncore.loop()
+    await server.run(address)
 
-    except (KeyboardInterrupt, Exception):
-        logger.info("Server finished.")
+    logger.info("Server stopped.")
 
     with container.resolve(database.Connection).enter_scope() as scope:
         container.resolve(nickdb.NickDb).set_signoff(scope, core.NICKSERV, datetime.utcnow())
         scope.complete()
 
+def get_opts(argv):
+    options, _ = getopt.getopt(argv, '-c:w:', ['config=', 'working-dir='])
+    m = {}
+
+    for opt, arg in options:
+        if opt in ('-c', '--config'):
+            m["config"] = arg
+        if opt in ('-w', '--working-dir'):
+            m["working_dir"] = arg
+
+    if not m.get("config"):
+        raise getopt.GetoptError("--config option is mandatory")
+
+    return m
+
 if __name__ == "__main__":
     try:
         opts = get_opts(sys.argv[1:])
 
-        run(opts)
+        asyncio.run(run(opts))
     except getopt.GetoptError as ex:
         print(str(ex))
+    except: pass

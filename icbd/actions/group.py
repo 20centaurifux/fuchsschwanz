@@ -37,7 +37,7 @@ class Group(Injected):
         info = self.__get_group_if_can_moderate__(session_id)
 
         if not validate.is_valid_topic(topic):
-            raise TldErrorException("Topic must consist of %d and %d characters."
+            raise TldErrorException("Topic must consist of at least %d and at most %d characters."
                                     % (validate.TOP_MIN, validate.TOPIC_MAX))
 
         info.topic = topic

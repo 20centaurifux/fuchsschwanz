@@ -41,11 +41,11 @@ class UserSession(Injected):
         self.log.debug("User login: loginid=%s, nick=%s, password=%s", loginid, nick, hide_password(password))
 
         if not validate.is_valid_loginid(loginid):
-            raise TldErrorException("loginid must consist of %d and %d alphanumeric characters."
+            raise TldErrorException("loginid must consist of at least %d and at most %d alphabetic characters."
                                     % (validate.LOGINID_MIN, validate.LOGINID_MAX))
 
         if not validate.is_valid_nick(nick):
-            raise TldErrorException("Nickname must consist of %d and %d alphanumeric characters."
+            raise TldErrorException("Nickname must consist of at least %d and at most %d alphanumeric characters."
                                     % (validate.NICK_MIN, validate.NICK_MAX))
 
         self.broker.deliver(session_id, tld.encode_empty_cmd("a"))

@@ -454,6 +454,16 @@ class Boot:
 
         ACTION(actions.group.Group).boot(session_id, fields[0])
 
+@command("pass")
+class Pass:
+    @staticmethod
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if fields[0]:
+            ACTION(actions.group.Group).pass_over(session_id, fields[0])
+        else:
+            ACTION(actions.group.Group).relinquish(session_id)
+
 @command("reputation")
 class Reputation:
     @staticmethod
@@ -473,6 +483,7 @@ class Help:
             ACTION(actions.help.Help).query(session_id, fields[0], msgid(fields))
         else:
             ACTION(actions.help.Help).introduction(session_id, msgid(fields))
+
 
 COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, type) and "command" in cls.__dict__,
                                                  sys.modules[__name__].__dict__.values())}

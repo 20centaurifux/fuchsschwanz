@@ -352,6 +352,53 @@ class Group(Injected):
 
         ACTION(actions.usersession.UserSession).join(loggedin_session, core.BOOT_GROUP)
 
+    def pass_over(self, session_id, nick):
+        info = self.__get_group_if_can_moderate__(session_id)
+
+        loggedin_session = self.session.find_nick(nick)
+
+        if not loggedin_session:
+            raise TldErrorException("%s is not signed on." % nick)
+
+        if info.moderator == loggedin_session:
+            raise TldErrorException("You are already moderator.")
+
+        loggedin_state = self.session.get(loggedin_session)
+
+        if loggedin_state.nick.lower() == core.NICKSERV.lower():
+            raise TldErrorException("Cannot pass to %s." % core.NICKSERV)
+
+        info.moderator = loggedin_session
+
+        self.groups.update(info)
+
+        state = self.session.get(session_id)
+
+        self.broker.deliver(loggedin_session, tld.encode_status_msg("Pass", "%s just passed moderation of group %s." % (state.nick, info.display_name)))
+
+        if info.volume != group.Volume.QUIET:
+            self.broker.to_channel(info.key, tld.encode_status_msg("Pass", "%s has passed moderation to %s." % (state.nick, loggedin_state.nick)))
+
+    def relinquish(self, session_id):
+        info = self.__get_group_if_can_moderate__(session_id)
+
+        info.moderator = None
+
+        state = self.session.get(session_id)
+
+        if info.volume != group.Volume.QUIET:
+            self.broker.to_channel(info.key, tld.encode_status_msg("Change", "%s just relinquished moderation." % state.nick))
+
+        if info.control != group.Control.PUBLIC:
+            info.control = group.Control.PUBLIC
+            info.clear_talkers()
+            info.clear_invitations()
+
+            if info.volume != group.Volume.QUIET:
+                self.broker.to_channel(info.key, tld.encode_status_msg("Change", "Group is now public."))
+
+        self.groups.update(info)
+
     def __get_group__(self, session_id):
         state = self.session.get(session_id)
 

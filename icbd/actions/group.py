@@ -402,9 +402,6 @@ class Group(Injected):
     def __get_group__(self, session_id):
         state = self.session.get(session_id)
 
-        if not state.group:
-            raise TldErrorException("Login required.")
-
         return self.groups.get(state.group)
 
     def __get_group_if_can_moderate__(self, session_id):

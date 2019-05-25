@@ -29,9 +29,6 @@ import validate
 from exception import TldErrorException
 
 class MessageBox(Injected):
-    def __init__(self):
-        super().__init__()
-
     def send_message(self, session_id, receiver, text):
         state = self.session.get(session_id)
 

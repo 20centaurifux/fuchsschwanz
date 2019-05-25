@@ -39,9 +39,6 @@ class Registration(Injected):
 
         state = self.session.get(session_id)
 
-        if not state.nick:
-            raise TldErrorException("Login required.")
-
         registered = False
 
         with self.db_connection.enter_scope() as scope:
@@ -113,9 +110,6 @@ class Registration(Injected):
         self.log.debug("Changing user password.")
 
         state = self.session.get(session_id)
-
-        if not state.nick:
-            raise TldErrorException("Login required.")
 
         with self.db_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, state.nick):

@@ -30,5 +30,4 @@ class Ping(Injected):
     def ping(self, session_id, msgid=""):
         state = self.session.get(session_id)
 
-        if state.group:
-            self.broker.deliver(session_id, tld.encode_str("m", msgid))
+        self.broker.deliver(session_id, tld.encode_str("m", msgid))

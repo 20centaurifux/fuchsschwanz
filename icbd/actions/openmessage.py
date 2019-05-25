@@ -34,30 +34,25 @@ class OpenMessage(Injected):
     def send(self, session_id, message):
         state = self.session.get(session_id)
 
-        if state.group:
-            info = self.groups.get(state.group)
+        info = self.groups.get(state.group)
 
-            if info.volume == group.Volume.QUIET:
-                raise TldErrorException("Open messages are not permitted in quiet groups.")
+        if info.volume == group.Volume.QUIET:
+            raise TldErrorException("Open messages are not permitted in quiet groups.")
 
-            if info.control == group.Control.CONTROLLED:
-                if (not info.nick_can_talk(state.nick, state.authenticated)
-                        and not info.address_can_talk(state.loginid, state.ip, state.host, state.authenticated)):
-                    self.reputation.warning(session_id)
+        if info.control == group.Control.CONTROLLED:
+            if (not info.nick_can_talk(state.nick, state.authenticated)
+                    and not info.address_can_talk(state.loginid, state.ip, state.host, state.authenticated)):
+                self.reputation.warning(session_id)
 
-                    raise TldErrorException("You do not have permission to talk in this group.")
+                raise TldErrorException("You do not have permission to talk in this group.")
 
-            max_len = 254 - validate.NICK_MAX - 2
+        max_len = 254 - validate.NICK_MAX - 2
 
-            for part in wrap(message, max_len):
-                e = tld.Encoder("b")
+        for part in wrap(message, max_len):
+            e = tld.Encoder("b")
 
-                e.add_field_str(state.nick, append_null=False)
-                e.add_field_str(part, append_null=True)
+            e.add_field_str(state.nick, append_null=False)
+            e.add_field_str(part, append_null=True)
 
-                if self.broker.to_channel_from(session_id, state.group, e.encode()) == 0:
-                    raise TldErrorException("No one else in group.")
-        else:
-            self.log.warning("Cannot send open message, session '%s' not logged in.", session_id)
-
-            raise TldErrorException("Login required.")
+            if self.broker.to_channel_from(session_id, state.group, e.encode()) == 0:
+                raise TldErrorException("No one else in group.")

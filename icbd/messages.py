@@ -25,6 +25,7 @@
 """
 import sys
 import di
+import session
 import broker
 import validate
 import tld
@@ -55,6 +56,19 @@ def code(id):
 def textfields(fn):
     def wrapper(session_id, fields):
         fn(session_id, [decode_ascii(b).strip(" \0") for b in fields])
+
+    return wrapper
+
+def loginrequired(fn):
+    def wrapper(session_id, fields):
+        sessions = di.default_container.resolve(session.Store)
+
+        state = sessions.get(session_id)
+
+        if not state.nick or not state.group:
+            raise TldErrorException("Login required.")
+
+        fn(session_id, fields)
 
     return wrapper
 
@@ -140,6 +154,7 @@ class Login:
 @code("b")
 class OpenMessage:
     @staticmethod
+    @loginrequired
     @textfields
     @catchtldexceptions
     @fieldslength(count=1)
@@ -149,6 +164,7 @@ class OpenMessage:
 @command("g")
 class ChangeGroup:
     @staticmethod
+    @loginrequired
     @fieldslength(count=1)
     @arglength(display="Group name", min=validate.GROUP_MIN, max=validate.GROUP_MAX)
     def process(session_id, fields):
@@ -157,6 +173,7 @@ class ChangeGroup:
 @command("name")
 class Rename:
     @staticmethod
+    @loginrequired
     @fieldslength(count=1)
     @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(session_id, fields):
@@ -165,6 +182,7 @@ class Rename:
 @command("p")
 class Register:
     @staticmethod
+    @loginrequired
     @fieldslength(count=1)
     def process(session_id, fields):
         ACTION(actions.registration.Registration).register(session_id, fields[0])
@@ -172,6 +190,7 @@ class Register:
 @command("cp")
 class ChangePassword:
     @staticmethod
+    @loginrequired
     @fieldslength(count=1)
     def process(session_id, fields):
         msg_fields = fields[0].split(" ")
@@ -189,6 +208,7 @@ def msgid(fields):
 @command("secure")
 class EnableSecurity:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         ACTION(actions.registration.Registration).set_security_mode(session_id, enabled=True, msgid=msgid(fields))
@@ -196,6 +216,7 @@ class EnableSecurity:
 @command("nosecure")
 class DisableSecurity:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         ACTION(actions.registration.Registration).set_security_mode(session_id, enabled=False, msgid=msgid(fields))
@@ -203,6 +224,7 @@ class DisableSecurity:
 @command("rname")
 class ChangeRealname:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     @arglength(display="Real Name", min=validate.REALNAME_MIN, max=validate.REALNAME_MAX)
     def process(session_id, fields):
@@ -211,6 +233,7 @@ class ChangeRealname:
 @command("addr")
 class ChangeAddress:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     @arglength(display="Address", min=validate.ADDRESS_MIN, max=validate.ADDRESS_MAX)
     def process(session_id, fields):
@@ -219,6 +242,7 @@ class ChangeAddress:
 @command("phone")
 class ChangePhone:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     @arglength(display="Phone Number", min=validate.PHONE_MIN, max=validate.PHONE_MAX)
     def process(session_id, fields):
@@ -227,6 +251,7 @@ class ChangePhone:
 @command("email")
 class ChangeEmail:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     @arglength(display="E-Mail address", min=validate.EMAIL_MIN, max=validate.EMAIL_MAX)
     def process(session_id, fields):
@@ -235,6 +260,7 @@ class ChangeEmail:
 @command("text")
 class ChangeText:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     @arglength(display="Text", min=validate.TEXT_MIN, max=validate.TEXT_MAX)
     def process(session_id, fields):
@@ -243,6 +269,7 @@ class ChangeText:
 @command("www")
 class ChangeWebsite:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     @arglength(display="WWW", min=validate.WWW_MIN, max=validate.WWW_MAX)
     def process(session_id, fields):
@@ -251,6 +278,7 @@ class ChangeWebsite:
 @command("delete")
 class DeleteNick:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         ACTION(actions.registration.Registration).delete(session_id, fields[0], msgid=msgid(fields))
@@ -258,6 +286,7 @@ class DeleteNick:
 @command("whois")
 class Whois:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(session_id, fields):
@@ -266,6 +295,7 @@ class Whois:
 @command("write")
 class WriteMessage:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         msg_fields = fields[0].split(" ", 1)
@@ -280,6 +310,7 @@ class WriteMessage:
 @command("m")
 class WritePrivateMessage:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         msg_fields = fields[0].split(" ", 1)
@@ -294,6 +325,7 @@ class WritePrivateMessage:
 @command("read")
 class ReadMessages:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
@@ -304,6 +336,7 @@ class ReadMessages:
 @command("whereis")
 class Whereis:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
@@ -314,6 +347,7 @@ class Whereis:
 @command("beep")
 class Beep:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
@@ -324,6 +358,7 @@ class Beep:
 @command("nobeep")
 class NoBeep:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         print("NOBEEP")
@@ -335,6 +370,7 @@ class NoBeep:
 @command("away")
 class Away:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         ACTION(actions.away.Away).away(session_id, fields[0])
@@ -342,6 +378,7 @@ class Away:
 @command("noaway")
 class NoAway:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
@@ -352,6 +389,7 @@ class NoAway:
 @command("w")
 class Userlist:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
@@ -362,6 +400,7 @@ class Userlist:
 @command("motd")
 class Motd:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
@@ -372,6 +411,7 @@ class Motd:
 @command("topic")
 class ChangeTopic:
     @staticmethod
+    @loginrequired
     @fieldslength(count=1)
     @arglength(display="Topic", min=validate.TOPIC_MIN, max=validate.TOPIC_MAX)
     def process(session_id, fields):
@@ -383,6 +423,7 @@ class ChangeTopic:
 @command("status")
 class Status:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
@@ -393,6 +434,7 @@ class Status:
 @command("invite")
 class Invite:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         usage = "Usage: invite {-q} {-r} {-n nickname | -s address}"
@@ -411,6 +453,7 @@ class Invite:
 @command("cancel")
 class Cancel:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         usage = "Usage: cancel {-q} {-n nickname | -s address}"
@@ -429,6 +472,7 @@ class Cancel:
 @command("talk")
 class Talk:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         usage = "Usage: talk {-q} {-d} {-r} {-n nickname | -s address}"
@@ -447,6 +491,7 @@ class Talk:
 @command("boot")
 class Boot:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
@@ -457,6 +502,7 @@ class Boot:
 @command("pass")
 class Pass:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
@@ -467,6 +513,7 @@ class Pass:
 @command("reputation")
 class Reputation:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
@@ -477,6 +524,7 @@ class Reputation:
 @command("help")
 class Help:
     @staticmethod
+    @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
@@ -491,6 +539,7 @@ COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, typ
 @code("h")
 class Command:
     @staticmethod
+    @loginrequired
     @textfields
     @catchtldexceptions
     @fieldslength(min=1, max=3)
@@ -505,6 +554,7 @@ class Command:
 @code("l")
 class Ping:
     @staticmethod
+    @loginrequired
     @textfields
     @catchtldexceptions
     @fieldslength(min=0, max=1)
@@ -514,6 +564,7 @@ class Ping:
 @code("m")
 class Pong:
     @staticmethod
+    @loginrequired
     @textfields
     @catchtldexceptions
     def process(session_id, fields):

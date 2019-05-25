@@ -151,7 +151,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
 
         old_reputation = self.__reputation.get(self.__session_id)
 
-        if type != "m":
+        if type_id != "m":
             self.__session_store.update(self.__session_id, t_recv=timer.Timer())
 
         msg = None
@@ -210,7 +210,7 @@ class Server(di.Injected):
 
         self.__signon_server__()
 
-        loop.create_task(self.__send_ping__())
+        loop.create_task(self.__process_idling_sessions__())
 
         async with server:
             await server.serve_forever()
@@ -234,15 +234,20 @@ class Server(di.Injected):
 
             scope.complete()
 
-    async def __send_ping__(self):
-        t = timer.Timer()
-
+    async def __process_idling_sessions__(self):
         while True:
-            for k, v in self.__session_store:
-                if k != self.__session_id and v.t_recv.elapsed() >= 15.0:
-                    self.__broker.deliver(k, tld.encode_empty_cmd("l"))
+            interval = self.__config.timeouts_ping
+            sessions = {k: v for k, v in self.__session_store if k != self.__session_id}
 
-            await asyncio.sleep(15.0)
+            for k, v in sessions.items():
+                elapsed = v.t_recv.elapsed()
+
+                if elapsed > self.__config.timeouts_ping:
+                    self.__broker.deliver(k, tld.encode_empty_cmd("l"))
+                else:
+                    interval = min(interval, self.__config.timeouts_ping - elapsed)
+
+            await asyncio.sleep(interval)
 
 async def run(opts):
     working_dir = opts.get("working_dir")

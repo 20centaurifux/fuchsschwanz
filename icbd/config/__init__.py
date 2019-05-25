@@ -39,6 +39,7 @@ class Config:
     mbox_limit: int = 25
     timeouts_away_message: float = 30.0
     timeouts_mbox_full_message: float = 30.0
+    timeouts_ping: float = 30.0
     database_filename: str = None
     protection_time_between_messages: float = 0.5
     help_path: str = None

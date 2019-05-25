@@ -509,4 +509,12 @@ class Ping:
     @catchtldexceptions
     @fieldslength(min=0, max=1)
     def process(session_id, fields):
-        ACTION(actions.ping.Ping).ping(session_id, fields[0] if len(fields) == 1 else "")
+        ACTION(actions.ping.Ping).ping(session_id, msgid(fields))
+
+@code("m")
+class Pong:
+    @staticmethod
+    @textfields
+    @catchtldexceptions
+    def process(session_id, fields):
+        pass

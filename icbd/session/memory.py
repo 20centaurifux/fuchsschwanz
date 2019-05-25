@@ -65,3 +65,7 @@ class Store(session.Store):
 
     def __len__(self):
         return len(self.__m)
+
+    def __iter__(self):
+        for k, v in self.__m.items():
+            yield k, v

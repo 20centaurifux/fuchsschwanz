@@ -151,7 +151,8 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
 
         old_reputation = self.__reputation.get(self.__session_id)
 
-        self.__session_store.update(self.__session_id, t_recv=timer.Timer())
+        if type != "m":
+            self.__session_store.update(self.__session_id, t_recv=timer.Timer())
 
         msg = None
 
@@ -186,6 +187,20 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         self.__broker.deliver(self.__session_id, e.encode())
 
 class Server(di.Injected):
+    def inject(self,
+               log: logging.Logger,
+               config: config.Config,
+               store: session.Store,
+               broker: broker.Broker,
+               db_connection: database.Connection,
+               nickdb: nickdb.NickDb):
+        self.__log = log
+        self.__config = config
+        self.__session_store = store
+        self.__broker = broker
+        self.__db_connection = db_connection
+        self.__nickdb = nickdb
+
     async def run(self, address):
         self.__log.info("Listening on %s:%d", address[0], address[1])
 
@@ -195,39 +210,39 @@ class Server(di.Injected):
 
         self.__signon_server__()
 
+        loop.create_task(self.__send_ping__())
+
         async with server:
             await server.serve_forever()
-
-    def inject(self,
-               log: logging.Logger,
-               config: config.Config,
-               store: session.Store,
-               db_connection: database.Connection,
-               nickdb: nickdb.NickDb):
-        self.__log = log
-        self.__config = config
-        self.__session_store = store
-        self.__db_connection = db_connection
-        self.__nickdb = nickdb
 
     def __signon_server__(self):
         now = datetime.utcnow()
 
-        session_id = self.__session_store.new(loginid=getuser(),
-                                              ip=self.__config.server_address,
-                                              host=socket.getfqdn(self.__config.server_address),
-                                              nick=core.NICKSERV,
-                                              authenticated=True,
-                                              signon=now,
-                                              t_recv=timer.Timer())
+        self.__session_id = self.__session_store.new(loginid=getuser(),
+                                                     ip=self.__config.server_address,
+                                                     host=socket.getfqdn(self.__config.server_address),
+                                                     nick=core.NICKSERV,
+                                                     authenticated=True,
+                                                     signon=now,
+                                                     t_recv=timer.Timer())
 
         with self.__db_connection.enter_scope() as scope:
-            state = self.__session_store.get(session_id)
+            state = self.__session_store.get(self.__session_id)
 
             self.__nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
             self.__nickdb.set_signon(scope, state.nick, now)
 
             scope.complete()
+
+    async def __send_ping__(self):
+        t = timer.Timer()
+
+        while True:
+            for k, v in self.__session_store:
+                if k != self.__session_id and v.t_recv.elapsed() >= 15.0:
+                    self.__broker.deliver(k, tld.encode_empty_cmd("l"))
+
+            await asyncio.sleep(15.0)
 
 async def run(opts):
     working_dir = opts.get("working_dir")
@@ -293,4 +308,6 @@ if __name__ == "__main__":
         asyncio.run(run(opts))
     except getopt.GetoptError as ex:
         print(str(ex))
-    except: pass
+    except:
+        traceback.print_exc()
+

@@ -27,8 +27,8 @@ from actions import Injected
 import tld
 
 class Ping(Injected):
-    def ping(self, session_id, message_id=""):
+    def ping(self, session_id, msgid=""):
         state = self.session.get(session_id)
 
         if state.group:
-            self.broker.deliver(session_id, tld.encode_str("m", message_id))
+            self.broker.deliver(session_id, tld.encode_str("m", msgid))

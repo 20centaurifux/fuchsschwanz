@@ -5,7 +5,10 @@ DESCRIPTION
      Receive messages you send.
 
           Mode        Description
-          --------------------------------------------------------
+          ---------------------------------------------------------
           off         receive no messages you send
           on          receive public messages you send
           verbose     receive public and personal messages you send
+
+SEE ALSO
+     /m /beep

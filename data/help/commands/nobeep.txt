@@ -11,4 +11,4 @@ DESCRIPTION
           verbose     ignore beep messages, but show a notification
 
 SEE ALSO
-     /beep
+     /beep /echoback

@@ -16,4 +16,4 @@ EXAMPLE
           /m server ? /m
 
 SEE ALSO
-     /beep
+     /echoback /beep

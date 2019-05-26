@@ -1,6 +1,6 @@
 """
     project............: Fuchsschwanz
-    description........: icbd server implementation
+    description........: ICB server
     date...............: 05/2019
     copyright..........: Sebastian Fedrau
 

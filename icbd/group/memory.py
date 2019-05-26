@@ -32,6 +32,9 @@ class Store(group.Store):
     def get(self, name):
         return self.__m.get(name.lower(), group.GroupInfo(display_name=name))
 
+    def exists(self, name):
+        return name.lower() in self.__m
+
     def get_groups(self):
         return sorted([g for g in self.__m.values()], key=lambda g: str(g))
 

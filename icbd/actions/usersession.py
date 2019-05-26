@@ -26,6 +26,7 @@
 from datetime import datetime
 import secrets
 import re
+from textwrap import wrap
 from actions import Injected, ACTION
 from actions.motd import Motd
 from actions.registration import Registration
@@ -508,72 +509,3 @@ class UserSession(Injected):
             self.broker.deliver(session_id, tld.encode_co_output("%-16s %s (%s)" % (nick, state.host, state.ip), msgid))
         else:
             self.broker.deliver(session_id, tld.encode_co_output("User not found.", msgid))
-
-    def list_and_quit(self, session_id, msgid=""):
-        self.list(session_id, msgid)
-
-        self.broker.deliver(session_id, tld.encode_empty_cmd("g"))
-
-    def list(self, session_id, msgid=""):
-        self.log.debug("Sending session list.")
-
-        logins = self.session.get_nicks()
-
-        is_admin = False
-
-        state = self.session.get(session_id)
-
-        if state.authenticated:
-            with self.db_connection.enter_scope() as scope:
-                is_admin = self.nickdb.is_admin(scope, state.nick)
-
-        available_groups = self.groups.get_groups()
-
-        for info in available_groups:
-            show_group = True
-            display_name = str(info)
-
-            if info.visibility != group.Visibility.VISIBLE:
-                if is_admin or state.group == info.key:
-                    display_name = "*%s*" % str(info)
-                else:
-                    display_name = "-SECRET-"
-                    show_group = info.visibility != group.Visibility.INVISIBLE
-
-            if show_group:
-                moderator = logins[info.moderator].nick if info.moderator else "(None)"
-
-                self.broker.deliver(session_id,
-                                    tld.encode_co_output("Group: %-27s Mod: %-16s" % (display_name, moderator), msgid))
-
-                self.broker.deliver(session_id,
-                                    tld.encode_co_output("Topic: %s" % (info.topic if info.topic else "(None)"), msgid))
-
-                self.broker.deliver(session_id,
-                                    tld.encode_co_output("Nickname           Idle            Signon (UTC)      Account", msgid))
-
-                subscribers = sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(info.key)],
-                                     key=lambda arg: arg[1].nick.lower())
-
-                for sub_id, sub_state in subscribers:
-                    admin_flag = "*" if info.moderator == sub_id else " "
-
-                    self.broker.deliver(session_id,
-                                        tld.encode_co_output("%s  %-16s%-16s%-18s%s" % (admin_flag,
-                                                                                        sub_state.nick,
-                                                                                        sub_state.t_recv.elapsed_str(),
-                                                                                        sub_state.signon.strftime("%Y/%m/%d %H:%M"),
-                                                                                        sub_state.address),
-                                                             msgid))
-
-                self.broker.deliver(session_id, tld.encode_co_output("", msgid))
-
-        logins_n = len(logins) - 1
-        logins_suffix = "" if logins_n == 1 else "s"
-
-        groups_n = len(available_groups)
-        groups_suffix = "" if groups_n == 1 else "s"
-
-        self.broker.deliver(session_id,
-                            tld.encode_co_output("Total: %d user%s in %d group%s." % (logins_n, logins_suffix, groups_n, groups_suffix),
-                                                 msgid))

@@ -197,6 +197,9 @@ class Store:
     def get(self, name):
         raise NotImplementedError
 
+    def exists(self, name):
+        raise NotImplementedError
+
     def update(self, info):
         raise NotImplementedError
 

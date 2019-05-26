@@ -40,6 +40,7 @@ import actions.ping
 import actions.privatemessage
 import actions.registration
 import actions.usersession
+import actions.list
 import actions.admin
 import actions.help
 from textutils import decode_ascii
@@ -145,7 +146,7 @@ class Login:
             status = fields[5] if len(fields) >= 6 else ""
             args = [session_id, fields[0], fields[1], password, fields[2], status]
         elif fields[3] == "w":
-            fn = ACTION(actions.usersession.UserSession).list_and_quit
+            fn = ACTION(actions.list.List).list_and_quit
             args = [session_id]
 
         if not fn:
@@ -394,9 +395,14 @@ class Userlist:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
-            raise TldErrorException("Usage: /w")
-
-        ACTION(actions.usersession.UserSession).list(session_id, msgid(fields))
+            if fields[0] == "-s":
+                ACTION(actions.list.List).shortlist(session_id, with_members=True, msgid=msgid(fields))
+            elif fields[0] == "-g":
+                ACTION(actions.list.List).shortlist(session_id, with_members=False, msgid=msgid(fields))
+            else:
+                ACTION(actions.list.List).list_group(session_id, fields[0], msgid(fields))
+        else:
+            ACTION(actions.list.List).list(session_id, msgid=msgid(fields))
 
 @command("motd")
 class Motd:

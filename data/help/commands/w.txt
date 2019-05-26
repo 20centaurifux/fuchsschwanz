@@ -1,5 +1,13 @@
 USAGE
-     /w
+     /w {-s | -g | . | group }
 
 DESCRIPTION
-     Displays a list of available groups and their member.
+     Displays a list of available groups and their members.
+
+          Argument         Description
+          -------------------------------------------------
+                           lists everyone on server
+          -s               short list of everyone on server
+          -g               lists the groups on the server
+          .                lists just the group you're in
+          {group name}     lists the specified group

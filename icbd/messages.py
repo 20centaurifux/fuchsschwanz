@@ -141,7 +141,9 @@ class Login:
 
         if fields[3] == "login":
             fn = ACTION(actions.usersession.UserSession).login
-            args = [session_id, fields[0], fields[1], fields[4] if len(fields) >= 5 else "", fields[2]]
+            password = fields[4] if len(fields) >= 5 else ""
+            status = fields[5] if len(fields) >= 6 else ""
+            args = [session_id, fields[0], fields[1], password, fields[2], status]
         elif fields[3] == "w":
             fn = ACTION(actions.usersession.UserSession).list_and_quit
             args = [session_id]
@@ -361,7 +363,6 @@ class NoBeep:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        print("NOBEEP")
         if not fields[0]:
             raise TldErrorException("Usage: /nobeep on/off/verbose")
 

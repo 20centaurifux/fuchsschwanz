@@ -1,16 +1,16 @@
 REGISTRATION
-	Your nick is how people know you. If you want to use a nick permanently
-	you should register it with the /p command.
+     Your nick is how people know you. If you want to use a nick permanently
+     you should register it with the /p command.
 
-	A new record is created if you register a nickname for the very first
-	time. From now on your password is required for registration.  Change
-	your password with /cp.
+     A new record is created if you register a nickname for the very first
+     time. From now on your password is required for registration.  Change
+     your password with /cp.
 
-	A registered nick has an inbox for private messages. This allows you
-	to send messages to signed off users.
+     A registered nick has an inbox for private messages. This allows you
+     to send messages to signed off users.
 
-	You can view user profiles with /whois. Feel free to fill in your own
-	profile to share personal information with other users.
+     You can view user profiles with /whois. Feel free to fill in your own
+     profile to share personal information with other users.
 
 SEE ALSO
      /p /cp inbox /whois /rname /addr /phone /email /text /www /delete

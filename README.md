@@ -4,7 +4,7 @@ Here I create my own [icbd](http://www.icb.net/) implementation just for fun.
 
 The project is at a *very* early stage. The following features are implemented:
 
-* user login & authentication (/secure and /nosecure node)
+* user login & authentication (/secure and /nosecure mode)
 * user registration
 * setting personal information
 * away status
@@ -20,13 +20,15 @@ The project is at a *very* early stage. The following features are implemented:
 * private messages
 * personal message box
 * "beep" users
-* basic permission management (group moderators & admins)
+* permission management (group moderators & admins)
 * query online users
 * motd
-* help
+* integrated help
 
 You need Python 3.7 to start the server.
 
 	$ ./run.sh
 
 Configure network address & database path in the ./icbd/data/config.json file.
+
+A test instance is running on internetcitizens.band (port 7326).

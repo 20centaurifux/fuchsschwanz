@@ -29,6 +29,7 @@ import re
 from actions import Injected, ACTION
 from actions.motd import Motd
 from actions.registration import Registration
+from actions.group import Group
 import core
 import group
 import validate
@@ -37,7 +38,7 @@ from textutils import hide_password
 from exception import TldErrorException, TldStatusException
 
 class UserSession(Injected):
-    def login(self, session_id, loginid, nick, password, group_name):
+    def login(self, session_id, loginid, nick, password, group_name, status=""):
         self.log.debug("User login: loginid=%s, nick=%s, password=%s", loginid, nick, hide_password(password))
 
         if not validate.is_valid_loginid(loginid):
@@ -77,7 +78,7 @@ class UserSession(Injected):
         if not group_name:
             group_name = core.DEFAULT_GROUP
 
-        self.join(session_id, group_name)
+        self.join(session_id, group_name, status)
 
     def __try_login_unsecure__(self, session_id, loginid, nick):
         self.log.debug("Testing unsecure authentication.")
@@ -376,12 +377,13 @@ class UserSession(Injected):
 
             self.session.update(session_id, nick=None, authenticated=False)
 
-    def join(self, session_id, group_name):
+    def join(self, session_id, group_name, status=""):
         state = self.session.get(session_id)
 
         self.log.debug("%s joins group %s.", state.nick, group_name)
 
         old_group = state.group
+        new_status = None
 
         group_name = self.__resolve_user_group_name__(group_name)
         visibility, group_name = self.__extract_visibility_from_groupname__(group_name)
@@ -429,6 +431,7 @@ class UserSession(Injected):
                 else:
                     info.control = group.Control.MODERATED
                     info.moderator = session_id
+                    new_status = status
 
                 self.groups.update(info)
 
@@ -440,6 +443,9 @@ class UserSession(Injected):
         msg += "."
 
         self.broker.deliver(session_id, tld.encode_status_msg("Status", msg))
+
+        if new_status:
+            ACTION(Group).change_status(session_id, new_status)
 
         if info.volume != group.Volume.QUIET:
             category = "Sign-on" if not old_group else "Arrive"

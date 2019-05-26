@@ -45,7 +45,6 @@ class Manual(manual.Manual):
         return re.sub('[^0-9a-zA-Z~_\\-]+', '_', q).lower()
 
     def __load_file__(self, filename):
-        print("FILE: '%s'" % filename)
         contents = None
 
         path = os.path.join(self.__path, filename)

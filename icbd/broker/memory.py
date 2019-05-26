@@ -113,11 +113,3 @@ class Broker(broker.Broker, di.Injected):
     def broadcast(self, message):
         for session_id in self.__sessions:
             self.deliver(session_id, message)
-
-    def pop(self, session_id):
-        msg = None
-
-        if self.__sessions[session_id]:
-            msg = self.__sessions[session_id].pop(0)
-
-        return msg

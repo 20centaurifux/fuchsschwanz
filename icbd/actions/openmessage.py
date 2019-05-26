@@ -25,6 +25,7 @@
 """
 from textwrap import wrap
 from actions import Injected
+import session
 import group
 import tld
 import validate
@@ -54,5 +55,12 @@ class OpenMessage(Injected):
             e.add_field_str(state.nick, append_null=False)
             e.add_field_str(part, append_null=True)
 
-            if self.broker.to_channel_from(session_id, state.group, e.encode()) == 0:
+            receivers = 0
+
+            if state.echo == session.EchoMode.OFF:
+                receivers = self.broker.to_channel_from(session_id, state.group, e.encode())
+            else:
+                receivers = self.broker.to_channel(state.group, e.encode())
+
+            if receivers == 0:
                 raise TldErrorException("No one else in group.")

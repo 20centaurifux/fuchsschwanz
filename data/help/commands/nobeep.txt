@@ -6,8 +6,8 @@ DESCRIPTION
 
           Mode        Description
           ---------------------------------------------------------
-          on          ignore beep messages
           off         receive beep messages
+          on          ignore beep messages
           verbose     ignore beep messages, but show a notification
 
 SEE ALSO

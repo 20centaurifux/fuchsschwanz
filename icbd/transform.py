@@ -68,13 +68,13 @@ class Transform(di.Injected):
             fields = [decode_ascii(f).strip() for f in tld.split(payload)]
 
             if len(fields) >= 2 and fields[0] == "?":
-                    payload = bytearray()
+                payload = bytearray()
 
-                    payload.extend("help\1".encode())
+                payload.extend("help\1".encode())
 
-                    for field in fields[1:]:
-                        payload.extend(field.encode())
+                for field in fields[1:]:
+                    payload.extend(field.encode())
 
-            self.log.debug("Message transformed: type='h', command='help'")
+                self.log.debug("Message transformed: type='h', command='help'")
 
         return type_id, payload

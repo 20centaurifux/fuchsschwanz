@@ -20,6 +20,7 @@ The project is at a *very* early stage. The following features are implemented:
 * private messages
 * personal message box
 * "beep" users
+* echoback
 * permission management (group moderators & admins)
 * query online users
 * motd

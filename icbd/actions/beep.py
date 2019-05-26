@@ -29,9 +29,6 @@ import tld
 from exception import TldStatusException, TldErrorException
 
 class Beep(Injected):
-    def __init__(self):
-        super().__init__()
-
     def beep(self, session_id, receiver):
         loggedin_session = self.session.find_nick(receiver)
 
@@ -41,6 +38,9 @@ class Beep(Injected):
         loggedin_state = self.session.get(loggedin_session)
 
         state = self.session.get(session_id)
+
+        if state.echo == session.EchoMode.VERBOSE:
+            self.broker.deliver(session_id, tld.encode_co_output("<*to: %s*> [=Beep=]" % receiver))
 
         if loggedin_state.beep != session.BeepMode.ON:
             if loggedin_state.beep == session.BeepMode.VERBOSE:

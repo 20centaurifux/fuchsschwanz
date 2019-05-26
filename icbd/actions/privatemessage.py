@@ -25,6 +25,7 @@
 """
 from textwrap import wrap
 from actions import Injected
+import session
 import tld
 import validate
 from exception import TldErrorException
@@ -36,7 +37,7 @@ class PrivateMessage(Injected):
         if loggedin_session:
             state = self.session.get(session_id)
 
-            max_len = 254 - validate.NICK_MAX - 2
+            max_len = 254 - validate.NICK_MAX - 5
 
             for part in wrap(message, max_len):
                 e = tld.Encoder("c")
@@ -45,6 +46,9 @@ class PrivateMessage(Injected):
                 e.add_field_str(part, append_null=True)
 
                 self.broker.deliver(loggedin_session, e.encode())
+
+                if state.echo == session.EchoMode.VERBOSE:
+                    self.broker.deliver(session_id, tld.encode_co_output("<*to: %s*> %s" % (receiver, part)))
 
             loggedin_state = self.session.get(loggedin_session)
 

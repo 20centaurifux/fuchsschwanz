@@ -35,6 +35,8 @@ import actions.beep
 import actions.group
 import actions.messagebox
 import actions.motd
+import actions.beep
+import actions.echoback
 import actions.openmessage
 import actions.ping
 import actions.privatemessage
@@ -368,6 +370,17 @@ class NoBeep:
             raise TldErrorException("Usage: /nobeep on/off/verbose")
 
         ACTION(actions.beep.Beep).set_mode(session_id, fields[0])
+
+@command("echoback")
+class Echoback:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if not fields[0]:
+            raise TldErrorException("Usage: /echoback on/off/verbose")
+
+        ACTION(actions.echoback.Echoback).set_mode(session_id, fields[0])
 
 @command("away")
 class Away:

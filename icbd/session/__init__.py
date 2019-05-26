@@ -34,6 +34,11 @@ class BeepMode(Enum):
     ON = 1
     VERBOSE = 2
 
+class EchoMode(Enum):
+    OFF = 0
+    ON = 1
+    VERBOSE = 2
+
 @dataclass
 class State:
     loginid: str = None
@@ -45,6 +50,7 @@ class State:
     signon: datetime = datetime.utcnow()
     t_recv: Timer = None
     beep: BeepMode = BeepMode.ON
+    echo: EchoMode = EchoMode.OFF
     away: str = None
     t_away: Timer = None
 

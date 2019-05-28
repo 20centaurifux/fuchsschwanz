@@ -1,5 +1,5 @@
 USAGE
-     /version
+     /v
 
 DESCRIPTION
      Prints server version.

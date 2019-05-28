@@ -599,7 +599,7 @@ class Help:
         else:
             ACTION(actions.help.Help).introduction(session_id, msgid(fields))
 
-@command("version")
+@command("v")
 class Version:
     @staticmethod
     @loginrequired

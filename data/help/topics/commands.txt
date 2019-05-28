@@ -15,5 +15,5 @@ COMMANDS
      S    /secure, /shush, /status
      T    /talk, /text, /topic
      U    /unsecure
-     V    /version
+     V    /v
      W    /w, /whereis, /whois, /write, /www

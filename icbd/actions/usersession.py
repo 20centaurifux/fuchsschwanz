@@ -30,6 +30,7 @@ from textwrap import wrap
 from actions import Injected, ACTION
 from actions.motd import Motd
 from actions.registration import Registration
+from actions.notification import Notify
 from actions.group import Group
 import core
 import group
@@ -320,6 +321,8 @@ class UserSession(Injected):
                 registration.notify_messagebox(session_id)
                 self.session.update(session_id, signon=datetime.utcnow())
 
+            ACTION(Notify).notify_rename(session_id)
+
     def sign_off(self, session_id):
         state = self.session.get(session_id)
 
@@ -331,6 +334,8 @@ class UserSession(Injected):
                     self.nickdb.set_signoff(scope, state.nick)
 
                     scope.complete()
+
+            ACTION(Notify).notify_signoff(session_id)
 
             if state.group:
                 self.log.debug("Removing %s from channel %s.", state.nick, state.group)
@@ -384,6 +389,7 @@ class UserSession(Injected):
         self.log.debug("%s joins group %s.", state.nick, group_name)
 
         old_group = state.group
+        old_info = None
         new_status = None
 
         group_name = self.__resolve_user_group_name__(group_name)
@@ -394,6 +400,9 @@ class UserSession(Injected):
 
         if old_group == group_name:
             raise LtdErrorException("You are already in that group.")
+
+        if old_group:
+            old_info = self.groups.get(old_group)
 
         info = self.groups.get(group_name)
 
@@ -478,6 +487,9 @@ class UserSession(Injected):
                                                                       "%s (%s) just left." % (state.nick, state.address)))
             else:
                 self.groups.delete(old_group)
+
+        if not old_info or (old_info.visibility == group.Visibility.INVISIBLE and visibility != group.Visibility.INVISIBLE):
+            ACTION(Notify).notify_signon(session_id)
 
     def __resolve_user_group_name__(self, name):
         if name.startswith("@"):

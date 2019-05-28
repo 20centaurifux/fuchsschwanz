@@ -1,0 +1,12 @@
+USAGE
+     /notify  {-q} {-n nickname | -s site}
+
+DESCRIPTION
+     Receive a notification when nickname or site signs on/off.
+
+          Argument         Description
+          -----------------------------------------------------------
+                           show notification list
+          -n               notify when nickname signs on/off
+          -s               notify when site signs on/off
+          -q               don't receive confirmation

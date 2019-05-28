@@ -9,7 +9,7 @@ COMMANDS
      H    /help, /hush
      I    /invite
      M    /m, /motd
-     N    /name, /news, /noaway, /nobeep
+     N    /name, /news, /noaway, /nobeep, notify
      P    /p, /phone
      R    /read, /reputation, /rname
      S    /secure, /shush, /status

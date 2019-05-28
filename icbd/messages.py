@@ -38,6 +38,7 @@ import actions.motd
 import actions.beep
 import actions.echoback
 import actions.hush
+import actions.notification
 import actions.openmessage
 import actions.ping
 import actions.privatemessage
@@ -405,6 +406,28 @@ class Hush:
             ACTION(actions.hush.Hush).toggle(session_id, target, **opts)
         else:
             ACTION(actions.hush.Hush).list(session_id)
+
+@command("notify")
+class Notify:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        usage = "Usage: notify {-q} {-n nickname | -s address}"
+
+        if fields[0]:
+            try:
+                opts, target = ltd.get_opts(fields[0], quiet="q", mode="ns")
+
+                if not target:
+                    raise LtdErrorException(usage)
+
+            except:
+                raise LtdErrorException(usage)
+
+            ACTION(actions.notification.Notify).toggle(session_id, target, **opts)
+        else:
+            ACTION(actions.notification.Notify).list(session_id)
 
 @command("away")
 class Away:

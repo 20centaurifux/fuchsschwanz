@@ -29,6 +29,7 @@ from datetime import datetime
 from typing import NewType
 from timer import Timer, TimeoutTable
 from hush import Hushlist
+from notify import Notifylist
 
 class BeepMode(Enum):
     OFF = 0
@@ -55,6 +56,7 @@ class State:
     away: str = None
     t_away: Timer = None
     hushlist: Hushlist = None
+    notifylist: Notifylist = None
 
     def __init__(self, **kwargs):
         for k, v in kwargs.items():

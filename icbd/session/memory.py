@@ -26,6 +26,7 @@
 from secrets import token_hex
 import session
 from hush import Hushlist
+from notify import Notifylist
 
 class Store(session.Store):
     def __init__(self):
@@ -37,6 +38,7 @@ class Store(session.Store):
         state = session.State(**kwargs)
 
         state.hushlist = Hushlist()
+        state.notifylist = Notifylist()
 
         self.__m[id] = state
 

@@ -23,18 +23,18 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import tld
+import ltd
 
-class TldResponseException(Exception):
+class LtdResponseException(Exception):
     def __init__(self, message, package):
         super().__init__(message)
 
         self.response = package
 
-class TldErrorException(TldResponseException):
+class LtdErrorException(LtdResponseException):
     def __init__(self, message):
-        super().__init__(message, tld.encode_str("e", message))
+        super().__init__(message, ltd.encode_str("e", message))
 
-class TldStatusException(TldResponseException):
+class LtdStatusException(LtdResponseException):
     def __init__(self, category, message):
-        super().__init__(message, tld.encode_status_msg(category, message))
+        super().__init__(message, ltd.encode_status_msg(category, message))

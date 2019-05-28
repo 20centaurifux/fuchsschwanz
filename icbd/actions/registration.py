@@ -27,8 +27,8 @@ from datetime import datetime
 from textwrap import wrap
 from actions import Injected
 import validate
-import tld
-from exception import TldResponseException, TldErrorException, TldStatusException
+import ltd
+from exception import LtdResponseException, LtdErrorException, LtdStatusException
 
 class Registration(Injected):
     def __init__(self):
@@ -48,14 +48,14 @@ class Registration(Injected):
                 if not self.nickdb.check_password(scope, state.nick, password):
                     self.reputation.fatal(session_id)
 
-                    raise TldErrorException("Authorization failure.")
+                    raise LtdErrorException("Authorization failure.")
 
                 registered = True
             else:
                 self.log.debug("Creating new user profile for %s.", state.nick)
 
                 if not validate.is_valid_password(password):
-                    raise TldStatusException("Register",
+                    raise LtdStatusException("Register",
                                              "Password format not valid. Password length must be between %d and %d characters."
                                              % (validate.PASSWORD_MIN, validate.PASSWORD_MAX))
 
@@ -85,7 +85,7 @@ class Registration(Injected):
 
             self.session.update(session_id, signon=now, authenticated=True)
 
-            self.broker.deliver(session_id, tld.encode_status_msg("Register", "Nick registered."))
+            self.broker.deliver(session_id, ltd.encode_status_msg("Register", "Nick registered."))
 
             self.reputation.good(session_id)
 
@@ -101,10 +101,10 @@ class Registration(Injected):
 
                 if count > 0:
                     self.broker.deliver(session_id,
-                                        tld.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
+                                        ltd.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
 
                 if count >= limit:
-                    self.broker.deliver(session_id, tld.encode_status_msg("Message", "User mailbox is full."))
+                    self.broker.deliver(session_id, ltd.encode_status_msg("Message", "User mailbox is full."))
 
     def change_password(self, session_id, old_pwd, new_pwd):
         self.log.debug("Changing user password.")
@@ -113,18 +113,18 @@ class Registration(Injected):
 
         with self.db_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, state.nick):
-                raise TldErrorException("Authorization failure.")
+                raise LtdErrorException("Authorization failure.")
 
             self.log.debug("Nick found, validating password.")
 
             if not self.nickdb.check_password(scope, state.nick, old_pwd):
                 self.reputation.fatal(session_id)
 
-                raise TldErrorException("Authorization failure.")
+                raise LtdErrorException("Authorization failure.")
 
             self.nickdb.set_password(scope, state.nick, new_pwd)
 
-            self.broker.deliver(session_id, tld.encode_status_msg("Pass", "Password changed."))
+            self.broker.deliver(session_id, ltd.encode_status_msg("Pass", "Password changed."))
 
             scope.complete()
 
@@ -132,15 +132,15 @@ class Registration(Injected):
         state = self.session.get(session_id)
 
         if not state.authenticated:
-            raise TldErrorException("You must be registered to change your security.")
+            raise LtdErrorException("You must be registered to change your security.")
 
         with self.db_connection.enter_scope() as scope:
             self.nickdb.set_secure(scope, state.nick, enabled)
 
             if enabled:
-                self.broker.deliver(session_id, tld.encode_co_output("Security set to password required.", msgid))
+                self.broker.deliver(session_id, ltd.encode_co_output("Security set to password required.", msgid))
             else:
-                self.broker.deliver(session_id, tld.encode_co_output("Security set to automatic.", msgid))
+                self.broker.deliver(session_id, ltd.encode_co_output("Security set to automatic.", msgid))
 
             scope.complete()
 
@@ -148,11 +148,11 @@ class Registration(Injected):
         state = self.session.get(session_id)
 
         if not state.authenticated:
-            raise TldErrorException("You must be registered to change your security.")
+            raise LtdErrorException("You must be registered to change your security.")
 
         if not self.__validate_field__(field, text):
-            raise TldResponseException("Invalid attribute.",
-                                       tld.encode_co_output("'%s' format not valid." % self.__map_field__(field), msgid))
+            raise LtdResponseException("Invalid attribute.",
+                                       ltd.encode_co_output("'%s' format not valid." % self.__map_field__(field), msgid))
 
         with self.db_connection.enter_scope() as scope:
             details = self.nickdb.lookup(scope, state.nick)
@@ -162,9 +162,9 @@ class Registration(Injected):
             self.nickdb.update(scope, state.nick, details)
 
             if text:
-                self.broker.deliver(session_id, tld.encode_co_output("%s set to '%s'." % (self.__map_field__(field), text), msgid))
+                self.broker.deliver(session_id, ltd.encode_co_output("%s set to '%s'." % (self.__map_field__(field), text), msgid))
             else:
-                self.broker.deliver(session_id, tld.encode_co_output("%s unset." % self.__map_field__(field), msgid))
+                self.broker.deliver(session_id, ltd.encode_co_output("%s unset." % self.__map_field__(field), msgid))
 
             scope.complete()
 
@@ -214,18 +214,18 @@ class Registration(Injected):
         state = self.session.get(session_id)
 
         if not state.authenticated:
-            raise TldErrorException("You must be registered to delete your entry.")
+            raise LtdErrorException("You must be registered to delete your entry.")
 
         if not password:
-            raise TldErrorException("Usage: /delete password")
+            raise LtdErrorException("Usage: /delete password")
 
         with self.db_connection.enter_scope() as scope:
             if not self.nickdb.check_password(scope, state.nick, password):
-                raise TldErrorException("Password incorrect.")
+                raise LtdErrorException("Password incorrect.")
 
             self.nickdb.delete(scope, state.nick)
 
-            self.broker.deliver(session_id, tld.encode_co_output("Record deleted.", msgid))
+            self.broker.deliver(session_id, ltd.encode_co_output("Record deleted.", msgid))
 
             self.session.update(session_id, authentication=False)
 
@@ -233,11 +233,11 @@ class Registration(Injected):
 
     def whois(self, session_id, nick, msgid=""):
         if not nick:
-            raise TldErrorException("Usage: /whois nickname")
+            raise LtdErrorException("Usage: /whois nickname")
 
         with self.db_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, nick):
-                raise TldErrorException("%s not found." % nick)
+                raise LtdErrorException("%s not found." % nick)
 
             signon = self.nickdb.get_signon(scope, nick)
             signoff = self.nickdb.get_signoff(scope, nick)
@@ -265,45 +265,45 @@ class Registration(Injected):
 
             return text
 
-        msgs.extend(tld.encode_co_output("Nickname:       %-24s Address:      %s"
+        msgs.extend(ltd.encode_co_output("Nickname:       %-24s Address:      %s"
                                          % (nick, display_value(login)),
                                          msgid))
 
-        msgs.extend(tld.encode_co_output("Phone Number:   %-24s Real Name:    %s"
+        msgs.extend(ltd.encode_co_output("Phone Number:   %-24s Real Name:    %s"
                                          % (display_value(details.phone), display_value(details.real_name)),
                                          msgid))
 
-        msgs.extend(tld.encode_co_output("Last signon:    %-24s Last signoff: %s"
+        msgs.extend(ltd.encode_co_output("Last signon:    %-24s Last signoff: %s"
                                          % (display_value(signon), display_value(signoff)),
                                          msgid))
 
         if idle:
-            msgs.extend(tld.encode_co_output("Idle:           %s" % idle, msgid))
+            msgs.extend(ltd.encode_co_output("Idle:           %s" % idle, msgid))
 
         if away:
-            msgs.extend(tld.encode_co_output("Away:           %s" % away, msgid))
+            msgs.extend(ltd.encode_co_output("Away:           %s" % away, msgid))
 
-        msgs.extend(tld.encode_co_output("E-Mail:         %s" % display_value(details.email), msgid))
-        msgs.extend(tld.encode_co_output("WWW:            %s" % display_value(details.www), msgid))
+        msgs.extend(ltd.encode_co_output("E-Mail:         %s" % display_value(details.email), msgid))
+        msgs.extend(ltd.encode_co_output("WWW:            %s" % display_value(details.www), msgid))
 
         if not details.address:
-            msgs.extend(tld.encode_co_output("Street address: (None)", msgid))
+            msgs.extend(ltd.encode_co_output("Street address: (None)", msgid))
         else:
             parts = [p.strip() for p in details.address.split("|")]
 
-            msgs.extend(tld.encode_co_output("Street address: %s" % parts[0], msgid))
+            msgs.extend(ltd.encode_co_output("Street address: %s" % parts[0], msgid))
 
             for part in parts[1:]:
-                msgs.extend(tld.encode_co_output("                %s" % part, msgid))
+                msgs.extend(ltd.encode_co_output("                %s" % part, msgid))
 
         if not details.text:
-            msgs.extend(tld.encode_co_output("Text:           (None)", msgid))
+            msgs.extend(ltd.encode_co_output("Text:           (None)", msgid))
         else:
             parts = wrap(details.text, 64)
 
-            msgs.extend(tld.encode_co_output("Text:           %s" % parts[0], msgid))
+            msgs.extend(ltd.encode_co_output("Text:           %s" % parts[0], msgid))
 
             for part in parts[1:]:
-                msgs.extend(tld.encode_co_output("                %s" % part, msgid))
+                msgs.extend(ltd.encode_co_output("                %s" % part, msgid))
 
         self.broker.deliver(session_id, msgs)

@@ -25,43 +25,43 @@
 """
 from actions import Injected
 import session
-import tld
-from exception import TldStatusException, TldErrorException
+import ltd
+from exception import LtdStatusException, LtdErrorException
 
 class Beep(Injected):
     def beep(self, session_id, receiver):
         loggedin_session = self.session.find_nick(receiver)
 
         if not loggedin_session:
-            raise TldErrorException("%s is not signed on." % receiver)
+            raise LtdErrorException("%s is not signed on." % receiver)
 
         loggedin_state = self.session.get(loggedin_session)
 
         state = self.session.get(session_id)
 
         if state.echo == session.EchoMode.VERBOSE:
-            self.broker.deliver(session_id, tld.encode_co_output("<*to: %s*> [=Beep=]" % receiver))
+            self.broker.deliver(session_id, ltd.encode_co_output("<*to: %s*> [=Beep=]" % receiver))
 
         if loggedin_state.beep != session.BeepMode.ON:
             if loggedin_state.beep == session.BeepMode.VERBOSE:
                 self.broker.deliver(loggedin_session,
-                                    tld.encode_status_msg("No-Beep", "%s attempted (and failed) to beep you." % state.nick))
+                                    ltd.encode_status_msg("No-Beep", "%s attempted (and failed) to beep you." % state.nick))
 
-            raise TldStatusException("Beep", "User has nobeep enabled.")
+            raise LtdStatusException("Beep", "User has nobeep enabled.")
 
-        self.broker.deliver(loggedin_session, tld.encode_str("k", state.nick))
+        self.broker.deliver(loggedin_session, ltd.encode_str("k", state.nick))
 
         if loggedin_state.away:
             if not self.away_table.is_alive(session_id, receiver):
                 self.broker.deliver(session_id,
-                                    tld.encode_status_msg("Away",
+                                    ltd.encode_status_msg("Away",
                                                           "%s (since %s)." % (loggedin_state.away, loggedin_state.t_away.elapsed_str())))
 
                 self.away_table.set_alive(session_id, receiver, self.config.timeouts_away_message)
 
     def set_mode(self, session_id, mode):
         if not mode in ["on", "off", "verbose"]:
-            raise TldErrorException("Usage: /nobeep on/off/verbose")
+            raise LtdErrorException("Usage: /nobeep on/off/verbose")
 
         real_mode = session.BeepMode.ON
 
@@ -72,4 +72,4 @@ class Beep(Injected):
 
         self.session.update(session_id, beep=real_mode)
 
-        self.broker.deliver(session_id, tld.encode_status_msg("No-Beep", "No-Beep is now %s." % mode))
+        self.broker.deliver(session_id, ltd.encode_status_msg("No-Beep", "No-Beep is now %s." % mode))

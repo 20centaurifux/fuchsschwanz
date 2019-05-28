@@ -25,15 +25,15 @@
 """
 import traceback
 from actions import Injected
-import tld
-from exception import TldErrorException
+import ltd
+from exception import LtdErrorException
 
 class Help(Injected):
     def introduction(self, session_id, msgid=""):
         contents = self.__read_contents__(self.manual.introduction)
 
         if not contents:
-            raise TldErrorException("No help available.")
+            raise LtdErrorException("No help available.")
 
         self.__send_contents__(session_id, contents, msgid)
 
@@ -48,7 +48,7 @@ class Help(Injected):
             contents = self.__read_contents__(lambda: self.manual.topic(q))
 
         if not contents:
-            raise TldErrorException("%s '%s' not found." % (domain, q))
+            raise LtdErrorException("%s '%s' not found." % (domain, q))
 
         self.__send_contents__(session_id, contents, msgid)
 
@@ -64,4 +64,4 @@ class Help(Injected):
 
     def __send_contents__(self, session_id, contents, msgid):
         for line in contents.split("\n")[:-1]:
-            self.broker.deliver(session_id, tld.encode_co_output(line, msgid))
+            self.broker.deliver(session_id, ltd.encode_co_output(line, msgid))

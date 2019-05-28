@@ -24,8 +24,8 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from actions import Injected
-import tld
-from exception import TldErrorException
+import ltd
+from exception import LtdErrorException
 
 class Admin(Injected):
     def get_reputation(self, session_id, nick, msgid=""):
@@ -40,16 +40,16 @@ class Admin(Injected):
         if not is_admin:
             self.reputation.critical(session_id)
 
-            raise TldErrorException("You don't have administrative privileges.")
+            raise LtdErrorException("You don't have administrative privileges.")
 
         loggedin_session = self.session.find_nick(nick)
 
         if not loggedin_session:
-            raise TldErrorException("%s is not signed on." % nick)
+            raise LtdErrorException("%s is not signed on." % nick)
 
         loggedin_state = self.session.get(loggedin_session)
         reputation = self.reputation.get(loggedin_session)
 
         self.broker.deliver(session_id,
-                            tld.encode_co_output("%s (%s): %.2f"
+                            ltd.encode_co_output("%s (%s): %.2f"
                                                  % (nick, loggedin_state.address, reputation), msgid))

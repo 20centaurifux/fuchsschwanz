@@ -53,10 +53,10 @@ import manual.plaintext
 import timer
 from actions import ACTION
 import actions.usersession
-import tld
+import ltd
 import messages
 from transform import Transform
-from exception import TldResponseException, TldErrorException
+from exception import LtdResponseException, LtdErrorException
 
 MESSAGES = {cls.code: cls for cls in filter(lambda cls: isinstance(cls, type) and "code" in cls.__dict__,
                                             messages.__dict__.values())}
@@ -88,7 +88,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         self.__broker.add_session(self.__session_id, self.__handle_write__)
         self.__reputation.add_session(self.__session_id)
         self.__buffer = bytearray()
-        self.__decoder = tld.Decoder()
+        self.__decoder = ltd.Decoder()
         self.__decoder.add_listener(self.__message_received__)
         self.__transform = Transform()
         self.__shutdown = False
@@ -106,9 +106,9 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
             try:
                 self.__decoder.write(data)
 
-            except TldResponseException as ex:
+            except LtdResponseException as ex:
                 self.__broker.deliver(self.__session_id, ex.response)
-                self.__broker.deliver(self.__session_id, tld.encode_empty_cmd("g"))
+                self.__broker.deliver(self.__session_id, ltd.encode_empty_cmd("g"))
 
             except Exception:
                 self.__abort__()
@@ -160,12 +160,12 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
             msg = MESSAGES.get(type_id)
 
             if not msg:
-                self.__broker.deliver(self.__session_id, tld.encode_str("e", "Unexpected message: '%s'" % type_id))
+                self.__broker.deliver(self.__session_id, ltd.encode_str("e", "Unexpected message: '%s'" % type_id))
         else:
             self.__log.debug("Time between messages too short.")
 
         if msg:
-            msg.process(self.__session_id, tld.split(payload))
+            msg.process(self.__session_id, ltd.split(payload))
 
             new_reputation = self.__reputation.get(self.__session_id)
 
@@ -175,10 +175,10 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
             self.__reputation.warning(self.__session_id)
 
         if self.__reputation.get(self.__session_id) == 0.0:
-            raise TldErrorException("Suspicious activity detected.")
+            raise LtdErrorException("Suspicious activity detected.")
 
     def __write_protocol_info__(self):
-        e = tld.Encoder("j")
+        e = ltd.Encoder("j")
 
         e.add_field_str(core.PROTOCOL_VERSION)
         e.add_field_str(self.__config.server_hostname, append_null=False)
@@ -243,7 +243,7 @@ class Server(di.Injected):
                 elapsed = v.t_recv.elapsed()
 
                 if elapsed > self.__config.timeouts_ping:
-                    self.__broker.deliver(k, tld.encode_empty_cmd("l"))
+                    self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
                 else:
                     interval = min(interval, self.__config.timeouts_ping - elapsed)
 

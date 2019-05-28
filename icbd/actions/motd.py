@@ -26,13 +26,13 @@
 import traceback
 from actions import Injected
 import motd
-import tld
+import ltd
 
 class Motd(Injected):
     def receive(self, session_id, msgid=""):
         try:
             for line in motd.load(self.config.motd_filename):
-                self.broker.deliver(session_id, tld.encode_co_output(line, msgid))
+                self.broker.deliver(session_id, ltd.encode_co_output(line, msgid))
 
         except:
             self.log.warning(traceback.format_exc())

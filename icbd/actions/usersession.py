@@ -34,26 +34,26 @@ from actions.group import Group
 import core
 import group
 import validate
-import tld
+import ltd
 from textutils import hide_password
-from exception import TldErrorException, TldStatusException
+from exception import LtdErrorException, LtdStatusException
 
 class UserSession(Injected):
     def login(self, session_id, loginid, nick, password, group_name, status=""):
         self.log.debug("User login: loginid=%s, nick=%s, password=%s", loginid, nick, hide_password(password))
 
         if not validate.is_valid_loginid(loginid):
-            raise TldErrorException("loginid must consist of at least %d and at most %d alphabetic characters."
+            raise LtdErrorException("loginid must consist of at least %d and at most %d alphabetic characters."
                                     % (validate.LOGINID_MIN, validate.LOGINID_MAX))
 
         if not validate.is_valid_nick(nick):
-            raise TldErrorException("Nickname must consist of at least %d and at most %d alphanumeric characters."
+            raise LtdErrorException("Nickname must consist of at least %d and at most %d alphanumeric characters."
                                     % (validate.NICK_MIN, validate.NICK_MAX))
 
-        self.broker.deliver(session_id, tld.encode_empty_cmd("a"))
+        self.broker.deliver(session_id, ltd.encode_empty_cmd("a"))
 
         if nick == core.NICKSERV:
-            raise TldStatusException("Register", "Nick already in use.")
+            raise LtdStatusException("Register", "Nick already in use.")
 
         ACTION(Motd).receive(session_id)
 
@@ -126,20 +126,20 @@ class UserSession(Injected):
         if loggedin_session:
             self.log.debug("%s already logged in, aborting login.", nick)
 
-            raise TldStatusException("Register", "Nick already in use.")
+            raise LtdStatusException("Register", "Nick already in use.")
 
         with self.db_connection.enter_scope() as scope:
             if self.nickdb.exists(scope, nick):
                 if self.nickdb.is_admin(scope, nick):
-                    raise TldErrorException("You need a password to login as administrator.")
+                    raise LtdErrorException("You need a password to login as administrator.")
 
-                self.broker.deliver(session_id, tld.encode_status_msg("Register",
+                self.broker.deliver(session_id, ltd.encode_status_msg("Register",
                                                                       "Send password to authenticate your nickname."))
             else:
-                self.broker.deliver(session_id, tld.encode_status_msg("No-Pass",
+                self.broker.deliver(session_id, ltd.encode_status_msg("No-Pass",
                                                                       "Your nickname does not have a password."))
 
-                self.broker.deliver(session_id, tld.encode_status_msg("No-Pass",
+                self.broker.deliver(session_id, ltd.encode_status_msg("No-Pass",
                                                                       "For help type /m server ?"))
 
         self.session.update(session_id, loginid=loginid, nick=nick)
@@ -160,19 +160,19 @@ class UserSession(Injected):
 
                 self.reputation.critical(session_id)
 
-                self.broker.deliver(session_id, tld.encode_str("e", "Authorization failure."))
-                self.broker.deliver(session_id, tld.encode_status_msg("Register",
+                self.broker.deliver(session_id, ltd.encode_str("e", "Authorization failure."))
+                self.broker.deliver(session_id, ltd.encode_status_msg("Register",
                                                                       "Send password to authenticate your nickname."))
 
                 if is_admin:
-                    raise TldErrorException("You need a password to login as administrator.")
+                    raise LtdErrorException("You need a password to login as administrator.")
 
         loggedin_session = self.session.find_nick(nick)
 
         if loggedin_session and not registered:
             self.log.debug("%s already logged in, aborting login.", nick)
 
-            raise TldStatusException("Register", "Nick already in use.")
+            raise LtdStatusException("Register", "Nick already in use.")
 
         if loggedin_session:
             self.__auto_rename__(loggedin_session)
@@ -239,13 +239,13 @@ class UserSession(Injected):
             if state.authenticated:
                 with self.db_connection.enter_scope() as scope:
                     if not self.nickdb.is_admin(scope, state.nick):
-                        raise TldErrorException("Connection limit reached.")
+                        raise LtdErrorException("Connection limit reached.")
             else:
-                raise TldErrorException("Connection limit reached.")
+                raise LtdErrorException("Connection limit reached.")
 
     def rename(self, session_id, nick):
         if not validate.is_valid_nick(nick):
-            raise TldErrorException("Nickname is invalid.")
+            raise LtdErrorException("Nickname is invalid.")
 
         state = self.session.get(session_id)
 
@@ -260,18 +260,18 @@ class UserSession(Injected):
             if self.session.find_nick(nick):
                 self.reputation.warning(session_id)
 
-                raise TldErrorException("Nick already in use.")
+                raise LtdErrorException("Nick already in use.")
 
             if state.group:
                 self.log.debug("Renaming %s to %s in channel %s.", old_nick, nick, state.group)
 
                 self.broker.to_channel(state.group,
-                                       tld.encode_status_msg("Name",
+                                       ltd.encode_status_msg("Name",
                                                              "%s changed nickname to %s." % (old_nick, nick)))
 
                 if self.groups.get(state.group).moderator == session_id:
                     self.broker.to_channel(state.group,
-                                           tld.encode_status_msg("Pass",
+                                           ltd.encode_status_msg("Pass",
                                                                  "%s is now mod." % nick))
 
             self.session.update(session_id, nick=nick, authenticated=False)
@@ -288,7 +288,7 @@ class UserSession(Injected):
 
                     if self.nickdb.is_secure(scope, nick):
                         self.broker.deliver(session_id,
-                                            tld.encode_status_msg("Register",
+                                            ltd.encode_status_msg("Register",
                                                                   "Send password to authenticate your nickname."))
                     else:
                         self.log.debug("Nick not secure, trying to register automatically.")
@@ -301,7 +301,7 @@ class UserSession(Injected):
                             registered = (lastlogin[0] == state.loginid and lastlogin[1] == state.host)
                 else:
                     self.broker.deliver(session_id,
-                                        tld.encode_status_msg("No-Pass",
+                                        ltd.encode_status_msg("No-Pass",
                                                               "To register your nickname type /m server p password."))
 
             registration = ACTION(Registration)
@@ -310,7 +310,7 @@ class UserSession(Injected):
                 registration.mark_registered(session_id)
             elif is_admin:
                 self.broker.deliver(session_id,
-                                    tld.encode_str("e",
+                                    ltd.encode_str("e",
                                                    "Registration failed, administrative account requires a password."))
 
                 self.reputation.fatal(session_id)
@@ -341,14 +341,14 @@ class UserSession(Injected):
                     if info.volume != group.Volume.QUIET:
                         self.broker.to_channel_from(session_id,
                                                     state.group,
-                                                    tld.encode_status_msg("Sign-off",
+                                                    ltd.encode_status_msg("Sign-off",
                                                                           "%s (%s) has signed off." % (state.nick, state.address)))
 
                     if info.moderator == session_id:
                         if info.volume != group.Volume.QUIET:
                             self.broker.to_channel_from(session_id,
                                                         state.group,
-                                                        tld.encode_status_msg("Sign-off",
+                                                        ltd.encode_status_msg("Sign-off",
                                                                               "Your group moderator signed off (no timeout)."))
 
                         self.log.debug("Selecting new moderator.")
@@ -368,7 +368,7 @@ class UserSession(Injected):
 
                         self.log.debug("New mod: %s", new_mod[1])
 
-                        self.broker.to_channel(state.group, tld.encode_status_msg("Pass", "%s is now mod." % new_mod[1]))
+                        self.broker.to_channel(state.group, ltd.encode_status_msg("Pass", "%s is now mod." % new_mod[1]))
 
                         info.moderator = new_mod[0]
                 else:
@@ -390,10 +390,10 @@ class UserSession(Injected):
         visibility, group_name = self.__extract_visibility_from_groupname__(group_name)
 
         if not validate.is_valid_group(group_name):
-            raise TldErrorException("Invalid group name.")
+            raise LtdErrorException("Invalid group name.")
 
         if old_group == group_name:
-            raise TldErrorException("You are already in that group.")
+            raise LtdErrorException("You are already in that group.")
 
         info = self.groups.get(group_name)
 
@@ -403,11 +403,11 @@ class UserSession(Injected):
                              or info.address_invited(state.loginid, state.ip, state.host, state.authenticated))):
                 if info.volume == group.Volume.LOUD:
                     self.broker.deliver(info.moderator,
-                                        tld.encode_status_msg("Probe",
+                                        ltd.encode_status_msg("Probe",
                                                               "%s tried to enter group %s." % (state.nick, group_name)))
                 self.reputation.warning(session_id)
 
-                raise TldErrorException("%s is restricted." % group_name)
+                raise LtdErrorException("%s is restricted." % group_name)
 
             self.broker.join(session_id, group_name)
         else:
@@ -443,7 +443,7 @@ class UserSession(Injected):
 
         msg += "."
 
-        self.broker.deliver(session_id, tld.encode_status_msg("Status", msg))
+        self.broker.deliver(session_id, ltd.encode_status_msg("Status", msg))
 
         if new_status:
             ACTION(Group).change_status(session_id, new_status)
@@ -452,7 +452,7 @@ class UserSession(Injected):
             category = "Sign-on" if not old_group else "Arrive"
             self.broker.to_channel_from(session_id,
                                         group_name,
-                                        tld.encode_status_msg(category,
+                                        ltd.encode_status_msg(category,
                                                               "%s (%s) entered group." % (state.nick, state.address)))
 
         self.session.update(session_id, group=info.key)
@@ -466,7 +466,7 @@ class UserSession(Injected):
                 if info.volume != group.Volume.QUIET:
                     self.broker.to_channel_from(session_id,
                                                 old_group,
-                                                tld.encode_status_msg("Depart",
+                                                ltd.encode_status_msg("Depart",
                                                                       "%s (%s) just left." % (state.nick, state.address)))
             else:
                 self.groups.delete(old_group)
@@ -476,12 +476,12 @@ class UserSession(Injected):
             session_id = self.session.find_nick(name[1:])
 
             if not session_id:
-                raise TldErrorException("User not found.")
+                raise LtdErrorException("User not found.")
 
             state = self.session.get(session_id)
 
             if not state.group or self.groups.get(state.group).visibility != group.Visibility.VISIBLE:
-                raise TldErrorException("User not found.")
+                raise LtdErrorException("User not found.")
 
             name = state.group
 
@@ -506,6 +506,6 @@ class UserSession(Injected):
         if loggedin_session:
             state = self.session.get(loggedin_session)
 
-            self.broker.deliver(session_id, tld.encode_co_output("%-16s %s (%s)" % (nick, state.host, state.ip), msgid))
+            self.broker.deliver(session_id, ltd.encode_co_output("%-16s %s (%s)" % (nick, state.host, state.ip), msgid))
         else:
-            self.broker.deliver(session_id, tld.encode_co_output("User not found.", msgid))
+            self.broker.deliver(session_id, ltd.encode_co_output("User not found.", msgid))

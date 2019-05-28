@@ -27,9 +27,9 @@ from textwrap import wrap
 from actions import Injected
 import session
 import group
-import tld
+import ltd
 import validate
-from exception import TldErrorException
+from exception import LtdErrorException
 
 class OpenMessage(Injected):
     def send(self, session_id, message):
@@ -38,19 +38,19 @@ class OpenMessage(Injected):
         info = self.groups.get(state.group)
 
         if info.volume == group.Volume.QUIET:
-            raise TldErrorException("Open messages are not permitted in quiet groups.")
+            raise LtdErrorException("Open messages are not permitted in quiet groups.")
 
         if info.control == group.Control.CONTROLLED:
             if (not info.nick_can_talk(state.nick, state.authenticated)
                     and not info.address_can_talk(state.loginid, state.ip, state.host, state.authenticated)):
                 self.reputation.warning(session_id)
 
-                raise TldErrorException("You do not have permission to talk in this group.")
+                raise LtdErrorException("You do not have permission to talk in this group.")
 
         max_len = 254 - validate.NICK_MAX - 2
 
         for part in wrap(message, max_len):
-            e = tld.Encoder("b")
+            e = ltd.Encoder("b")
 
             e.add_field_str(state.nick, append_null=False)
             e.add_field_str(part, append_null=True)
@@ -63,4 +63,4 @@ class OpenMessage(Injected):
                 receivers = self.broker.to_channel(state.group, e.encode())
 
             if receivers == 0:
-                raise TldErrorException("No one else in group.")
+                raise LtdErrorException("No one else in group.")

@@ -26,7 +26,7 @@
 import logging
 import core
 import di
-import tld
+import ltd
 from textutils import decode_ascii
 
 class Transform(di.Injected):
@@ -41,7 +41,7 @@ class Transform(di.Injected):
 
     def __private_message_to_command__(self, type_id, payload):
         if type_id == "h":
-            fields = [decode_ascii(f).strip() for f in tld.split(payload)]
+            fields = [decode_ascii(f).strip() for f in ltd.split(payload)]
 
             if len(fields) >= 2 and fields[0] == "m":
                 args = [arg.rstrip(" \0") for arg in fields[1].split(" ", 2)]
@@ -65,7 +65,7 @@ class Transform(di.Injected):
 
     def __questionmark_to_help__(self, type_id, payload):
         if type_id == "h":
-            fields = [decode_ascii(f).strip() for f in tld.split(payload)]
+            fields = [decode_ascii(f).strip() for f in ltd.split(payload)]
 
             if len(fields) >= 2 and fields[0] == "?":
                 payload = bytearray()

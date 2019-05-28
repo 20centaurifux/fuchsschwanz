@@ -25,13 +25,13 @@
 """
 from actions import Injected
 import session
-import tld
-from exception import TldErrorException
+import ltd
+from exception import LtdErrorException
 
 class Echoback(Injected):
     def set_mode(self, session_id, mode):
         if not mode in ["on", "off", "verbose"]:
-            raise TldErrorException("Usage: /echoback on/off/verbose")
+            raise LtdErrorException("Usage: /echoback on/off/verbose")
 
         real_mode = session.EchoMode.OFF
 
@@ -42,4 +42,4 @@ class Echoback(Injected):
 
         self.session.update(session_id, echo=real_mode)
 
-        self.broker.deliver(session_id, tld.encode_status_msg("Echo", "Echoback is now %s." % mode))
+        self.broker.deliver(session_id, ltd.encode_status_msg("Echo", "Echoback is now %s." % mode))

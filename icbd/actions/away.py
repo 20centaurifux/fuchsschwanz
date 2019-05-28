@@ -24,8 +24,8 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from actions import Injected
-import tld
-from exception import TldStatusException
+import ltd
+from exception import LtdStatusException
 from timer import Timer 
 
 class Away(Injected):
@@ -41,21 +41,21 @@ class Away(Injected):
 
             self.session.update(session_id, away=text, t_away=Timer())
 
-            self.broker.deliver(session_id, tld.encode_status_msg("Away", "Away message set to \"%s\"." % text))
+            self.broker.deliver(session_id, ltd.encode_status_msg("Away", "Away message set to \"%s\"." % text))
         elif state.away:
             self.broker.deliver(session_id,
-                                tld.encode_status_msg("Away",
+                                ltd.encode_status_msg("Away",
                                                       "Away message is set to \"%s\" (since %s)."
                                                       % (state.away, state.t_away.elapsed_str())))
         else:
-            self.broker.deliver(session_id, tld.encode_status_msg("Away", "Away message is not set."))
+            self.broker.deliver(session_id, ltd.encode_status_msg("Away", "Away message is not set."))
 
     def noaway(self, session_id):
         state = self.session.get(session_id)
 
         if not state.away:
-            raise TldStatusException("Away", "No away message set.")
+            raise LtdStatusException("Away", "No away message set.")
 
         self.session.update(session_id, away=None, t_away=None)
 
-        self.broker.deliver(session_id, tld.encode_status_msg("Away", "Away message unset."))
+        self.broker.deliver(session_id, ltd.encode_status_msg("Away", "Away message unset."))

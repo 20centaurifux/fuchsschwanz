@@ -26,9 +26,9 @@
 from textwrap import wrap
 from actions import Injected
 import session
-import tld
+import ltd
 import validate
-from exception import TldErrorException
+from exception import LtdErrorException
 
 class PrivateMessage(Injected):
     def send(self, session_id, receiver, message):
@@ -40,7 +40,7 @@ class PrivateMessage(Injected):
             max_len = 254 - validate.NICK_MAX - 5
 
             for part in wrap(message, max_len):
-                e = tld.Encoder("c")
+                e = ltd.Encoder("c")
 
                 e.add_field_str(state.nick, append_null=False)
                 e.add_field_str(part, append_null=True)
@@ -48,15 +48,15 @@ class PrivateMessage(Injected):
                 self.broker.deliver(loggedin_session, e.encode())
 
                 if state.echo == session.EchoMode.VERBOSE:
-                    self.broker.deliver(session_id, tld.encode_co_output("<*to: %s*> %s" % (receiver, part)))
+                    self.broker.deliver(session_id, ltd.encode_co_output("<*to: %s*> %s" % (receiver, part)))
 
             loggedin_state = self.session.get(loggedin_session)
 
             if loggedin_state.away:
                 if not self.away_table.is_alive(session_id, receiver):
-                    self.broker.deliver(session_id, tld.encode_status_msg("Away",
+                    self.broker.deliver(session_id, ltd.encode_status_msg("Away",
                                                                           "%s (since %s)." % (loggedin_state.away,
                                                                                               loggedin_state.t_away.elapsed_str())))
                     self.away_table.set_alive(session_id, receiver, self.config.timeouts_away_message)
         else:
-            raise TldErrorException("%s is not signed on." % receiver)
+            raise LtdErrorException("%s is not signed on." % receiver)

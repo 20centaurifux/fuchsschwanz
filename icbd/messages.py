@@ -28,7 +28,7 @@ import di
 import session
 import broker
 import validate
-import tld
+import ltd
 from actions import ACTION
 import actions.away
 import actions.beep
@@ -46,7 +46,7 @@ import actions.list
 import actions.admin
 import actions.help
 from textutils import decode_ascii
-from exception import TldErrorException, TldResponseException
+from exception import LtdErrorException, LtdResponseException
 
 def code(id):
     def decorator(cls):
@@ -69,18 +69,18 @@ def loginrequired(fn):
         state = sessions.get(session_id)
 
         if not state.nick or not state.group:
-            raise TldErrorException("Login required.")
+            raise LtdErrorException("Login required.")
 
         fn(session_id, fields)
 
     return wrapper
 
-def catchtldexceptions(fn):
+def catchltdexceptions(fn):
     def wrapper(session_id, fields):
         try:
             fn(session_id, fields)
 
-        except TldResponseException as ex:
+        except LtdResponseException as ex:
             b = di.default_container.resolve(broker.Broker)
 
             b.deliver(session_id, ex.response)
@@ -91,13 +91,13 @@ def fieldslength(count=0, min=0, max=0):
     def decorator(fn):
         def wrapper(session_id, fields):
             if count > 0 and len(fields) != count:
-                raise TldErrorException("Malformed message, wrong number of fields.")
+                raise LtdErrorException("Malformed message, wrong number of fields.")
 
             if len(fields) < min:
-                raise TldErrorException("Malformed message, missing fields.")
+                raise LtdErrorException("Malformed message, missing fields.")
 
             if max > min and len(fields) > max:
-                raise TldErrorException("Malformed message, too many fields.")
+                raise LtdErrorException("Malformed message, too many fields.")
 
             fn(session_id, fields)
 
@@ -112,12 +112,12 @@ def arglength(at=0, min=0, max=0, display="Argument"):
 
             if len(val) < min:
                 if min == 1:
-                    raise TldErrorException("%s cannot be empty." % display)
+                    raise LtdErrorException("%s cannot be empty." % display)
 
-                raise TldErrorException("%s requires at least %d characters." % (display, min))
+                raise LtdErrorException("%s requires at least %d characters." % (display, min))
 
             if max > min and len(val) > max:
-                raise TldErrorException("%s exceeds allowed maximum length (%d characters)." % (display, max))
+                raise LtdErrorException("%s exceeds allowed maximum length (%d characters)." % (display, max))
 
             fn(session_id, fields)
 
@@ -152,7 +152,7 @@ class Login:
             args = [session_id]
 
         if not fn:
-            raise TldErrorException("Unsupported login type: '%s'" % fields[3])
+            raise LtdErrorException("Unsupported login type: '%s'" % fields[3])
 
         fn(*args)
 
@@ -161,7 +161,7 @@ class OpenMessage:
     @staticmethod
     @loginrequired
     @textfields
-    @catchtldexceptions
+    @catchltdexceptions
     @fieldslength(count=1)
     def process(session_id, fields):
         ACTION(actions.openmessage.OpenMessage).send(session_id, fields[0])
@@ -205,7 +205,7 @@ class ChangePassword:
 
             ACTION(actions.registration.Registration).change_password(session_id, old_pwd, new_pwd)
         else:
-            raise TldErrorException("Usage: /cp old_password new_password")
+            raise LtdErrorException("Usage: /cp old_password new_password")
 
 def msgid(fields):
     return fields[1] if len(fields) == 2 else ""
@@ -308,7 +308,7 @@ class WriteMessage:
         if len(msg_fields) == 2:
             receiver, message = [f.strip() for f in msg_fields]
         else:
-            raise TldErrorException("Usage: /write nick message text")
+            raise LtdErrorException("Usage: /write nick message text")
 
         ACTION(actions.messagebox.MessageBox).send_message(session_id, receiver, message)
 
@@ -323,7 +323,7 @@ class WritePrivateMessage:
         if len(msg_fields) == 2:
             receiver, message = [f.strip() for f in msg_fields]
         else:
-            raise TldErrorException("Usage: /m nick message text")
+            raise LtdErrorException("Usage: /m nick message text")
 
         ACTION(actions.privatemessage.PrivateMessage).send(session_id, receiver, message)
 
@@ -334,7 +334,7 @@ class ReadMessages:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
-            raise TldErrorException("Usage: /read")
+            raise LtdErrorException("Usage: /read")
 
         ACTION(actions.messagebox.MessageBox).read_messages(session_id, msgid=msgid(fields))
 
@@ -345,7 +345,7 @@ class Whereis:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise TldErrorException("Usage: /whereis nick")
+            raise LtdErrorException("Usage: /whereis nick")
 
         ACTION(actions.usersession.UserSession).whereis(session_id, fields[0], msgid(fields))
 
@@ -356,7 +356,7 @@ class Beep:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise TldErrorException("Usage: /beep nick")
+            raise LtdErrorException("Usage: /beep nick")
 
         ACTION(actions.beep.Beep).beep(session_id, fields[0])
 
@@ -367,7 +367,7 @@ class NoBeep:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise TldErrorException("Usage: /nobeep on/off/verbose")
+            raise LtdErrorException("Usage: /nobeep on/off/verbose")
 
         ACTION(actions.beep.Beep).set_mode(session_id, fields[0])
 
@@ -378,7 +378,7 @@ class Echoback:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise TldErrorException("Usage: /echoback on/off/verbose")
+            raise LtdErrorException("Usage: /echoback on/off/verbose")
 
         ACTION(actions.echoback.Echoback).set_mode(session_id, fields[0])
 
@@ -397,7 +397,7 @@ class NoAway:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
-            raise TldErrorException("Usage: /noaway")
+            raise LtdErrorException("Usage: /noaway")
 
         ACTION(actions.away.Away).noaway(session_id)
 
@@ -424,7 +424,7 @@ class Motd:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
-            raise TldErrorException("Usage: /motd")
+            raise LtdErrorException("Usage: /motd")
 
         ACTION(actions.motd.Motd).receive(session_id, msgid(fields))
 
@@ -460,13 +460,13 @@ class Invite:
         usage = "Usage: invite {-q} {-r} {-n nickname | -s address}"
 
         try:
-            opts, nick = tld.get_opts(fields[0], quiet="q", registered="r", mode="ns")
+            opts, nick = ltd.get_opts(fields[0], quiet="q", registered="r", mode="ns")
 
             if not nick:
-                raise TldErrorException(usage)
+                raise LtdErrorException(usage)
 
         except:
-            raise TldErrorException(usage)
+            raise LtdErrorException(usage)
 
         ACTION(actions.group.Group).invite(session_id, nick, **opts)
 
@@ -479,13 +479,13 @@ class Cancel:
         usage = "Usage: cancel {-q} {-n nickname | -s address}"
 
         try:
-            opts, nick = tld.get_opts(fields[0], quiet="q", mode="ns")
+            opts, nick = ltd.get_opts(fields[0], quiet="q", mode="ns")
 
             if not nick:
-                raise TldErrorException(usage)
+                raise LtdErrorException(usage)
 
         except:
-            raise TldErrorException(usage)
+            raise LtdErrorException(usage)
 
         ACTION(actions.group.Group).cancel(session_id, nick, **opts)
 
@@ -498,13 +498,13 @@ class Talk:
         usage = "Usage: talk {-q} {-d} {-r} {-n nickname | -s address}"
 
         try:
-            opts, nick = tld.get_opts(fields[0], quiet="q", delete="d", registered="r", mode="ns")
+            opts, nick = ltd.get_opts(fields[0], quiet="q", delete="d", registered="r", mode="ns")
 
             if not nick:
-                raise TldErrorException(usage)
+                raise LtdErrorException(usage)
 
         except:
-            raise TldErrorException(usage)
+            raise LtdErrorException(usage)
 
         ACTION(actions.group.Group).talk(session_id, nick, **opts)
 
@@ -515,7 +515,7 @@ class Boot:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise TldErrorException("Usage: /boot nick")
+            raise LtdErrorException("Usage: /boot nick")
 
         ACTION(actions.group.Group).boot(session_id, fields[0])
 
@@ -537,7 +537,7 @@ class Reputation:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise TldErrorException("Usage: /reputation nick")
+            raise LtdErrorException("Usage: /reputation nick")
 
         ACTION(actions.admin.Admin).get_reputation(session_id, fields[0], msgid(fields))
 
@@ -561,13 +561,13 @@ class Command:
     @staticmethod
     @loginrequired
     @textfields
-    @catchtldexceptions
+    @catchltdexceptions
     @fieldslength(min=1, max=3)
     def process(session_id, fields):
         cmd = COMMANDS.get(fields[0])
 
         if not cmd:
-            raise TldErrorException("Unsupported command: '%s'" % fields[0])
+            raise LtdErrorException("Unsupported command: '%s'" % fields[0])
 
         cmd.process(session_id, fields[1:])
 
@@ -576,7 +576,7 @@ class Ping:
     @staticmethod
     @loginrequired
     @textfields
-    @catchtldexceptions
+    @catchltdexceptions
     @fieldslength(min=0, max=1)
     def process(session_id, fields):
         ACTION(actions.ping.Ping).ping(session_id, msgid(fields))
@@ -586,6 +586,6 @@ class Pong:
     @staticmethod
     @loginrequired
     @textfields
-    @catchtldexceptions
+    @catchltdexceptions
     def process(session_id, fields):
         pass

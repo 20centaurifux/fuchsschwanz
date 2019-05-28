@@ -29,14 +29,14 @@ from actions import Injected
 import core
 import group
 import validate
-import tld
-from exception import TldErrorException, TldStatusException
+import ltd
+from exception import LtdErrorException, LtdStatusException
 
 class List(Injected):
     def list_and_quit(self, session_id, msgid=""):
         self.list(session_id, msgid)
 
-        self.broker.deliver(session_id, tld.encode_empty_cmd("g"))
+        self.broker.deliver(session_id, ltd.encode_empty_cmd("g"))
 
     def list(self, session_id, msgid=""):
         is_admin = False
@@ -54,7 +54,7 @@ class List(Injected):
         if available_groups:
             for info in available_groups[:-1]:
                 if self.__show_group__(session_id, state, info, logins, is_admin, False, msgid):
-                    self.broker.deliver(session_id, tld.encode_co_output("", msgid))
+                    self.broker.deliver(session_id, ltd.encode_co_output("", msgid))
 
             self.__show_group__(session_id, state, available_groups[-1], logins, is_admin, False, msgid)
 
@@ -69,7 +69,7 @@ class List(Injected):
             group_name = state.group
 
         if not self.groups.exists(group_name):
-            raise TldErrorException("Group %s not found." % group_name)
+            raise LtdErrorException("Group %s not found." % group_name)
 
         if state.authenticated:
             with self.db_connection.enter_scope() as scope:
@@ -97,13 +97,13 @@ class List(Injected):
             flags = "%s%s%s" % (chr(info.control.value), chr(info.visibility.value), chr(info.volume.value))
 
             self.broker.deliver(session_id,
-                                tld.encode_co_output("Group: %-14s (%s)           Mod: %-16s" % (display_name, flags, moderator), msgid))
+                                ltd.encode_co_output("Group: %-14s (%s)           Mod: %-16s" % (display_name, flags, moderator), msgid))
 
             self.broker.deliver(session_id,
-                                tld.encode_co_output("Topic: %s" % (info.topic if info.topic else "(None)"), msgid))
+                                ltd.encode_co_output("Topic: %s" % (info.topic if info.topic else "(None)"), msgid))
 
             self.broker.deliver(session_id,
-                                tld.encode_co_output("Nickname              Idle            Signon (UTC)      Account", msgid))
+                                ltd.encode_co_output("Nickname              Idle            Signon (UTC)      Account", msgid))
 
             subscribers = sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(info.key)],
                                  key=lambda arg: arg[1].nick.lower())
@@ -112,7 +112,7 @@ class List(Injected):
                 admin_flag = "*" if info.moderator == sub_id else " "
 
                 self.broker.deliver(session_id,
-                                    tld.encode_co_output("%s  %-19s%-16s%-18s%s" % (admin_flag,
+                                    ltd.encode_co_output("%s  %-19s%-16s%-18s%s" % (admin_flag,
                                                                                     sub_state.nick,
                                                                                     sub_state.t_recv.elapsed_str(),
                                                                                     sub_state.signon.strftime("%Y/%m/%d %H:%M"),
@@ -129,7 +129,7 @@ class List(Injected):
         groups_suffix = "" if groups_n == 1 else "s"
 
         self.broker.deliver(session_id,
-                            tld.encode_co_output("Total: %d user%s in %d group%s." % (logins_n, logins_suffix, groups_n, groups_suffix),
+                            ltd.encode_co_output("Total: %d user%s in %d group%s." % (logins_n, logins_suffix, groups_n, groups_suffix),
                                                  msgid))
 
     def shortlist(self, session_id, with_members=False, msgid=""):
@@ -148,7 +148,7 @@ class List(Injected):
         if available_groups:
             for info in available_groups[:-1]:
                 if self.__show_short_group__(session_id, state, info, logins, is_admin, with_members, msgid):
-                    self.broker.deliver(session_id, tld.encode_co_output("", msgid))
+                    self.broker.deliver(session_id, ltd.encode_co_output("", msgid))
 
             self.__show_short_group__(session_id, state, available_groups[-1], logins, is_admin, with_members, msgid)
 
@@ -171,7 +171,7 @@ class List(Injected):
             topic = info.topic if info.topic else "(None)"
 
             self.broker.deliver(session_id,
-                                tld.encode_co_output("Group: %-12s (%s) Mod: %-12s Topic: %s"
+                                ltd.encode_co_output("Group: %-12s (%s) Mod: %-12s Topic: %s"
                                                      % (display_name, flags, moderator, topic), msgid))
 
             if with_members:
@@ -180,9 +180,9 @@ class List(Injected):
                 lines = wrap(subscribers, 64)
 
                 if lines:
-                    self.broker.deliver(session_id, tld.encode_co_output("    Members: %s" % lines[0], msgid))
+                    self.broker.deliver(session_id, ltd.encode_co_output("    Members: %s" % lines[0], msgid))
 
                     for line in lines[1:]:
-                        self.broker.deliver(session_id, tld.encode_co_output("             %s" % line, msgid))
+                        self.broker.deliver(session_id, ltd.encode_co_output("             %s" % line, msgid))
 
         return show_group

@@ -23,7 +23,10 @@ The project is at a *very* early stage. The following features are implemented:
 * echoback
 * permission management (group moderators & admins)
 * query online users
+* notify sign on/off
+* hush annoying users
 * motd
+* show news & version
 * integrated help
 
 You need Python 3.7 to start the server.

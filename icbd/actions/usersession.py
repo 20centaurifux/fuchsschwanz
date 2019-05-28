@@ -402,9 +402,17 @@ class UserSession(Injected):
                     and not (info.nick_invited(state.nick, state.authenticated)
                              or info.address_invited(state.loginid, state.ip, state.host, state.authenticated))):
                 if info.volume == group.Volume.LOUD:
-                    self.broker.deliver(info.moderator,
-                                        ltd.encode_status_msg("Probe",
-                                                              "%s tried to enter group %s." % (state.nick, group_name)))
+                    moderator_state = self.session.get(info.moderator)
+
+                    hushed = moderator_state.hushlist.nick_private_hushed(state.nick)
+
+                    if not hushed:
+                        hushed = moderator_state.hushlist.site_private_hushed(state.address)
+
+                    if not hushed:
+                        self.broker.deliver(info.moderator,
+                                            ltd.encode_status_msg("Probe",
+                                                                  "%s tried to enter group %s." % (state.nick, group_name)))
                 self.reputation.warning(session_id)
 
                 raise LtdErrorException("%s is restricted." % group_name)

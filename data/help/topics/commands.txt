@@ -6,13 +6,14 @@ COMMANDS
      D    /delete
      E    /echoback, /email
      G    /g
-     H    /help
+     H    /help, /hush
      I    /invite
      M    /m, /motd
-     N    /name, /noaway, /nobeep
+     N    /name, /news, /noaway, /nobeep
      P    /p, /phone
      R    /read, /reputation, /rname
-     S    /secure, /status
+     S    /secure, /shush, /status
      T    /talk, /text, /topic
      U    /unsecure
+     V    /version
      W    /w, /whereis, /whois, /write, /www

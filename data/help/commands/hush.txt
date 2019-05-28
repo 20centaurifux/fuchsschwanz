@@ -1,0 +1,22 @@
+USAGE
+     /hush  {-q} {-o} {-p} {-n nickname | -s site}
+
+DESCRIPTION
+     Hush nicknames or sites.
+
+     Note that hush is a toggle. If you have hushed someone, issued the same
+     command you used to hush them to unhush them.
+
+          Argument         Description
+          -----------------------------------------------------------
+                           show hush list
+          -n               server doesn't send you messages from this
+                           nickname
+          -s               server doesn't send you messages from
+                           people logged in from this site
+          -q               don't receive confirmation
+          -o               hush open messages only
+          -p               hush personal messages only
+
+SEE ALSO
+     /nobeep

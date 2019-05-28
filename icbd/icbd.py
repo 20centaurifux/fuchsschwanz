@@ -100,8 +100,64 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         self.__write_protocol_info__()
 
     def __handle_write__(self, message):
-        self.__transport.write(message)
+        if not self.__reject__(message):
+            self.__transport.write(message)
+
         self.__shutdown = (len(message) >= 2 and message[1] == 103) # quit message ("g")
+
+    def __reject__(self, message):
+        rejected = False
+
+        if len(message) >= 5 and (message[1] == 98 or message[1] == 99):
+            state = self.__session_store.get(self.__session_id)
+
+            if not state.hushlist.empty():
+                is_public = message[1] == 98
+
+                sender = self.__message_from__(message)
+
+                rejected = self.__hushed__(state.hushlist, sender, public=is_public)
+
+                if rejected and message[1] == 99:
+                    self.__notify_sender__(sender)
+
+        return rejected
+
+    def __message_from__(self, message):
+        payload = message[2:]
+        index = payload.find(1)
+
+        sender = None
+
+        if index > 0:
+            sender = payload[:index].decode("ascii", errors="ignore").strip()
+
+        return sender
+
+    def __hushed__(self, hushlist, sender, public):
+        hushed = False
+
+        if public:
+            hushed = hushlist.nick_public_hushed(sender)
+        else:
+            hushed = hushlist.nick_private_hushed(sender)
+
+        if not hushed:
+            sender_session = self.__session_store.find_nick(sender)
+            sender_state = self.__session_store.get(sender_session)
+
+            if public:
+                hushed = hushlist.site_public_hushed(sender_state.address)
+            else:
+                hushed = hushlist.site_private_hushed(sender_state.address)
+
+        return hushed
+
+    def __notify_sender__(self, sender):
+        session_id = self.__session_store.find_nick(sender)
+
+        if session_id:
+            self.__broker.deliver(session_id, ltd.encode_status_msg("Bounce", "Message did not go trough."))
 
     def data_received(self, data):
         if not self.__shutdown:
@@ -318,4 +374,3 @@ if __name__ == "__main__":
         print(str(ex))
     except:
         traceback.print_exc()
-

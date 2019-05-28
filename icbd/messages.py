@@ -37,6 +37,7 @@ import actions.messagebox
 import actions.motd
 import actions.beep
 import actions.echoback
+import actions.hush
 import actions.openmessage
 import actions.ping
 import actions.privatemessage
@@ -382,6 +383,28 @@ class Echoback:
             raise LtdErrorException("Usage: /echoback on/off/verbose")
 
         ACTION(actions.echoback.Echoback).set_mode(session_id, fields[0])
+
+@command("hush")
+class Hush:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        usage = "Usage: hush {-q} {-n nickname | -s address}"
+
+        if fields[0]:
+            try:
+                opts, target = ltd.get_opts(fields[0], quiet="q", mode="ns", msg_type="op")
+
+                if not target:
+                    raise LtdErrorException(usage)
+
+            except:
+                raise LtdErrorException(usage)
+
+            ACTION(actions.hush.Hush).toggle(session_id, target, **opts)
+        else:
+            ACTION(actions.hush.Hush).list(session_id)
 
 @command("away")
 class Away:

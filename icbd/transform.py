@@ -36,6 +36,7 @@ class Transform(di.Injected):
     def transform(self, type_id, payload):
         type_id, payload = self.__private_message_to_command__(type_id, payload)
         type_id, payload = self.__questionmark_to_help__(type_id, payload)
+        type_id, payload = self.__shush_to_hush__(type_id, payload)
 
         return type_id, payload
 
@@ -76,5 +77,21 @@ class Transform(di.Injected):
                     payload.extend(field.encode())
 
                 self.log.debug("Message transformed: type='h', command='help'")
+
+        return type_id, payload
+
+    def __shush_to_hush__(self, type_id, payload):
+        if type_id == "h":
+            fields = [decode_ascii(f).strip() for f in ltd.split(payload)]
+
+            if len(fields) >= 2 and fields[0] == "shush":
+                payload = bytearray()
+
+                payload.extend("hush\1".encode())
+
+                for field in fields[1:]:
+                    payload.extend(field.encode())
+
+                self.log.debug("Message transformed: type='h', command='hush'")
 
         return type_id, payload

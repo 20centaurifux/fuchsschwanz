@@ -1,0 +1,8 @@
+USAGE
+     /version
+
+DESCRIPTION
+     Prints server version.
+
+SEE ALSO
+     /news

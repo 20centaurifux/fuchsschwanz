@@ -45,6 +45,7 @@ import actions.usersession
 import actions.list
 import actions.admin
 import actions.help
+import actions.info
 from textutils import decode_ascii
 from exception import LtdErrorException, LtdResponseException
 
@@ -552,6 +553,30 @@ class Help:
         else:
             ACTION(actions.help.Help).introduction(session_id, msgid(fields))
 
+@command("version")
+class Version:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if fields[0]:
+            raise LtdErrorException("Usage: /version")
+
+        ACTION(actions.info.Info).version(session_id, msgid(fields))
+
+@command("news")
+class News:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if fields[0] and not fields[0].isdigit():
+            raise LtdErrorException("Usage: /news {item}")
+
+        if fields[0]:
+            ACTION(actions.info.Info).news_item(session_id, int(fields[0]), msgid(fields))
+        else:
+            ACTION(actions.info.Info).all_news(session_id, msgid(fields))
 
 COMMANDS = {cls.command: cls() for cls in filter(lambda cls: isinstance(cls, type) and "command" in cls.__dict__,
                                                  sys.modules[__name__].__dict__.values())}

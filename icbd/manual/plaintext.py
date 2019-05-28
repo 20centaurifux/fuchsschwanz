@@ -25,11 +25,14 @@
 """
 import re
 import os.path
+from timer import Timer
 import manual
 
 class Manual(manual.Manual):
     def __init__(self, path):
         self.__path = path
+        self.__timer = None
+        self.__synonyms = {}
 
     def introduction(self):
         return self.__load_file__("introduction.txt")
@@ -40,16 +43,32 @@ class Manual(manual.Manual):
     def command(self, cmd):
         return self.__load_file__(os.path.join("commands", "%s.txt" % self.__filter_query__(cmd)))
 
-    @staticmethod
-    def __filter_query__(q):
+    def __filter_query__(self, q):
+        self.__load_synonyms__()
+
+        q = self.__synonyms.get(q.lower(), q)
+
         return re.sub('[^0-9a-zA-Z~_\\-]+', '_', q).lower()
+
+    def __load_synonyms__(self):
+        if not self.__timer or self.__timer.elapsed() > 60.0:
+            contents = self.__load_file__("command_synonyms.txt")
+
+            if contents:
+                self.__synonyms = {kv[0].strip(): kv[1].strip() for kv in [l.split(" ", 1) for l in contents.split("\n")[:-1]]}
+            else:
+                self.__synonyms = {}
+
+            self.__timer = Timer()
 
     def __load_file__(self, filename):
         contents = None
 
-        path = os.path.join(self.__path, filename)
+        try:
+            path = os.path.join(self.__path, filename)
 
-        with open(path) as f:
-            contents = f.read()
+            with open(path) as f:
+                contents = f.read()
+        except: pass
 
         return contents

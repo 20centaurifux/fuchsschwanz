@@ -25,9 +25,11 @@
 """
 from enum import Enum
 
-VERSION = "0.1.0"
+NAME = "Fuchsschwanz"
+VERSION = "0.1.1"
 
 PROTOCOL_VERSION = "1.0"
+PROTOCOL_LEVEL = 1
 
 NICKSERV = "server"
 

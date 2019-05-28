@@ -43,6 +43,7 @@ class Config:
     database_filename: str = None
     protection_time_between_messages: float = 0.5
     help_path: str = None
+    news_path: str = None
 
 def transform_map(m):
     m = copy.deepcopy(m)

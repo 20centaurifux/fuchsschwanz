@@ -10,6 +10,10 @@
 	{
 		"path": "help"
 	},
+	"news":
+	{
+		"path": "news"
+	},
 	"motd":
 	{
 		"filename": "motd"

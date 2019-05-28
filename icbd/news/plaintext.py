@@ -23,48 +23,39 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import logging
-import config
-import session
-import reputation
-import broker
-import group
-import database
-import nickdb
-import manual
+import os
+import os.path
+import re
 import news
-import di
 
-class Injected(di.Injected):
-    def inject(self,
-               log: logging.Logger,
-               config: config.Config,
-               session: session.Store,
-               reputation: reputation.Reputation,
-               away_table: session.AwayTimeoutTable,
-               notification_table: session.NotificationTimeoutTable,
-               broker: broker.Broker,
-               groups: group.Store,
-               db_connection: database.Connection,
-               nickdb: nickdb.NickDb,
-               manual: manual.Manual,
-               news: news.News):
-        self.log = log
-        self.config = config
-        self.session = session
-        self.reputation = reputation
-        self.away_table = away_table
-        self.notification_table = notification_table
-        self.broker = broker
-        self.groups = groups
-        self.db_connection = db_connection
-        self.nickdb = nickdb
-        self.manual = manual
-        self.news = news
+class News(news.News):
+    def __init__(self, path):
+        self.__path = path
 
-def cache():
-    m = {}
+    def all(self):
+        items = []
 
-    return lambda T: m.get(T, T())
+        for f in os.listdir(self.__path):
+            m = re.match("news\\.(\\d+)", f)
 
-ACTION = cache()
+            if m:
+                items.append(int(m.group(1)))
+
+        return [self.get_item(n) for n in sorted(items)]
+
+    def get_item(self, n):
+        return self.__load_file__("news.%d" % n)
+
+    def __load_file__(self, filename):
+        contents = None
+
+        try:
+            path = os.path.join(self.__path, filename)
+
+            with open(path) as f:
+                contents = f.read()
+
+            contents = [l.rstrip() for l in contents.split("\n")][:-1]
+        except: pass
+
+        return contents

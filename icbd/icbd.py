@@ -50,6 +50,8 @@ import nickdb
 import nickdb.sqlite
 import manual
 import manual.plaintext
+import news
+import news.plaintext
 import timer
 from actions import ACTION
 import actions.usersession
@@ -275,6 +277,7 @@ async def run(opts):
     container.register(database.Connection, nickdb.sqlite.Connection(preferences.database_filename))
     container.register(nickdb.NickDb, nickdb.sqlite.NickDb)
     container.register(manual.Manual, manual.plaintext.Manual(preferences.help_path))
+    container.register(news.News, news.plaintext.News(preferences.news_path))
 
     with container.resolve(database.Connection).enter_scope() as scope:
         container.resolve(nickdb.NickDb).setup(scope)

@@ -1,0 +1,10 @@
+USAGE
+     /news {item}
+     /news
+
+DESCRIPTION
+     Prints a news item. With no argument all news items
+     are displayed.
+
+SEE ALSO
+     /version

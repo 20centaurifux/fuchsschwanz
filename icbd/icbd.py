@@ -311,17 +311,17 @@ class Server(di.Injected):
                     if v.group:
                         info = self.__groups.get(v.group)
 
-                        if k == info.moderator and info.idle_mod > 0:
-                            if elapsed > info.idle_mod and not v.away * 60:
+                        if info.moderator and k == info.moderator and info.idle_mod > 0:
+                            if elapsed > info.idle_mod * 60:
                                 ACTION(actions.usersession.UserSession).idle_mod(k)
                             else:
-                                interval = min(interval, info.idle_mod - elapsed)
+                                interval = min(interval, (info.idle_mod * 60) - elapsed)
 
-                        if info.idle_boot > 0:
-                            if elapsed > info.idle_boot and not v.away * 60:
+                        if (not info.moderator or k != info.moderator) and info.idle_boot > 0:
+                            if elapsed > info.idle_boot * 60:
                                 ACTION(actions.usersession.UserSession).idle_boot(k)
                             else:
-                                interval = min(interval, info.idle_boot - elapsed)
+                                interval = min(interval, (info.idle_boot * 60) - elapsed)
 
             await asyncio.sleep(interval)
 

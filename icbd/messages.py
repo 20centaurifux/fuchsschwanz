@@ -603,6 +603,17 @@ class Reputation:
 
         ACTION(actions.admin.Admin).get_reputation(session_id, fields[0], msgid(fields))
 
+@command("wall")
+class Wall:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if not fields[0]:
+            raise LtdErrorException("Usage: /wall {message}")
+
+        ACTION(actions.admin.Admin).wall(session_id, fields[0])
+
 @command("help")
 class Help:
     @staticmethod

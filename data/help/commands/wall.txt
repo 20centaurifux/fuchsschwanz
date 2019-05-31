@@ -1,0 +1,5 @@
+USAGE
+     /wall {message}
+
+DESCRIPTION
+     Sends an important broadcast message.

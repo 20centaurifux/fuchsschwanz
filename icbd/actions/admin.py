@@ -53,3 +53,24 @@ class Admin(Injected):
         self.broker.deliver(session_id,
                             ltd.encode_co_output("%s (%s): %.2f"
                                                  % (nick, loggedin_state.address, reputation), msgid))
+
+    def wall(self, session_id, message):
+        is_admin = False
+
+        state = self.session.get(session_id)
+
+        if state.authenticated:
+            with self.db_connection.enter_scope() as scope:
+                is_admin = self.nickdb.is_admin(scope, state.nick)
+
+        if not is_admin:
+            self.reputation.critical(session_id)
+
+            raise LtdErrorException("You don't have administrative privileges.")
+
+        e = ltd.Encoder("f")
+
+        e.add_field_str("WALL", append_null=False)
+        e.add_field_str(message, append_null=True)
+
+        self.broker.broadcast(e.encode())

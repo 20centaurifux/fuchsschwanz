@@ -26,6 +26,7 @@
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict
+import core
 
 class Visibility(Enum):
     VISIBLE = 118
@@ -94,6 +95,8 @@ class GroupInfo:
     volume: Volume = Volume.LOUD
     moderator: str = None
     topic: str = None
+    idle_boot = core.DEFAULT_IDLE_BOOT
+    idle_mod = core.DEFAULT_IDLE_MOD
 
     __nicks_inv: Dict[str, Invitation] = field(default_factory=dict)
     __addrs_inv: Dict[str, Invitation] = field(default_factory=dict)
@@ -102,6 +105,29 @@ class GroupInfo:
 
     def __str__(self):
         return self.display_name
+
+    @property
+    def idle_boot_str(self):
+        return self.__minutes_to_str__(self.idle_boot)
+
+    @property
+    def idle_mod_str(self):
+        return self.__minutes_to_str__(self.idle_mod)
+
+    def __minutes_to_str__(self, total_minutes):
+        text = None
+
+        if total_minutes == 0:
+            text = "no limit"
+        elif total_minutes < 60:
+            text = "%d minute%s" % (total_minutes, ("" if total_minutes == 1 else "s"))
+        else:
+            total_hours = int(total_minutes / 60)
+            minutes = total_minutes - (total_hours * 60)
+
+            text = "%d hour%s, %d minute%s" % (total_hours, ("" if total_hours == 1 else "s"), minutes, ("" if minutes == 1 else "s"))
+
+        return text
 
     @property
     def key(self):

@@ -57,20 +57,62 @@ class Group(Injected):
         else:
             self.broker.deliver(session_id, ltd.encode_co_output("The topic is not set.", msgid))
 
-    def change_status(self, session_id, flags):
+    def change_status(self, session_id, opts):
         state = self.session.get(session_id)
         info = self.__get_group_if_can_moderate__(session_id)
 
-        for flag in [f.strip() for f in flags.split(" ")]:
-            if len(flag) == 1:
-                if (self.__try_change_visibility__(session_id, state.nick, info, flag)
-                        or self.__try_change_volume__(session_id, state.nick, info, flag)
-                        or self.__try_change_control__(session_id, state.nick, info, flag)):
-                    self.groups.update(info)
-                else:
-                    self.broker.deliver(session_id, ltd.encode_str("e", "Option %s is unknown." % flag))
+        opt = None
+        arg_required = False
+
+        for word in [f.strip() for f in opts.split(" ")]:
+            if arg_required:
+                arg = word
+
+                if opt == "b":
+                    if arg.isdigit():
+                        minutes = int(arg)
+
+                        if minutes == 0 or (minutes >= core.MIN_IDLE_BOOT and minutes <= core.MAX_IDLE_BOOT):
+                            self.__change_idle_boot__(info, minutes)
+                        else:
+                            self.broker.deliver(session_id,
+                                                ltd.encode_str("e", "Idle-Boot must be between %d and %d minutes."
+                                                                    % (core.MIN_IDLE_BOOT, core.MAX_IDLE_BOOT)))
+                    else:
+                        self.broker.deliver(session_id, ltd.encode_str("e", "Idle-Boot must be a number."))
+                elif opt == "im":
+                    if arg.isdigit():
+                        minutes = int(arg)
+
+                        if minutes == 0 or (minutes >= core.MIN_IDLE_MOD and minutes <= core.MAX_IDLE_MOD):
+                            self.__change_idle_mod__(info, minutes)
+                        else:
+                            self.broker.deliver(session_id,
+                                                ltd.encode_str("e", "Idle-Mod must be between %d and %d minutes."
+                                                                    % (core.MIN_IDLE_MOD, core.MAX_IDLE_MOD)))
+                    else:
+                        self.broker.deliver(session_id, ltd.encode_str("e", "Idle-Mod must be a number."))
+
+                arg_required = False
             else:
-                self.broker.deliver(session_id, ltd.encode_str("e", "Option %s is unknown." % flag))
+                opt = word
+
+                if opt in ["b", "im"]:
+                    arg_required = True
+                elif opt in ["r", "m", "p", "i", "s", "v", "q", "n", "l"]:
+                    arg_required = False
+
+                    if (not (self.__try_change_visibility__(session_id, state.nick, info, opt)
+                                 or self.__try_change_volume__(session_id, state.nick, info, opt)
+                                 or self.__try_change_control__(session_id, state.nick, info, opt))):
+                        self.broker.deliver(session_id, ltd.encode_str("e", "Option %s is unknown." % opt))
+                else:
+                    self.broker.deliver(session_id, ltd.encode_str("e", "Option \"%s\" is unknown." % opt))
+
+        if arg_required:
+            self.broker.deliver(session_id, ltd.encode_str("e", "Option \"%s\" requires an argument." % opt))
+
+        self.groups.update(info)
 
     def __try_change_visibility__(self, session_id, nick, info, flag):
         found = True
@@ -125,6 +167,11 @@ class Group(Injected):
 
                 info.clear_talkers()
 
+                if control == group.Control.MODERATED:
+                    info.moderator = session_id
+
+                    self.broker.to_channel(info.key, ltd.encode_status_msg("Pass", "%s is now mod." % moderator))
+
                 if control == group.Control.RESTRICTED:
                     self.__make_restricted__(session_id, info)
                 else:
@@ -143,6 +190,12 @@ class Group(Injected):
 
             info.invite_nick(sub_state.nick, sub_state.authenticated)
 
+    def __change_idle_boot__(self, info, minutes):
+        info.idle_boot = minutes
+
+    def __change_idle_mod__(self, info, minutes):
+        info.idle_mod = minutes
+
     def status(self, session_id, msgid):
         info = self.__get_group__(session_id)
         logins = self.session.get_nicks()
@@ -155,6 +208,9 @@ class Group(Injected):
                                                     info.control,
                                                     info.volume),
                                                  msgid))
+
+        self.broker.deliver(session_id, ltd.encode_co_output("Idle-Boot: %s" % info.idle_boot_str, msgid))
+        self.broker.deliver(session_id, ltd.encode_co_output("Idle-Mod: %s" % info.idle_mod_str, msgid))
 
         self.__send__wrapped__(session_id, "Nicks invited: ", info.invited_nicks, msgid)
         self.__send__wrapped__(session_id, "Addresses invited: ", info.invited_addresses, msgid)

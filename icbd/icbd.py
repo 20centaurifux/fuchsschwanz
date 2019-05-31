@@ -250,12 +250,14 @@ class Server(di.Injected):
                config: config.Config,
                store: session.Store,
                broker: broker.Broker,
+               groups: group.Store,
                db_connection: database.Connection,
                nickdb: nickdb.NickDb):
         self.__log = log
         self.__config = config
         self.__session_store = store
         self.__broker = broker
+        self.__groups = groups
         self.__db_connection = db_connection
         self.__nickdb = nickdb
 
@@ -298,12 +300,28 @@ class Server(di.Injected):
             sessions = {k: v for k, v in self.__session_store if k != self.__session_id}
 
             for k, v in sessions.items():
-                elapsed = v.t_recv.elapsed()
+                if k != self.__session_id:
+                    elapsed = v.t_recv.elapsed()
 
-                if elapsed > self.__config.timeouts_ping:
-                    self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
-                else:
-                    interval = min(interval, self.__config.timeouts_ping - elapsed)
+                    if elapsed > self.__config.timeouts_ping:
+                        self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
+                    else:
+                        interval = min(interval, self.__config.timeouts_ping - elapsed)
+
+                    if v.group:
+                        info = self.__groups.get(v.group)
+
+                        if k == info.moderator and info.idle_mod > 0:
+                            if elapsed > info.idle_mod and not v.away * 60:
+                                ACTION(actions.usersession.UserSession).idle_mod(k)
+                            else:
+                                interval = min(interval, info.idle_mod - elapsed)
+
+                        if info.idle_boot > 0:
+                            if elapsed > info.idle_boot and not v.away * 60:
+                                ACTION(actions.usersession.UserSession).idle_boot(k)
+                            else:
+                                interval = min(interval, info.idle_boot - elapsed)
 
             await asyncio.sleep(interval)
 

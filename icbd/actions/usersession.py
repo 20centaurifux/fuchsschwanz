@@ -349,39 +349,66 @@ class UserSession(Injected):
                                                     ltd.encode_status_msg("Sign-off",
                                                                           "%s (%s) has signed off." % (state.nick, state.address)))
 
-                    if info.moderator == session_id:
-                        if info.volume != group.Volume.QUIET:
-                            self.broker.to_channel_from(session_id,
-                                                        state.group,
-                                                        ltd.encode_status_msg("Sign-off",
-                                                                              "Your group moderator signed off (no timeout)."))
-
-                        self.log.debug("Selecting new moderator.")
-
-                        new_mod = {}
-                        min_elapsed = -1
-
-                        for sub_id in self.broker.get_subscribers(state.group):
-                            sub_state = self.session.get(sub_id)
-                            elapsed = sub_state.t_recv.elapsed()
-
-                            self.log.debug("Found subscriber: %s, elapsed milliseconds: %f", sub_state.nick, elapsed)
-
-                            if min_elapsed == -1 or elapsed < min_elapsed:
-                                min_elapsed = elapsed
-                                new_mod = [sub_id, sub_state.nick]
-
-                        self.log.debug("New mod: %s", new_mod[1])
-
-                        self.broker.to_channel(state.group, ltd.encode_status_msg("Pass", "%s is now mod." % new_mod[1]))
-
-                        info.moderator = new_mod[0]
+                    self.drop_moderator(session_id, "Sign-off", "Your moderator signed off.")
                 else:
                     self.groups.delete(state.group)
 
             self.log.debug("Removing nick %s from session %s.", state.nick, session_id)
 
             self.session.update(session_id, nick=None, authenticated=False)
+
+    def idle_mod(self, session_id):
+        state = self.session.get(session_id)
+
+        self.broker.deliver(session_id, ltd.encode_status_msg("Idle-Mod", "You were booted."))
+
+        self.join(session_id, core.BOOT_GROUP)
+        self.drop_moderator(session_id, "Idle-Mod", "Your group moderator idled away.")
+
+    def idle_boot(self, session_id):
+        state = self.session.get(session_id)
+
+        self.broker.deliver(session_id, ltd.encode_status_msg("Idle-Boot", "You were booted."))
+
+        self.join(session_id, core.BOOT_GROUP)
+        self.drop_moderator(session_id, "Idle-Boot", "Your group moderator idled away.")
+
+    def drop_moderator(self, session_id, category, message):
+        for info in self.groups.get_groups():
+            if info.moderator == session_id:
+                if info.volume != group.Volume.QUIET:
+                    self.broker.to_channel_from(session_id, info.key, ltd.encode_status_msg(category, message))
+
+                new_mod = None
+                min_elapsed = -1
+
+                for sub_id in self.broker.get_subscribers(info.key):
+                    sub_state = self.session.get(sub_id)
+                    elapsed = sub_state.t_recv.elapsed()
+
+                    self.log.debug("Found subscriber: %s, elapsed milliseconds: %f", sub_state.nick, elapsed)
+
+                    if not sub_state.away and (min_elapsed == -1 or elapsed < min_elapsed):
+                        min_elapsed = elapsed
+                        new_mod = [sub_id, sub_state.nick]
+
+                if new_mod:
+                    self.log.debug("New mod: %s", new_mod[1])
+
+                    self.broker.to_channel(info.key, ltd.encode_status_msg("Pass", "%s is now mod." % new_mod[1]))
+
+                    info.moderator = new_mod[0]
+                else:
+                    self.log.debug("No new moderator found.")
+
+                    self.broker.to_channel(str(info), ltd.encode_status_msg("Change", "Group is now public."))
+
+                    info.control = group.Control.PUBLIC
+                    info.moderator = None
+                    info.clear_talkers()
+                    info.clear_invitations()
+
+                self.groups.update(info)
 
     def join(self, session_id, group_name, status=""):
         state = self.session.get(session_id)
@@ -432,16 +459,21 @@ class UserSession(Injected):
                 if group_name == core.DEFAULT_GROUP:
                     info.control = group.Control.PUBLIC
                     info.topic = core.DEFAULT_TOPIC
+                    info.idle_mod = 0
                 elif group_name == core.IDLE_GROUP:
                     info.control = group.Control.PUBLIC
                     info.visibility = group.Visibility.VISIBLE
                     info.volume = group.Volume.QUIET
                     info.topic = core.IDLE_TOPIC
+                    info.idle_mod = 0
+                    info.idle_boot = 0
                 elif group_name == core.BOOT_GROUP:
                     info.control = group.Control.PUBLIC
                     info.visibility = group.Visibility.VISIBLE
                     info.volume = group.Volume.LOUD
                     info.topic = core.BOOT_TOPIC
+                    info.idle_mod = 0
+                    info.idle_boot = 0
                 else:
                     info.control = group.Control.MODERATED
                     info.moderator = session_id

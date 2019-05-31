@@ -72,15 +72,12 @@ class Notify(Injected):
         self.session.set(session_id, state)
 
     def notify_signon(self, session_id):
-        self.__notify__(session_id, signed_on=True, nick_only=False)
+        self.__notify__(session_id, signed_on=True)
 
     def notify_signoff(self, session_id):
-        self.__notify__(session_id, signed_on=False, nick_only=False)
+        self.__notify__(session_id, signed_on=False)
 
-    def notify_rename(self, session_id):
-        self.__notify__(session_id, signed_on=True, nick_only=True)
-
-    def __notify__(self, session_id, signed_on, nick_only=False):
+    def __notify__(self, session_id, signed_on):
         state = self.session.get(session_id)
 
         info = None
@@ -96,11 +93,8 @@ class Notify(Injected):
                 same_group= v.group and v.group.lower() == info.key
 
                 if not hidden or same_group:
-                    if v.notifylist.nick_watched(state.nick) and v.notifylist.update_nick(state.nick, signed_on) and not same_group:
+                    if v.notifylist.nick_watched(state.nick) and not same_group:
                         self.broker.deliver(k, ltd.encode_status_msg(status_name, state.nick))
 
-                    if (not nick_only
-                            and v.notifylist.site_watched(state.address)
-                            and v.notifylist.update_site(state.address, signed_on)
-                            and not same_group):
+                    if v.notifylist.site_watched(state.address) and not same_group:
                         self.broker.deliver(k, ltd.encode_status_msg(status_name, state.address))

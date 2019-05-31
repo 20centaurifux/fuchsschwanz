@@ -23,15 +23,6 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from dataclasses import dataclass
-
-@dataclass
-class Entry:
-    display_name: str
-    signed_on: bool = False
-
-    def __str__(self):
-        return self.display_name
 
 class Notifylist:
     def __init__(self):
@@ -50,7 +41,7 @@ class Notifylist:
         added = not k in m
 
         if added:
-            m[k] = Entry(display_name=name)
+            m[k] = name
         else:
             del m[k]
 
@@ -59,31 +50,16 @@ class Notifylist:
     def nick_watched(self, nick):
         return nick.lower() in self.__nicks
 
-    def update_nick(self, nick, signed_on):
-        return self.__update__(self.__nicks, nick, signed_on)
-
     def site_watched(self, site):
         return site.lower() in self.__sites
-
-    def update_site(self, site, signed_on):
-        return self.__update__(self.__sites, site, signed_on)
-
-    def __update__(self, m, name, signed_on):
-        k = name.lower()
-
-        old_val = m[k].signed_on
-
-        m[k].signed_on = signed_on
-
-        return old_val != signed_on
 
     def empty(self):
         return not (self.__nicks or self.__sites)
 
     @property
     def nicks(self):
-        return sorted([str(e) for e in self.__nicks.values()])
+        return sorted([n for n in self.__nicks.values()])
 
     @property
     def sites(self):
-        return sorted([str(e) for e in self.__sites.values()])
+        return sorted([s for s in self.__sites.values()])

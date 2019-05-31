@@ -25,22 +25,13 @@
 """
 from actions import Injected
 import ltd
+from core import Verbosity
+from log import LOG_LEVELS
 from exception import LtdErrorException
 
 class Admin(Injected):
     def get_reputation(self, session_id, nick, msgid=""):
-        is_admin = False
-
-        state = self.session.get(session_id)
-
-        if state.authenticated:
-            with self.db_connection.enter_scope() as scope:
-                is_admin = self.nickdb.is_admin(scope, state.nick)
-
-        if not is_admin:
-            self.reputation.critical(session_id)
-
-            raise LtdErrorException("You don't have administrative privileges.")
+        self.__test_admin__(session_id)
 
         loggedin_session = self.session.find_nick(nick)
 
@@ -54,7 +45,37 @@ class Admin(Injected):
                             ltd.encode_co_output("%s (%s): %.2f"
                                                  % (nick, loggedin_state.address, reputation), msgid))
 
-    def wall(self, session_id, message):
+    def wall(self, session_id, message, msgid=""):
+        self.__test_admin__(session_id)
+
+        e = ltd.Encoder("f")
+
+        e.add_field_str("WALL", append_null=False)
+        e.add_field_str(message, append_null=True)
+
+        self.broker.broadcast(e.encode())
+
+    def set_log_level(self, session_id, level, msgid):
+        self.__test_admin__(session_id)
+
+        try:
+            verbosity = Verbosity(level)
+        except ValueError:
+            raise LtdErrorException("Unsupported log level: %d" % level)
+
+        self.log.info("Verbosity set set to %s.", verbosity)
+        self.log.setLevel(LOG_LEVELS[verbosity])
+
+        self.broker.deliver(session_id, ltd.encode_co_output("The log level is %d." % level, msgid))
+
+    def log_level(self, session_id, msgid):
+        self.__test_admin__(session_id)
+
+        verbosity = next(k for k, v in LOG_LEVELS.items() if v == self.log.level)
+
+        self.broker.deliver(session_id, ltd.encode_co_output("The log level is %d." % verbosity.value, msgid))
+
+    def __test_admin__(self, session_id):
         is_admin = False
 
         state = self.session.get(session_id)
@@ -67,10 +88,3 @@ class Admin(Injected):
             self.reputation.critical(session_id)
 
             raise LtdErrorException("You don't have administrative privileges.")
-
-        e = ltd.Encoder("f")
-
-        e.add_field_str("WALL", append_null=False)
-        e.add_field_str(message, append_null=True)
-
-        self.broker.broadcast(e.encode())

@@ -1,0 +1,7 @@
+USAGE
+     /log {level}
+     /log
+
+DESCRIPTION
+     Sets the log level (0-4). With no argument the current
+     level is displayed.

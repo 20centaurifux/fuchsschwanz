@@ -8,6 +8,7 @@ COMMANDS
      G    /g
      H    /help, /hush
      I    /invite
+     L    /log
      M    /m, /motd
      N    /name, /news, /noaway, /nobeep, notify
      P    /p, /phone

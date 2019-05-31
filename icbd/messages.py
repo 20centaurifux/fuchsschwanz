@@ -614,6 +614,20 @@ class Wall:
 
         ACTION(actions.admin.Admin).wall(session_id, fields[0])
 
+@command("log")
+class Log:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if fields[0] and not fields[0].isdigit():
+            raise LtdErrorException("Usage: /log {level}")
+
+        if fields[0]:
+            ACTION(actions.admin.Admin).set_log_level(session_id, int(fields[0]), msgid(fields))
+        else:
+            ACTION(actions.admin.Admin).log_level(session_id, msgid(fields))
+
 @command("help")
 class Help:
     @staticmethod

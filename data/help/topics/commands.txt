@@ -4,7 +4,7 @@ COMMANDS
      B    /beep, /boot
      C    /cancel, /cp
      D    /delete
-     E    /echoback, /email
+     E    /echoback, /email, /exclude
      G    /g
      H    /help, /hush
      I    /invite

@@ -208,7 +208,7 @@ class ChangePassword:
 
             ACTION(actions.registration.Registration).change_password(session_id, old_pwd, new_pwd)
         else:
-            raise LtdErrorException("Usage: /cp old_password new_password")
+            raise LtdErrorException("Usage: /cp {old password} {new password}")
 
 def msgid(fields):
     return fields[1] if len(fields) == 2 else ""
@@ -311,7 +311,7 @@ class WriteMessage:
         if len(msg_fields) == 2:
             receiver, message = [f.strip() for f in msg_fields]
         else:
-            raise LtdErrorException("Usage: /write nick message text")
+            raise LtdErrorException("Usage: /write {nick} {message}")
 
         ACTION(actions.messagebox.MessageBox).send_message(session_id, receiver, message)
 
@@ -326,9 +326,24 @@ class WritePrivateMessage:
         if len(msg_fields) == 2:
             receiver, message = [f.strip() for f in msg_fields]
         else:
-            raise LtdErrorException("Usage: /m nick message text")
+            raise LtdErrorException("Usage: /m {nick} {message}")
 
         ACTION(actions.privatemessage.PrivateMessage).send(session_id, receiver, message)
+
+@command("exclude")
+class Exclude:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        msg_fields = fields[0].split(" ", 1)
+
+        if len(msg_fields) == 2:
+            receiver, message = [f.strip() for f in msg_fields]
+        else:
+            raise LtdErrorException("Usage: /exclude {nick} {message}")
+
+        ACTION(actions.openmessage.OpenMessage).send(session_id, message, exclude=receiver)
 
 @command("read")
 class ReadMessages:
@@ -348,7 +363,7 @@ class Whereis:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise LtdErrorException("Usage: /whereis nick")
+            raise LtdErrorException("Usage: /whereis {nick}")
 
         ACTION(actions.usersession.UserSession).whereis(session_id, fields[0], msgid(fields))
 
@@ -359,7 +374,7 @@ class Beep:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise LtdErrorException("Usage: /beep nick")
+            raise LtdErrorException("Usage: /beep {nick}")
 
         ACTION(actions.beep.Beep).beep(session_id, fields[0])
 
@@ -370,7 +385,7 @@ class NoBeep:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise LtdErrorException("Usage: /nobeep on/off/verbose")
+            raise LtdErrorException("Usage: /nobeep {on|off|verbose}")
 
         ACTION(actions.beep.Beep).set_mode(session_id, fields[0])
 
@@ -381,7 +396,7 @@ class Echoback:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise LtdErrorException("Usage: /echoback on/off/verbose")
+            raise LtdErrorException("Usage: /echoback {on|off|verbose}")
 
         ACTION(actions.echoback.Echoback).set_mode(session_id, fields[0])
 
@@ -391,7 +406,7 @@ class Hush:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: hush {-q} {-n nickname | -s address}"
+        usage = "Usage: hush {-q} {-n nickname|-s address}"
 
         if fields[0]:
             try:
@@ -413,7 +428,7 @@ class Notify:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: notify {-q} {-n nickname | -s address}"
+        usage = "Usage: notify {-q} {-n nickname|-s address}"
 
         if fields[0]:
             try:
@@ -504,7 +519,7 @@ class Invite:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: invite {-q} {-r} {-n nickname | -s address}"
+        usage = "Usage: invite {-q} {-r} {-n nickname|-s address}"
 
         try:
             opts, nick = ltd.get_opts(fields[0], quiet="q", registered="r", mode="ns")
@@ -523,7 +538,7 @@ class Cancel:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: cancel {-q} {-n nickname | -s address}"
+        usage = "Usage: cancel {-q} {-n nickname|-s address}"
 
         try:
             opts, nick = ltd.get_opts(fields[0], quiet="q", mode="ns")
@@ -542,7 +557,7 @@ class Talk:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: talk {-q} {-d} {-r} {-n nickname | -s address}"
+        usage = "Usage: talk {-q} {-d} {-r} {-n nickname|-s address}"
 
         try:
             opts, nick = ltd.get_opts(fields[0], quiet="q", delete="d", registered="r", mode="ns")
@@ -562,7 +577,7 @@ class Boot:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise LtdErrorException("Usage: /boot nick")
+            raise LtdErrorException("Usage: /boot {nick}")
 
         ACTION(actions.group.Group).boot(session_id, fields[0])
 
@@ -584,7 +599,7 @@ class Reputation:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if not fields[0]:
-            raise LtdErrorException("Usage: /reputation nick")
+            raise LtdErrorException("Usage: /reputation {nick}")
 
         ACTION(actions.admin.Admin).get_reputation(session_id, fields[0], msgid(fields))
 
@@ -606,7 +621,7 @@ class Version:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields[0]:
-            raise LtdErrorException("Usage: /version")
+            raise LtdErrorException("Usage: /v")
 
         ACTION(actions.info.Info).version(session_id, msgid(fields))
 

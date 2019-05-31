@@ -1,0 +1,5 @@
+USAGE
+     /m {nickname} {message}
+
+DESCRIPTION
+     Sends an open message excluding the specified nick.

@@ -29,10 +29,10 @@ import session
 import group
 import ltd
 import validate
-from exception import LtdErrorException
+from exception import LtdErrorException, LtdStatusException
 
 class OpenMessage(Injected):
-    def send(self, session_id, message):
+    def send(self, session_id, message, exclude=None):
         state = self.session.get(session_id)
 
         info = self.groups.get(state.group)
@@ -55,12 +55,35 @@ class OpenMessage(Injected):
             e.add_field_str(state.nick, append_null=False)
             e.add_field_str(part, append_null=True)
 
-            receivers = 0
+            if exclude:
+                excluded_sessions = set()
 
-            if state.echo == session.EchoMode.OFF:
-                receivers = self.broker.to_channel_from(session_id, state.group, e.encode())
+                excluded_id  = self.session.find_nick(exclude)
+
+                if not excluded_id:
+                    raise LtdStatusException("Exclude", "Nick not found.")
+
+                subscribers = self.broker.get_subscribers(info.key)
+
+                if not excluded_id in subscribers:
+                    raise LtdStatusException("Exclude", "Nick is not here.")
+
+                excluded_sessions.add(excluded_id)
+
+                if state.echo == session.EchoMode.OFF:
+                    excluded_sessions.add(session_id)
+
+                msg = e.encode()
+
+                for sub_id in [s for s in subscribers if not s in excluded_sessions]:
+                    self.broker.deliver(sub_id, msg)
             else:
-                receivers = self.broker.to_channel(state.group, e.encode())
+                receivers = 0
 
-            if receivers == 0:
-                raise LtdErrorException("No one else in group.")
+                if state.echo == session.EchoMode.OFF:
+                    receivers = self.broker.to_channel_from(session_id, state.group, e.encode())
+                else:
+                    receivers = self.broker.to_channel(state.group, e.encode())
+
+                if receivers == 0:
+                    raise LtdErrorException("No one else in group.")

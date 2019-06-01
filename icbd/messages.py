@@ -71,7 +71,7 @@ def loginrequired(fn):
 
         state = sessions.get(session_id)
 
-        if not state.nick or not state.group:
+        if not state.loggedin:
             raise LtdErrorException("Login required.")
 
         fn(session_id, fields)

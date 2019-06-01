@@ -86,7 +86,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         self.__log.info("Client connected: %s:%d", address[0], address[1])
 
         self.__transport = transport
-        self.__session_id = self.__session_store.new(ip=address[0], host=socket.getfqdn(address[0]))
+        self.__session_id = self.__session_store.new(ip=address[0], host=socket.getfqdn(address[0]), t_recv=timer.Timer())
         self.__broker.add_session(self.__session_id, self.__handle_write__)
         self.__reputation.add_session(self.__session_id)
         self.__buffer = bytearray()
@@ -214,7 +214,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
 
         msg = None
 
-        if not elapsed or elapsed > self.__config.protection_time_between_messages:
+        if not state.loggedin or elapsed > self.__config.protection_time_between_messages:
             msg = MESSAGES.get(type_id)
 
             if not msg:

@@ -125,7 +125,10 @@ class GroupInfo:
             total_hours = int(total_minutes / 60)
             minutes = total_minutes - (total_hours * 60)
 
-            text = "%d hour%s, %d minute%s" % (total_hours, ("" if total_hours == 1 else "s"), minutes, ("" if minutes == 1 else "s"))
+            if minutes == 0:
+                text = "%d hour%s" % (total_hours, ("" if total_hours == 1 else "s"))
+            else:
+                text = "%d hour%s, %d minute%s" % (total_hours, ("" if total_hours == 1 else "s"), minutes, ("" if minutes == 1 else "s"))
 
         return text
 

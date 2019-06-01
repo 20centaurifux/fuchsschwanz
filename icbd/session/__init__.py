@@ -63,6 +63,10 @@ class State:
             setattr(self, k, v)
 
     @property
+    def loggedin(self):
+        return self.nick and self.group
+
+    @property
     def address(self):
         return "%s@%s" % (self.loginid, self.host)
 

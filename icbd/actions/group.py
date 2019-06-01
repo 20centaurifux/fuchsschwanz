@@ -73,7 +73,7 @@ class Group(Injected):
                         minutes = int(arg)
 
                         if minutes == 0 or (minutes >= core.MIN_IDLE_BOOT and minutes <= core.MAX_IDLE_BOOT):
-                            self.__change_idle_boot__(info, minutes)
+                            self.__change_idle_boot__(state.nick, info, minutes)
                         else:
                             self.broker.deliver(session_id,
                                                 ltd.encode_str("e", "Idle-Boot must be between %d and %d minutes."
@@ -85,7 +85,7 @@ class Group(Injected):
                         minutes = int(arg)
 
                         if minutes == 0 or (minutes >= core.MIN_IDLE_MOD and minutes <= core.MAX_IDLE_MOD):
-                            self.__change_idle_mod__(info, minutes)
+                            self.__change_idle_mod__(state.nick, info, minutes)
                         else:
                             self.broker.deliver(session_id,
                                                 ltd.encode_str("e", "Idle-Mod must be between %d and %d minutes."
@@ -190,11 +190,36 @@ class Group(Injected):
 
             info.invite_nick(sub_state.nick, sub_state.authenticated)
 
-    def __change_idle_boot__(self, info, minutes):
+    def __change_idle_boot__(self, moderator, info, minutes):
+        old_val = info.idle_boot
         info.idle_boot = minutes
+        
+        self.broker.to_channel(info.key, ltd.encode_status_msg("Change", "%s changed idle-boot to %s." % (moderator, info.idle_boot_str)))
 
-    def __change_idle_mod__(self, info, minutes):
+        if old_val > minutes and minutes > 0:
+            boot_ids = []
+
+            for sub_id in self.broker.get_subscribers(str(info)):
+                sub_state = self.session.get(sub_id)
+
+                if (not info.moderator or sub_id != info.moderator):
+                    if sub_state.t_recv.elapsed() > (info.idle_boot * 60):
+                        boot_ids.append(sub_id)
+
+            for sub_id in boot_ids:
+                ACTION(actions.usersession.UserSession).idle_boot(sub_id)
+
+    def __change_idle_mod__(self, moderator, info, minutes):
+        old_val = info.idle_mod
         info.idle_mod = minutes
+        
+        self.broker.to_channel(info.key, ltd.encode_status_msg("Change", "%s changed idle-mod to %s." % (moderator, info.idle_mod_str)))
+
+        if old_val > minutes and minutes > 0 and info.moderator:
+            mod_state = self.session.get(info.moderator)
+
+            if mod_state.t_recv.elapsed() > (minutes * 60):
+                ACTION(actions.usersession.UserSession).idle_mod(info.moderator)
 
     def status(self, session_id, msgid):
         info = self.__get_group__(session_id)

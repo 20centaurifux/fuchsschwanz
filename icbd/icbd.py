@@ -26,6 +26,7 @@
 import logging
 import asyncio
 import socket
+import ssl
 import traceback
 from datetime import datetime
 from getpass import getuser
@@ -266,7 +267,13 @@ class Server(di.Injected):
 
         loop = asyncio.get_running_loop()
 
-        server = await loop.create_server(lambda: ICBServerProtocol(), *address)
+        sc = None
+
+        if self.__config.ssl_cert and self.__config.ssl_key:
+            sc = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+            sc.load_cert_chain(self.__config.ssl_cert, self.__config.ssl_key)
+
+        server = await loop.create_server(lambda: ICBServerProtocol(), *address, ssl=sc)
 
         self.__signon_server__()
 

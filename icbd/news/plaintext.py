@@ -41,7 +41,7 @@ class News(news.News):
             if m:
                 items.append(int(m.group(1)))
 
-        return [self.get_item(n) for n in sorted(items)]
+        return [self.get_item(n) for n in sorted(items, reverse=True)]
 
     def get_item(self, n):
         return self.__load_file__("news.%d" % n)

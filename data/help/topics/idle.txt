@@ -1,0 +1,15 @@
+IDLE (GROUP)
+     Group members and moderators can be booted automatically when they're
+     idling too long.
+
+     The idle-boot option defines the maximum allowed idle time for all
+     group members except the moderator.
+
+     Use the idle-mod option to set an idle timeout for moderators.
+
+     When the moderator is booted the group member with the shortest idle
+     time and without an away message becomes the next moderator. If no
+     user can be found the group becomes public.
+
+SEE ALSO
+     group /status /boot ~OUTLAWS~

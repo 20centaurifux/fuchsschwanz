@@ -1,0 +1,25 @@
+# 2019-06-01 v0.1.1
+	* FEATURE: /echoback
+	* FEATURE: /news
+	* FEATURE: /v
+	* FEATURE: /hush
+	* FEATURE: /notify
+	* FEATURE: /exclude
+	* FEATURE: /wall
+	* FEATURE: /log
+	* FEATURE: /w command arguments (-s, -g, . and group name)
+	* FEATURE: idle-boot and idle-mod options
+
+# 2019-05-25 v0.1.0
+	* FEATURE: user login, authentication & registration
+	* FEATURE: set/delete personal information
+	* FEATURE: away status
+	* FEATURE: change nick
+	* FEATURE: groups (public messages, moderation, booting, topic,
+	           visibility, volume and control)
+	* FEATURE: private messages
+	* FEATURE: personal inbox
+	* FEATURE: beep other users
+	* FEATURE: query groups & users
+	* FEATURE: message of the day
+	* FEATURE: integrated help

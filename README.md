@@ -16,7 +16,7 @@ The project is at a *very* early stage. The following features are implemented:
 * group visibility (visible, secret, invisible)
 * group volume (quiet, normal, loud)
 * group control (public, moderated, restricted, controlled)
-* boot users
+* boot users (automatically)
 * private messages
 * personal message box
 * "beep" users

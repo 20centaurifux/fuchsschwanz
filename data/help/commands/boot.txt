@@ -5,4 +5,4 @@ DESCRIPTION
      Moderator's can throw users out.
 
 SEE ALSO
-     group ~OUTLAWS~
+     group idle ~OUTLAWS~

@@ -1,28 +1,45 @@
 USAGE
-     /status {flags}
+     /status {flags | options}
      /status
 
 DESCRIPTION
-     Sets visibility, volume and control flags.
+     Sets group flags and options.
 
-     The following flags are available:
+     The following flags and options are available:
 
           Flag  Name
           ----------------
+          Visibility
+          ----------
           v     visible
           s     secret
           i     invisible
 
+          Control
+          -------
           p     public
           m     moderated
           r     restricted
           c     controlled
 
+          Volume
+          ------
           q     quiet
           n     normal
           l     loud
 
-     With no argument the status is displayed.
+          Option           Name
+          --------------------------
+          b {seconds}      idle-boot
+          im {seconds}     idle-mod
+
+     With no argument the group's current flags and options are displayed.
+
+EXAMPLE
+
+     Make group restricted and disable idle-mod.
+
+          /status r im 0
 
 SEE ALSO
-     group visibility volume control
+     group visibility volume control idle

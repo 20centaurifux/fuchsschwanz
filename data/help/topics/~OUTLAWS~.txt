@@ -3,4 +3,4 @@
      changed.
 
 SEE ALSO
-     group /topic /status 1 ~IDLE~
+     group idle /topic /status 1 ~IDLE~

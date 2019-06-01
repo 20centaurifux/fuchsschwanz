@@ -36,6 +36,7 @@ class Config:
     server_max_logins: int = 500
     ssl_cert: str = None
     ssl_key: str = None
+    ssl_port: int = 7327
     motd_filename: str = "./motd"
     logging_verbosity: Verbosity = Verbosity.INFO
     mbox_limit: int = 25

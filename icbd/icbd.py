@@ -262,25 +262,30 @@ class Server(di.Injected):
         self.__db_connection = db_connection
         self.__nickdb = nickdb
 
-    async def run(self, address):
-        self.__log.info("Listening on %s:%d", address[0], address[1])
+    async def run(self):
+        self.__signon_server__()
 
         loop = asyncio.get_running_loop()
 
-        sc = None
+        loop.create_task(self.__process_idling_sessions__())
+
+        self.__log.info("Listening on %s:%d", self.__config.server_address, self.__config.server_port)
+
+        server = await loop.create_server(lambda: ICBServerProtocol(), self.__config.server_address, self.__config.server_port)
 
         if self.__config.ssl_cert and self.__config.ssl_key:
             sc = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             sc.load_cert_chain(self.__config.ssl_cert, self.__config.ssl_key)
 
-        server = await loop.create_server(lambda: ICBServerProtocol(), *address, ssl=sc)
+            self.__log.info("Listening on %s:%d", self.__config.server_address, self.__config.ssl_port)
 
-        self.__signon_server__()
+            ssl_server = await loop.create_server(lambda: ICBServerProtocol(), self.__config.server_address, self.__config.ssl_port, ssl=sc)
 
-        loop.create_task(self.__process_idling_sessions__())
-
-        async with server:
-            await server.serve_forever()
+            async with server, ssl_server:
+                await asyncio.gather(server.serve_forever(), ssl_server.serve_forever())
+        else:
+            async with server:
+                await server.serve_forever()
 
     def __signon_server__(self):
         now = datetime.utcnow()
@@ -364,10 +369,9 @@ async def run(opts):
         container.resolve(nickdb.NickDb).setup(scope)
         scope.complete()
 
-    address = (preferences.server_address, preferences.server_port)
     server = Server()
 
-    await server.run(address)
+    await server.run()
 
     logger.info("Server stopped.")
 

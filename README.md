@@ -28,6 +28,7 @@ The project is at a *very* early stage. The following features are implemented:
 * motd
 * show news & version
 * integrated help
+* SSL support
 
 You need Python 3.7 to start the server.
 

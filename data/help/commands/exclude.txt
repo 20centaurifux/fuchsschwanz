@@ -1,5 +1,5 @@
 USAGE
-     /m {nickname} {message}
+     /exclude nickname} {message}
 
 DESCRIPTION
      Sends an open message excluding the specified nick.

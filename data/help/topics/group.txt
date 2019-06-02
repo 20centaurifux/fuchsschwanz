@@ -1,7 +1,7 @@
 GROUP
      Every user is member of a group. They can be listed with /w.
 
-     Groups have a moderator which can set topic and status. The latter
+     Groups have a moderator who can set topic and status. The latter
      affects visibility, volume, control and idle time(s).
 
      Change your group membership with /g.

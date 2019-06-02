@@ -2,7 +2,7 @@ USAGE
      /boot {nickname}
 
 DESCRIPTION
-     Moderator's can throw users out.
+     Moderators can throw users out.
 
 SEE ALSO
      group idle ~OUTLAWS~

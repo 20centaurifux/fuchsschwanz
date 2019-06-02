@@ -4,6 +4,8 @@ Here I create my own [icbd](http://www.icb.net/) implementation just for fun.
 
 The project is at a *very* early stage. The following features are implemented:
 
+* SSL support
+* UTF-8 support instead of ANSI
 * user login & authentication (/secure and /nosecure mode)
 * user registration
 * setting personal information
@@ -28,7 +30,6 @@ The project is at a *very* early stage. The following features are implemented:
 * motd
 * show news & version
 * integrated help
-* SSL support
 
 You need Python 3.7 to start the server.
 

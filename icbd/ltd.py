@@ -23,6 +23,7 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+
 class Encoder:
     def __init__(self, T):
         self.__T = T
@@ -35,7 +36,7 @@ class Encoder:
         self.__d.extend(data)
 
     def add_field_str(self, text, append_null=False):
-        self.add_field(text.encode("ascii", "ignore"))
+        self.add_field(text.encode("UTF-8", "backslashreplace"))
 
         if append_null:
             self.__d.append(0)

@@ -131,7 +131,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         sender = None
 
         if index > 0:
-            sender = payload[:index].decode("ascii", errors="ignore").strip()
+            sender = payload[:index].decode("UTF-8", errors="backslashreplace").strip()
 
         return sender
 

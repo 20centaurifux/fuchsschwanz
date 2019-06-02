@@ -25,11 +25,11 @@
 """
 import inspect
 
-def decode_ascii(data):
+def decode(data):
     text = ""
 
     if data:
-        text = data.decode("ascii", errors="backslashreplace")
+        text = data.decode("UTF-8", errors="backslashreplace")
 
     return text
 

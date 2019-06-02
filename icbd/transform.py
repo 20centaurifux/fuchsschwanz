@@ -27,7 +27,7 @@ import logging
 import core
 import di
 import ltd
-from textutils import decode_ascii
+import textutils
 
 class Transform(di.Injected):
     def inject(self, log: logging.Logger):
@@ -42,7 +42,7 @@ class Transform(di.Injected):
 
     def __private_message_to_command__(self, type_id, payload):
         if type_id == "h":
-            fields = [decode_ascii(f).strip() for f in ltd.split(payload)]
+            fields = [textutils.decode(f).strip() for f in ltd.split(payload)]
 
             if len(fields) >= 2 and fields[0] == "m":
                 args = [arg.rstrip(" \0") for arg in fields[1].split(" ", 2)]
@@ -66,7 +66,7 @@ class Transform(di.Injected):
 
     def __questionmark_to_help__(self, type_id, payload):
         if type_id == "h":
-            fields = [decode_ascii(f).strip() for f in ltd.split(payload)]
+            fields = [textutils.decode(f).strip() for f in ltd.split(payload)]
 
             if len(fields) >= 2 and fields[0] == "?":
                 payload = bytearray()
@@ -82,7 +82,7 @@ class Transform(di.Injected):
 
     def __shush_to_hush__(self, type_id, payload):
         if type_id == "h":
-            fields = [decode_ascii(f).strip() for f in ltd.split(payload)]
+            fields = [textutils.decode(f).strip() for f in ltd.split(payload)]
 
             if len(fields) >= 2 and fields[0] == "shush":
                 payload = bytearray()

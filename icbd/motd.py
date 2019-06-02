@@ -36,7 +36,7 @@ class Stdout:
         result = subprocess.run(self.__path, stdout=subprocess.PIPE)
 
         if result.returncode == 0:
-            self.__stdout = result.stdout.decode("ascii", "ignore")
+            self.__stdout = result.stdout.decode("UTF-8", "backslashreplace")
 
         return self
 

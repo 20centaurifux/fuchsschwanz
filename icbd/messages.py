@@ -48,7 +48,7 @@ import actions.list
 import actions.admin
 import actions.help
 import actions.info
-from textutils import decode_ascii
+import textutils
 from exception import LtdErrorException, LtdResponseException
 
 def code(id):
@@ -61,7 +61,7 @@ def code(id):
 
 def textfields(fn):
     def wrapper(session_id, fields):
-        fn(session_id, [decode_ascii(b).strip(" \0") for b in fields])
+        fn(session_id, [textutils.decode(b).strip(" \0") for b in fields])
 
     return wrapper
 

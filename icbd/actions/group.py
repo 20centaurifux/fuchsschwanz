@@ -34,7 +34,7 @@ from exception import LtdErrorException
 
 class Group(Injected):
     def set_topic(self, session_id, topic):
-        info = self.__get_group_if_can_moderate__(session_id)
+        info = self.__get_group_if_can_moderate__(session_id, allow_public=True)
 
         if not validate.is_valid_topic(topic):
             raise LtdErrorException("Topic must consist of at least %d and at most %d characters."
@@ -485,7 +485,7 @@ class Group(Injected):
 
         return self.groups.get(state.group)
 
-    def __get_group_if_can_moderate__(self, session_id):
+    def __get_group_if_can_moderate__(self, session_id, allow_public=False):
         info = self.__get_group__(session_id)
 
         if self.__is_protected_group__(info.key):
@@ -493,19 +493,20 @@ class Group(Injected):
 
             raise LtdErrorException("You aren't the moderator.")
 
-        if info.control != group.Control.PUBLIC:
-            self.log.debug("Group's moderator: %s", info.moderator)
+        if not (allow_public and info.control == group.Control.PUBLIC):
+            if info.moderator:
+                self.log.debug("Group's moderator: %s", info.moderator)
 
-            if info.moderator != session_id:
-                self.log.debug("User isn't moderator, testing administrative privileges.")
+                if info.moderator != session_id:
+                    self.log.debug("User isn't moderator, testing administrative privileges.")
 
-                with self.db_connection.enter_scope() as scope:
-                    state = self.session.get(session_id)
+                    with self.db_connection.enter_scope() as scope:
+                        state = self.session.get(session_id)
 
-                    if not self.nickdb.exists(scope, state.nick) or not self.nickdb.is_admin(scope, state.nick):
-                        self.reputation.critical(session_id)
+                        if not self.nickdb.exists(scope, state.nick) or not self.nickdb.is_admin(scope, state.nick):
+                            self.reputation.critical(session_id)
 
-                        raise LtdErrorException("You aren't the moderator.")
+                            raise LtdErrorException("You aren't the moderator.")
 
         return info
 

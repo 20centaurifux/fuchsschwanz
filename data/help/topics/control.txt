@@ -2,7 +2,9 @@ CONTROL (GROUP)
      There are 4 control levels:
 
           p     public
-                     * there aren't any restrictions
+                     * everyone can change the topic
+                     * there aren't any restrictions when there's no
+                       moderator
 
           m     moderated
                      * only the moderator can modify the group and boot

@@ -477,6 +477,8 @@ class UserSession(Injected):
                 else:
                     info.control = group.Control.MODERATED
                     info.moderator = session_id
+                    info.idle_mod = self.config.timeouts_idle_mod
+                    info.idle_boot = self.config.timeouts_idle_boot
                     new_status = status
 
                 self.groups.update(info)

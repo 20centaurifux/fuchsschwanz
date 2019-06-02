@@ -25,7 +25,7 @@
 """
 from dataclasses import dataclass
 import copy
-from core import Verbosity
+import core
 
 @dataclass
 class Config:
@@ -38,11 +38,13 @@ class Config:
     ssl_key: str = None
     ssl_port: int = 7327
     motd_filename: str = "./motd"
-    logging_verbosity: Verbosity = Verbosity.INFO
+    logging_verbosity: core.Verbosity = core.Verbosity.INFO
     mbox_limit: int = 25
     timeouts_away_message: float = 30.0
     timeouts_mbox_full_message: float = 30.0
     timeouts_ping: float = 30.0
+    timeouts_idle_boot: int = core.DEFAULT_IDLE_BOOT
+    timeouts_idle_mod: int = core.DEFAULT_IDLE_MOD
     database_filename: str = None
     protection_time_between_messages: float = 0.5
     help_path: str = None
@@ -52,7 +54,7 @@ def transform_map(m):
     m = copy.deepcopy(m)
 
     try:
-        m["logging_verbosity"] = Verbosity(m["logging_verbosity"])
+        m["logging_verbosity"] = core.Verbosity(m["logging_verbosity"])
     except KeyError: pass
 
     return m

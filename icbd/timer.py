@@ -63,6 +63,7 @@ class TimeoutTable:
 
         if t:
             timer, timeout = t
+            print(timeout, timer.elapsed())
 
             alive = timer.elapsed() < timeout
 

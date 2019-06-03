@@ -27,6 +27,7 @@ import logging
 import asyncio
 import socket
 import ssl
+import os.path
 import traceback
 from datetime import datetime
 from getpass import getuser
@@ -49,6 +50,8 @@ import group.memory
 import database
 import nickdb
 import nickdb.sqlite
+import motd
+import motd.plaintext
 import manual
 import manual.plaintext
 import news
@@ -215,7 +218,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
 
         msg = None
 
-        if not state.loggedin or elapsed > self.__config.protection_time_between_messages:
+        if not state.loggedin or elapsed > self.__config.timeouts_time_between_messages:
             msg = MESSAGES.get(type_id)
 
             if not msg:
@@ -269,30 +272,33 @@ class Server(di.Injected):
 
         loop.create_task(self.__process_idling_sessions__())
 
-        self.__log.info("Listening on %s:%d", self.__config.server_address, self.__config.server_port)
+        servers = []
 
-        server = await loop.create_server(lambda: ICBServerProtocol(), self.__config.server_address, self.__config.server_port)
+        if self.__config.tcp_enabled:
+            self.__log.info("Listening on %s:%d (tcp)", self.__config.tcp_address, self.__config.tcp_port)
 
-        if self.__config.ssl_cert and self.__config.ssl_key:
+            server = await loop.create_server(lambda: ICBServerProtocol(), self.__config.tcp_address, self.__config.tcp_port)
+
+            servers.append(server)
+
+        if self.__config.tcp_tls_enabled:
+            self.__log.info("Listening on %s:%d (tcp/tls)", self.__config.tcp_tls_address, self.__config.tcp_tls_port)
+
             sc = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            sc.load_cert_chain(self.__config.ssl_cert, self.__config.ssl_key)
+            sc.load_cert_chain(self.__config.tcp_tls_cert, self.__config.tcp_tls_key)
 
-            self.__log.info("Listening on %s:%d", self.__config.server_address, self.__config.ssl_port)
+            server = await loop.create_server(lambda: ICBServerProtocol(), self.__config.tcp_tls_address, self.__config.tcp_tls_port, ssl=sc)
 
-            ssl_server = await loop.create_server(lambda: ICBServerProtocol(), self.__config.server_address, self.__config.ssl_port, ssl=sc)
+            servers.append(server)
 
-            async with server, ssl_server:
-                await asyncio.gather(server.serve_forever(), ssl_server.serve_forever())
-        else:
-            async with server:
-                await server.serve_forever()
+        await asyncio.gather(*(map(lambda s: s.serve_forever(), servers)))
 
     def __signon_server__(self):
         now = datetime.utcnow()
 
         self.__session_id = self.__session_store.new(loginid=getuser(),
-                                                     ip=self.__config.server_address,
-                                                     host=socket.getfqdn(self.__config.server_address),
+                                                     ip=self.__config.tcp_address,
+                                                     host=socket.getfqdn(self.__config.tcp_address),
                                                      nick=core.NICKSERV,
                                                      authenticated=True,
                                                      signon=now,
@@ -338,10 +344,7 @@ class Server(di.Injected):
             await asyncio.sleep(interval)
 
 async def run(opts):
-    working_dir = opts.get("working_dir")
-
-    if working_dir:
-        os.chdir(working_dir)
+    data_dir = opts.get("data_dir")
 
     mapping = config.json.load(opts["config"])
     preferences = config.from_mapping(mapping)
@@ -362,8 +365,9 @@ async def run(opts):
     container.register(group.Store, group.memory.Store())
     container.register(database.Connection, nickdb.sqlite.Connection(preferences.database_filename))
     container.register(nickdb.NickDb, nickdb.sqlite.NickDb)
-    container.register(manual.Manual, manual.plaintext.Manual(preferences.help_path))
-    container.register(news.News, news.plaintext.News(preferences.news_path))
+    container.register(motd.Motd, motd.plaintext.Motd(os.path.join(data_dir, "motd")))
+    container.register(manual.Manual, manual.plaintext.Manual(os.path.join(data_dir, "help")))
+    container.register(news.News, news.plaintext.News(os.path.join(data_dir, "news")))
 
     with container.resolve(database.Connection).enter_scope() as scope:
         container.resolve(nickdb.NickDb).setup(scope)
@@ -380,17 +384,20 @@ async def run(opts):
         scope.complete()
 
 def get_opts(argv):
-    options, _ = getopt.getopt(argv, '-c:w:', ['config=', 'working-dir='])
+    options, _ = getopt.getopt(argv, '-c:d:', ['config=', 'data-dir='])
     m = {}
 
     for opt, arg in options:
         if opt in ('-c', '--config'):
             m["config"] = arg
-        if opt in ('-w', '--working-dir'):
-            m["working_dir"] = arg
+        if opt in ('-w', '--data-dir'):
+            m["data_dir"] = arg
 
     if not m.get("config"):
         raise getopt.GetoptError("--config option is mandatory")
+
+    if not m.get("data_dir"):
+        raise getopt.GetoptError("--data-dir option is mandatory")
 
     return m
 

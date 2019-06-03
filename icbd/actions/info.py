@@ -25,10 +25,16 @@
 """
 from actions import Injected
 import core
+import news
 import ltd
 from exception import LtdStatusException
 
 class Info(Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.news = self.resolve(news.News)
+
     def version(self, session_id, msgid=""):
         self.broker.deliver(session_id, ltd.encode_co_output("%s v%s" % (core.NAME, core.VERSION), msgid))
         self.broker.deliver(session_id,

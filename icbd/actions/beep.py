@@ -29,6 +29,11 @@ import ltd
 from exception import LtdStatusException, LtdErrorException
 
 class Beep(Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.away_table = self.resolve(session.AwayTimeoutTable)
+
     def beep(self, session_id, receiver):
         loggedin_session = self.session.find_nick(receiver)
 

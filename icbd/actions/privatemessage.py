@@ -31,6 +31,11 @@ import validate
 from exception import LtdErrorException
 
 class PrivateMessage(Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.away_table = self.resolve(session.AwayTimeoutTable)
+
     def send(self, session_id, receiver, message):
         loggedin_session = self.session.find_nick(receiver)
 

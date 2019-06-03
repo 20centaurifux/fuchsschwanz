@@ -1,40 +1,56 @@
 # Fuchsschwanz
 
-Here I create my own [icbd](http://www.icb.net/) implementation just for fun.
+Fuchsschwanz is a cross-platform [ICB](http://www.icb.net/) server written in Python. It supports
+TLS and UTF-8 out of the box.
 
-The project is at a *very* early stage. The following features are implemented:
+# Running Fuchsschwanz
 
-* SSL support
-* UTF-8 support instead of ANSI
-* user login & authentication (/secure and /nosecure mode)
-* user registration
-* setting personal information
-* away status
-* delete users
-* change group
-* change nick
-* public messages
-* group topics
-* group visibility (visible, secret, invisible)
-* group volume (quiet, normal, loud)
-* group control (public, moderated, restricted, controlled)
-* boot users (automatically)
-* private messages
-* personal message box
-* "beep" users
-* echoback
-* permission management (group moderators & admins)
-* query online users
-* notify sign on/off
-* hush annoying users
-* motd
-* show news & version
-* integrated help
+You need Python 3.7 to start the server. It requires a data directory and a
+configuration file.
 
-You need Python 3.7 to start the server.
+	$ python3.7 icbd/icbd.py --config=./config.json --data-dir=$(pwd)/data
 
-	$ ./run.sh
+The data directory contains help files, news and the message of the day.
 
-Configure network address & database path in the ./icbd/data/config.json file.
+You can use the run.sh script to start the server. This script will also
+generate a self-signed certificate for TLS (this requires openssl).
 
-A test instance is running on internetcitizens.band (port 7326).
+Running for the first time an administrative user will be created. You should
+note down the password.
+
+	2019-06-03 ... DEBUG ... Creating admin account: nick='admin'
+	2019-06-03 ... INFO ... Initial admin created with password 'HPjkVtiS'.
+
+# Configuration
+
+Please find below a list with the most important settings.
+
+## server
+
+* hostname: hostname of your server
+
+## tcp
+
+* enabled: enable (true) or disable (false) TCP without encryption
+* address, port: network address and port used for TCP connections
+
+## tcp\_tls
+
+* enabled: enable (true) or disable (false) TCP with TLS encryption
+* address, port: network address and port used for encrypted TCP connections
+* key, cert: private key and certificate
+
+## mbox
+
+* limit: message box limit for new registered users
+
+## timeouts
+
+* ping: the server sends a ping message at this interval (in seconds) if no other client activity is detected
+* timeBetweenMessages: minimum allowed seconds between two client messages
+* idleBoot: default idle-boot setting for new created groups
+* idleMod: default idle-mod setting for new created groups
+
+## database
+
+* filename: filename of the internal SQLite database

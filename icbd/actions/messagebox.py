@@ -26,9 +26,15 @@
 from actions import Injected
 import ltd
 import validate
+import session
 from exception import LtdErrorException
 
 class MessageBox(Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.notification_table = self.resolve(session.NotificationTimeoutTable)
+
     def send_message(self, session_id, receiver, text):
         state = self.session.get(session_id)
 

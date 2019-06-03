@@ -25,10 +25,16 @@
 """
 import traceback
 from actions import Injected
+import manual
 import ltd
 from exception import LtdErrorException
 
 class Help(Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.manual = self.resolve(manual.Manual)
+
     def introduction(self, session_id, msgid=""):
         contents = self.__read_contents__(self.manual.introduction)
 

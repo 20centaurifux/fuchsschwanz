@@ -23,41 +23,7 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import logging
-import config
-import session
-import reputation
-import broker
-import group
-import database
-import nickdb
-import di
 
-class Injected(di.Injected):
-    def inject(self,
-               log: logging.Logger,
-               config: config.Config,
-               session: session.Store,
-               reputation: reputation.Reputation,
-               broker: broker.Broker,
-               groups: group.Store,
-               db_connection: database.Connection,
-               nickdb: nickdb.NickDb):
-        self.log = log
-        self.config = config
-        self.session = session
-        self.reputation = reputation
-        self.broker = broker
-        self.groups = groups
-        self.db_connection = db_connection
-        self.nickdb = nickdb
-
-    def resolve(self, T):
-        return di.default_container.resolve(T)
-
-def cache():
-    m = {}
-
-    return lambda T: m.get(T, T())
-
-ACTION = cache()
+class Motd:
+    def read(self):
+        raise NotImplementedError

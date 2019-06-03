@@ -29,9 +29,14 @@ import motd
 import ltd
 
 class Motd(Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.motd = self.resolve(motd.Motd)
+
     def receive(self, session_id, msgid=""):
         try:
-            for line in motd.load(self.config.motd_filename):
+            for line in self.motd.read():
                 self.broker.deliver(session_id, ltd.encode_co_output(line, msgid))
 
         except:

@@ -29,26 +29,26 @@ import core
 
 @dataclass
 class Config:
-    server_address: str = "127.0.0.1"
-    server_port: int = 7326
     server_hostname: str = "localhost"
     server_unsecure_login: bool = False
     server_max_logins: int = 500
-    ssl_cert: str = None
-    ssl_key: str = None
-    ssl_port: int = 7327
-    motd_filename: str = "./motd"
+    tcp_enabled: bool = True
+    tcp_address: str = "127.0.0.1"
+    tcp_port: int = 7326
+    tcp_tls_enabled: bool = False
+    tcp_tls_address: str = "127.0.0.1"
+    tcp_tls_port: int = 7327
+    tcp_tls_cert: str = None
+    tcp_tls_key: str = None
     logging_verbosity: core.Verbosity = core.Verbosity.INFO
     mbox_limit: int = 25
+    timeouts_ping: float = 30.0
     timeouts_away_message: float = 30.0
     timeouts_mbox_full_message: float = 30.0
-    timeouts_ping: float = 30.0
     timeouts_idle_boot: int = core.DEFAULT_IDLE_BOOT
     timeouts_idle_mod: int = core.DEFAULT_IDLE_MOD
+    timeouts_time_between_messages: float = 0.5
     database_filename: str = None
-    protection_time_between_messages: float = 0.5
-    help_path: str = None
-    news_path: str = None
 
 def transform_map(m):
     m = copy.deepcopy(m)

@@ -23,41 +23,45 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import logging
-import config
-import session
-import reputation
-import broker
-import group
-import database
-import nickdb
-import di
+import os
+import sys
+import subprocess
+import motd
 
-class Injected(di.Injected):
-    def inject(self,
-               log: logging.Logger,
-               config: config.Config,
-               session: session.Store,
-               reputation: reputation.Reputation,
-               broker: broker.Broker,
-               groups: group.Store,
-               db_connection: database.Connection,
-               nickdb: nickdb.NickDb):
-        self.log = log
-        self.config = config
-        self.session = session
-        self.reputation = reputation
-        self.broker = broker
-        self.groups = groups
-        self.db_connection = db_connection
-        self.nickdb = nickdb
+class Stdout:
+    def __init__(self, path):
+        self.__path = path
+        self.__stdout = ""
 
-    def resolve(self, T):
-        return di.default_container.resolve(T)
+    def __enter__(self):
+        result = subprocess.run(self.__path, stdout=subprocess.PIPE)
 
-def cache():
-    m = {}
+        if result.returncode == 0:
+            self.__stdout = result.stdout.decode("UTF-8", "backslashreplace")
 
-    return lambda T: m.get(T, T())
+        return self
 
-ACTION = cache()
+    def __exit__(self, type, value, traceback):
+        pass
+
+    def __iter__(self):
+        for l in self.__stdout.split("\n")[:-1]:
+            yield l
+
+class Motd(motd.Motd):
+    def __init__(self, path):
+        self.__path = path
+
+    def read(self):
+        with self.__read_motd__(self.__path) as f:
+            return [l.rstrip() for l in f]
+
+    def __read_motd__(self, path):
+        reader = None
+
+        if sys.platform == "linux" and os.access(path, os.X_OK):
+            reader = Stdout(path)
+        else:
+            reader = open(path)
+
+        return reader

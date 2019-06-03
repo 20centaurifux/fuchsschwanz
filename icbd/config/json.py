@@ -29,11 +29,15 @@ from io import StringIO
 def to_key(k):
     builder = StringIO()
 
+    was_upper = False
+
     for c in k:
-        if c.isupper():
+        if c.isupper() and not was_upper:
             builder.write("_%s" % c.lower())
+            was_upper = True
         else:
-            builder.write(c)
+            builder.write(c.lower())
+            was_upper = c.isupper()
 
     return builder.getvalue()
 

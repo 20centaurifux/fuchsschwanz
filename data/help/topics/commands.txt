@@ -3,7 +3,7 @@ COMMANDS
      A    /addr, /away
      B    /beep, /boot
      C    /cancel, /cp
-     D    /delete
+     D    /delete, /drop
      E    /echoback, /email, /exclude
      G    /g
      H    /help, /hush

@@ -1,0 +1,5 @@
+USAGE
+     /drop {nicknames}
+
+DESCRIPTION
+     Administrators can drop users out.

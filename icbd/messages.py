@@ -628,6 +628,19 @@ class Log:
         else:
             ACTION(actions.admin.Admin).log_level(session_id, msgid(fields))
 
+@command("drop")
+class Drop:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        if not fields[0]:
+            raise LtdErrorException("Usage: /drop {nicknames}")
+
+        nicks = [n.strip() for n in fields[0].split(" ")]
+
+        ACTION(actions.admin.Admin).drop(session_id, nicks)
+
 @command("help")
 class Help:
     @staticmethod

@@ -75,6 +75,21 @@ class Admin(Injected):
 
         self.broker.deliver(session_id, ltd.encode_co_output("The log level is %d." % verbosity.value, msgid))
 
+    def drop(self, session_id, nicks):
+        self.__test_admin__(session_id)
+
+        state = self.session.get(session_id)
+
+        for nick in nicks:
+            victim_id = self.session.find_nick(nick)
+
+            if victim_id:
+                self.broker.deliver(session_id, ltd.encode_status_msg("Drop", "You have dropped %s." % nick))
+                self.broker.deliver(victim_id, ltd.encode_status_msg("Drop", "You have been disconnected by %s." % state.nick))
+                self.broker.deliver(victim_id, ltd.encode_empty_cmd("g"))
+            else:
+                self.broker.deliver(session_id, ltd.encode_str("e", "%s not found." % nick))
+
     def __test_admin__(self, session_id):
         is_admin = False
 

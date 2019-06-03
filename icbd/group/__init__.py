@@ -95,8 +95,9 @@ class GroupInfo:
     volume: Volume = Volume.LOUD
     moderator: str = None
     topic: str = None
-    idle_boot = core.DEFAULT_IDLE_BOOT
-    idle_mod = core.DEFAULT_IDLE_MOD
+    group_limit: int = 0
+    idle_boot: int = core.DEFAULT_IDLE_BOOT
+    idle_mod: int = core.DEFAULT_IDLE_MOD
 
     __nicks_inv: Dict[str, Invitation] = field(default_factory=dict)
     __addrs_inv: Dict[str, Invitation] = field(default_factory=dict)
@@ -105,6 +106,10 @@ class GroupInfo:
 
     def __str__(self):
         return self.display_name
+
+    @property
+    def group_limit_str(self):
+        return "no limit" if self.group_limit == 0 else str(self.group_limit)
 
     @property
     def idle_boot_str(self):

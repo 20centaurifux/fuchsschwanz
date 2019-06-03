@@ -30,6 +30,7 @@ DESCRIPTION
 
           Option           Name
           --------------------------
+          # {size}         size limit
           b {seconds}      idle-boot
           im {seconds}     idle-mod
 

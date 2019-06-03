@@ -92,12 +92,24 @@ class Group(Injected):
                                                                     % (core.MIN_IDLE_MOD, core.MAX_IDLE_MOD)))
                     else:
                         self.broker.deliver(session_id, ltd.encode_str("e", "Idle-Mod must be a number."))
+                elif opt == "#":
+                    if arg.isdigit():
+                        limit = int(arg)
+
+                        if limit >= 0 and limit <= self.config.server_max_logins:
+                            self.__change_group_limit__(state.nick, info, limit)
+                        else:
+                            self.broker.deliver(session_id,
+                                                ltd.encode_str("e", "Group limit must be between 0 and %d."
+                                                                    % self.control.server_max_logins))
+                    else:
+                        self.broker.deliver(session_id, ltd.encode_str("e", "Group limit must be a number."))
 
                 arg_required = False
             else:
                 opt = word
 
-                if opt in ["b", "im"]:
+                if opt in ["b", "im", "#"]:
                     arg_required = True
                 elif opt in ["r", "m", "p", "i", "s", "v", "q", "n", "l"]:
                     arg_required = False
@@ -221,6 +233,11 @@ class Group(Injected):
             if mod_state.t_recv.elapsed() > (minutes * 60):
                 ACTION(actions.usersession.UserSession).idle_mod(info.moderator)
 
+    def __change_group_limit__(self, moderator, info, limit):
+        info.group_limit = limit
+
+        self.broker.to_channel(info.key, ltd.encode_status_msg("Change", "%s changed limit to %s." % (moderator, info.group_limit_str)))
+
     def status(self, session_id, msgid):
         info = self.__get_group__(session_id)
         logins = self.session.get_nicks()
@@ -234,6 +251,7 @@ class Group(Injected):
                                                     info.volume),
                                                  msgid))
 
+        self.broker.deliver(session_id, ltd.encode_co_output("Size: %s" % info.group_limit_str, msgid))
         self.broker.deliver(session_id, ltd.encode_co_output("Idle-Boot: %s" % info.idle_boot_str, msgid))
         self.broker.deliver(session_id, ltd.encode_co_output("Idle-Mod: %s" % info.idle_mod_str, msgid))
 
@@ -409,7 +427,7 @@ class Group(Injected):
 
         if loggedin_state.authenticated:
             with self.db_connection.enter_scope() as scope:
-                if self.nickdb.is_admin(scope, nick):
+                if self.nickdb.is_admin(scope, state.nick):
                     self.broker.deliver(loggedin_session, ltd.encode_status_msg("Boot", "%s tried to boot you." % state.nick))
 
                     self.reputation.fatal(session_id)

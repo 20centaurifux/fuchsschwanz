@@ -429,6 +429,17 @@ class UserSession(Injected):
 
         info = self.groups.get(group_name)
 
+        if info.group_limit > 0 and len(self.broker.get_subscribers(str(info))) >= info.group_limit:
+            with self.db_connection.enter_scope() as scope:
+                is_admin = self.nickdb.exists(scope, state.nick) and self.nickdb.is_admin(scope, state.nick)
+
+                if info.moderator != session_id and not is_admin:
+                    if info.volume == group.Volume.LOUD:
+                        self.broker.to_channel(str(info),
+                                               ltd.encode_status_msg("Probe", "%s tried to enter the group, but it's full." % state.nick))
+
+                    raise LtdErrorException("Group is full.")
+
         if info.control == group.Control.RESTRICTED:
             if (info.moderator != session_id
                     and not (info.nick_invited(state.nick, state.authenticated)

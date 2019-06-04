@@ -23,26 +23,50 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import group
+from dataclasses import dataclass
+from typing import NewType
+import database
 
-class Store(group.Store):
-    def __init__(self):
-        self.__m = {}
+@dataclass
+class Stats:
+    signons: int = 0
+    boots: int = 0
+    drops: int = 0
+    idleboots: int = 0
+    idlemods: int = 0
 
-    def get(self, name):
-        return self.__m.get(name.lower(), group.GroupInfo(display_name=name))
+Connection = NewType("Connection", database.Connection)
 
-    def exists(self, name):
-        return name.lower() in self.__m
+class StatsDb:
+    def setup(self, scope):
+        raise NotImplementedError
 
-    def get_groups(self):
-        return sorted([g for g in self.__m.values()], key=lambda g: str(g))
+    def add_signon(self, scope):
+        raise NotImplementedError
 
-    def update(self, info):
-        self.__m[info.key] = info
+    def add_boot(self, scope):
+        raise NotImplementedError
 
-    def delete(self, id):
-        del self.__m[id]
+    def add_drop(self, scope):
+        raise NotImplementedError
 
-    def __len__(self):
-        return len(self.__m)
+    def add_idleboot(self, scope):
+        raise NotImplementedError
+
+    def add_idlemod(self, scope):
+        raise NotImplementedError
+
+    def start(self, scope):
+        raise NotImplementedError
+
+    def today(self, scope):
+        raise NotImplementedError
+
+    def month(self, scope):
+        raise NotImplementedError
+
+    def year(self, scope):
+        raise NotImplementedError
+
+    def all(self, scope):
+        raise NotImplementedError

@@ -26,6 +26,8 @@
 from dataclasses import dataclass
 from datetime import datetime
 from uuid import UUID
+from typing import NewType
+import database
 
 @dataclass
 class UserDetails:
@@ -42,6 +44,8 @@ class Message:
     sender: str = None
     date: datetime = None
     text: str = None
+
+Connection = NewType("Connection", database.Connection)
 
 class NickDb:
     def setup(self, scope):

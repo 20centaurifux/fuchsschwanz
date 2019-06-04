@@ -663,6 +663,26 @@ class Version:
 
         ACTION(actions.info.Info).version(session_id, msgid(fields))
 
+@command("stats")
+class Version:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        usage = "Usage: /stats {-s|-t|-m|-y|-a}"
+
+        try:
+            opts, rest = ltd.get_opts(fields[0], timeframe="stmya")
+
+            if rest:
+                raise LtdErrorException(usage)
+
+            ACTION(actions.info.Info).stats(session_id, **opts, msgid=msgid(fields))
+        except LtdErrorException as ex:
+            raise ex
+        except:
+                raise LtdErrorException(usage)
+
 @command("news")
 class News:
     @staticmethod

@@ -41,7 +41,7 @@ class Registration(Injected):
 
         registered = False
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             if self.nickdb.exists(scope, state.nick):
                 self.log.debug("Nick found, validating password.")
 
@@ -74,7 +74,7 @@ class Registration(Injected):
             self.notify_messagebox(session_id)
 
     def mark_registered(self, session_id):
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             state = self.session.get(session_id)
 
             self.nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
@@ -92,7 +92,7 @@ class Registration(Injected):
             scope.complete()
 
     def notify_messagebox(self, session_id):
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             state = self.session.get(session_id)
 
             if self.nickdb.exists(scope, state.nick):
@@ -111,7 +111,7 @@ class Registration(Injected):
 
         state = self.session.get(session_id)
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, state.nick):
                 raise LtdErrorException("Authorization failure.")
 
@@ -134,7 +134,7 @@ class Registration(Injected):
         if not state.authenticated:
             raise LtdErrorException("You must be registered to change your security.")
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             self.nickdb.set_secure(scope, state.nick, enabled)
 
             if enabled:
@@ -154,7 +154,7 @@ class Registration(Injected):
             raise LtdResponseException("Invalid attribute.",
                                        ltd.encode_co_output("'%s' format not valid." % self.__map_field__(field), msgid))
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             details = self.nickdb.lookup(scope, state.nick)
 
             setattr(details, field, text)
@@ -219,7 +219,7 @@ class Registration(Injected):
         if not password:
             raise LtdErrorException("Usage: /delete password")
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.check_password(scope, state.nick, password):
                 raise LtdErrorException("Password incorrect.")
 
@@ -235,7 +235,7 @@ class Registration(Injected):
         if not nick:
             raise LtdErrorException("Usage: /whois nickname")
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, nick):
                 raise LtdErrorException("%s not found." % nick)
 

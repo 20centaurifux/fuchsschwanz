@@ -23,26 +23,54 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import group
+import sqlite3
+import database
 
-class Store(group.Store):
-    def __init__(self):
-        self.__m = {}
+class TransactionScope(database.TransactionScope):
+    def __init__(self, db):
+        database.TransactionScope.__init__(self, db)
+        self.__db = db
+        self.__cursor = None
 
-    def get(self, name):
-        return self.__m.get(name.lower(), group.GroupInfo(display_name=name))
+    def __enter_scope__(self):
+        self.__cursor = self.__db.cursor()
 
-    def exists(self, name):
-        return name.lower() in self.__m
+    def __leave_scope__(self, commit):
+        if commit:
+            self.__db.commit()
+        else:
+            self.__db.rollback()
 
-    def get_groups(self):
-        return sorted([g for g in self.__m.values()], key=lambda g: str(g))
+    def get_handle(self):
+        return self.__cursor
 
-    def update(self, info):
-        self.__m[info.key] = info
+class Connection(database.Connection):
+    def __init__(self, db):
+        super().__init__()
 
-    def delete(self, id):
-        del self.__m[id]
+        self.__conn = None
+        self.__db = db
 
-    def __len__(self):
-        return len(self.__m)
+    def __connect__(self):
+        if not self.__conn:
+            self.__conn = sqlite3.connect(self.__db)
+            self.__conn.row_factory = sqlite3.Row
+
+            self.__conn.cursor().execute("pragma foreign_keys=on")
+
+    def __create_transaction_scope__(self):
+        self.__connect__()
+        return TransactionScope(self)
+
+    def cursor(self):
+        return self.__conn.cursor()
+
+    def commit(self):
+        self.__conn.commit()
+
+    def rollback(self):
+        self.__conn.rollback()
+
+    def close(self):
+        if self.__conn is not None:
+            self.__conn.close()

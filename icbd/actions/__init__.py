@@ -29,8 +29,8 @@ import session
 import reputation
 import broker
 import group
-import database
 import nickdb
+import statsdb 
 import di
 
 class Injected(di.Injected):
@@ -41,16 +41,20 @@ class Injected(di.Injected):
                reputation: reputation.Reputation,
                broker: broker.Broker,
                groups: group.Store,
-               db_connection: database.Connection,
-               nickdb: nickdb.NickDb):
+               nickdb_connection: nickdb.Connection,
+               nickdb: nickdb.NickDb,
+               statsdb_connection: statsdb.Connection,
+               statsdb: statsdb.StatsDb):
         self.log = log
         self.config = config
         self.session = session
         self.reputation = reputation
         self.broker = broker
         self.groups = groups
-        self.db_connection = db_connection
+        self.nickdb_connection = nickdb_connection
         self.nickdb = nickdb
+        self.statsdb_connection = statsdb_connection
+        self.statsdb = statsdb
 
     def resolve(self, T):
         return di.default_container.resolve(T)

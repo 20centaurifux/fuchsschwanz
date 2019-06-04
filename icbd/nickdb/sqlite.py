@@ -23,67 +23,16 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import sqlite3
 import uuid
 import secrets
 import string
 from hashlib import sha256
 from datetime import datetime
 from logging import Logger
-import database
 import nickdb
 import core
 import di
 from textutils import tolower
-
-class TransactionScope(database.TransactionScope):
-    def __init__(self, db):
-        database.TransactionScope.__init__(self, db)
-        self.__db = db
-        self.__cursor = None
-
-    def __enter_scope__(self):
-        self.__cursor = self.__db.cursor()
-
-    def __leave_scope__(self, commit):
-        if commit:
-            self.__db.commit()
-        else:
-            self.__db.rollback()
-
-    def get_handle(self):
-        return self.__cursor
-
-class Connection(database.Connection):
-    def __init__(self, db):
-        super().__init__()
-
-        self.__conn = None
-        self.__db = db
-
-    def __connect__(self):
-        if not self.__conn:
-            self.__conn = sqlite3.connect(self.__db)
-            self.__conn.row_factory = sqlite3.Row
-
-            self.__conn.cursor().execute("pragma foreign_keys=on")
-
-    def __create_transaction_scope__(self):
-        self.__connect__()
-        return TransactionScope(self)
-
-    def cursor(self):
-        return self.__conn.cursor()
-
-    def commit(self):
-        self.__conn.commit()
-
-    def rollback(self):
-        self.__conn.rollback()
-
-    def close(self):
-        if self.__conn is not None:
-            self.__conn.close()
 
 class NickDb(nickdb.NickDb, di.Injected):
     def __init__(self):
@@ -109,18 +58,16 @@ class NickDb(nickdb.NickDb, di.Injected):
             self.__create_user__(scope, nick="admin", password=password, is_admin=True)
 
             self.log.info("Initial admin created with password '%s'." % password)
-        elif revision > 1:
-            raise Exception("Unsupported database version.")
 
     @staticmethod
     def __get_revision__(scope):
         revision = 0
 
         cur = scope.get_handle()
-        cur.execute("select count(name) FROM sqlite_master where type='table' AND name='Version'")
+        cur.execute("select count(name) from sqlite_master where type='table' AND name='Version'")
 
         if cur.fetchone()[0] == 1:
-            cur.execute("select Revision FROM Version limit 1")
+            cur.execute("select Revision from Version limit 1")
             revision = cur.fetchone()[0]
 
         return revision

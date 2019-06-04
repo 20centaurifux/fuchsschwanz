@@ -48,7 +48,7 @@ class MessageBox(Injected):
             raise LtdErrorException("Message text not valid. Length has to be between %d and %d characters."
                                     % (validate.MESSAGE_MIN, validate.MESSAGE_MAX))
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, receiver):
                 raise LtdErrorException("%s is not registered." % receiver)
 
@@ -85,7 +85,7 @@ class MessageBox(Injected):
         if not state.authenticated:
             raise LtdErrorException("You must be registered to read any messages.")
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             if self.nickdb.count_messages(scope, state.nick) == 0:
                 raise LtdErrorException("No messages.")
 

@@ -44,7 +44,7 @@ class List(Injected):
         state = self.session.get(session_id)
 
         if state.authenticated:
-            with self.db_connection.enter_scope() as scope:
+            with self.nickdb_connection.enter_scope() as scope:
                 is_admin = self.nickdb.is_admin(scope, state.nick)
 
         logins = self.session.get_nicks()
@@ -72,7 +72,7 @@ class List(Injected):
             raise LtdErrorException("Group %s not found." % group_name)
 
         if state.authenticated:
-            with self.db_connection.enter_scope() as scope:
+            with self.nickdb_connection.enter_scope() as scope:
                 is_admin = self.nickdb.is_admin(scope, state.nick)
 
         info = self.groups.get(group_name)
@@ -138,7 +138,7 @@ class List(Injected):
         state = self.session.get(session_id)
 
         if state.authenticated:
-            with self.db_connection.enter_scope() as scope:
+            with self.nickdb_connection.enter_scope() as scope:
                 is_admin = self.nickdb.is_admin(scope, state.nick)
 
         logins = self.session.get_nicks()

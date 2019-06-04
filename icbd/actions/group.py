@@ -285,7 +285,7 @@ class Group(Injected):
 
         if mode == "n":
             if registered:
-                with self.db_connection.enter_scope() as scope:
+                with self.nickdb_connection.enter_scope() as scope:
                     if not self.nickdb.exists(scope, invitee):
                         raise LtdErrorException("User not found.")
 
@@ -378,7 +378,7 @@ class Group(Injected):
 
             if mode == "n":
                 if registered:
-                    with self.db_connection.enter_scope() as scope:
+                    with self.nickdb_connection.enter_scope() as scope:
                         if not self.nickdb.exists(scope, talker):
                             raise LtdErrorException("User not found.")
 
@@ -426,7 +426,7 @@ class Group(Injected):
             raise LtdErrorException("%s is not in your group." % nick)
 
         if loggedin_state.authenticated:
-            with self.db_connection.enter_scope() as scope:
+            with self.nickdb_connection.enter_scope() as scope:
                 if self.nickdb.is_admin(scope, state.nick):
                     self.broker.deliver(loggedin_session, ltd.encode_status_msg("Boot", "%s tried to boot you." % state.nick))
 
@@ -450,6 +450,11 @@ class Group(Injected):
         self.broker.deliver(loggedin_session, ltd.encode_status_msg("Boot", "%s booted you." % state.nick))
 
         ACTION(actions.usersession.UserSession).join(loggedin_session, core.BOOT_GROUP)
+
+        with self.statsdb_connection.enter_scope() as scope:
+            self.statsdb.add_boot(scope)
+
+            scope.complete()
 
     def pass_over(self, session_id, nick):
         info = self.__get_group_if_can_moderate__(session_id)
@@ -518,7 +523,7 @@ class Group(Injected):
                 if info.moderator != session_id:
                     self.log.debug("User isn't moderator, testing administrative privileges.")
 
-                    with self.db_connection.enter_scope() as scope:
+                    with self.nickdb_connection.enter_scope() as scope:
                         state = self.session.get(session_id)
 
                         if not self.nickdb.exists(scope, state.nick) or not self.nickdb.is_admin(scope, state.nick):

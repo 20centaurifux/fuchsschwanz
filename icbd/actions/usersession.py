@@ -84,12 +84,17 @@ class UserSession(Injected):
 
         ACTION(Notify).notify_signon(session_id)
 
+        with self.statsdb_connection.enter_scope() as scope:
+            self.statsdb.add_signon(scope)
+
+            scope.complete()
+
     def __try_login_unsecure__(self, session_id, loginid, nick):
         self.log.debug("Testing unsecure authentication.")
 
         registered = False
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             if self.nickdb.exists(scope, nick):
                 self.log.debug("Nick found, testing security level.")
 
@@ -131,7 +136,7 @@ class UserSession(Injected):
 
             raise LtdStatusException("Register", "Nick already in use.")
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             if self.nickdb.exists(scope, nick):
                 if self.nickdb.is_admin(scope, nick):
                     raise LtdErrorException("You need a password to login as administrator.")
@@ -153,7 +158,7 @@ class UserSession(Injected):
         registered = False
         is_admin = False
 
-        with self.db_connection.enter_scope() as scope:
+        with self.nickdb_connection.enter_scope() as scope:
             if self.nickdb.exists(scope, nick):
                 registered = self.nickdb.check_password(scope, nick, password)
                 is_admin = self.nickdb.is_admin(scope, nick)
@@ -240,7 +245,7 @@ class UserSession(Injected):
             state = self.session.get(session_id)
 
             if state.authenticated:
-                with self.db_connection.enter_scope() as scope:
+                with self.nickdb_connection.enter_scope() as scope:
                     if not self.nickdb.is_admin(scope, state.nick):
                         raise LtdErrorException("Connection limit reached.")
             else:
@@ -282,7 +287,7 @@ class UserSession(Injected):
             registered = False
             is_admin = False
 
-            with self.db_connection.enter_scope() as scope:
+            with self.nickdb_connection.enter_scope() as scope:
                 if was_authenticated and self.nickdb.exists(scope, old_nick):
                     self.nickdb.set_signoff(scope, old_nick)
 
@@ -330,7 +335,7 @@ class UserSession(Injected):
             self.log.debug("Dropping session: %s", session_id)
 
             if state.authenticated:
-                with self.db_connection.enter_scope() as scope:
+                with self.nickdb_connection.enter_scope() as scope:
                     self.nickdb.set_signoff(scope, state.nick)
 
                     scope.complete()
@@ -365,6 +370,11 @@ class UserSession(Injected):
         self.join(session_id, core.BOOT_GROUP)
         self.drop_moderator(session_id, "Idle-Mod", "Your group moderator idled away.")
 
+        with self.statsdb_connection.enter_scope() as scope:
+            self.statsdb.add_idlemod(scope)
+
+            scope.complete()
+
     def idle_boot(self, session_id):
         state = self.session.get(session_id)
 
@@ -372,6 +382,11 @@ class UserSession(Injected):
 
         self.join(session_id, core.BOOT_GROUP)
         self.drop_moderator(session_id, "Idle-Boot", "Your group moderator idled away.")
+
+        with self.statsdb_connection.enter_scope() as scope:
+            self.statsdb.add_idleboot(scope)
+
+            scope.complete()
 
     def drop_moderator(self, session_id, category, message):
         for info in self.groups.get_groups():
@@ -430,7 +445,7 @@ class UserSession(Injected):
         info = self.groups.get(group_name)
 
         if info.group_limit > 0 and len(self.broker.get_subscribers(str(info))) >= info.group_limit:
-            with self.db_connection.enter_scope() as scope:
+            with self.nickdb_connection.enter_scope() as scope:
                 is_admin = self.nickdb.exists(scope, state.nick) and self.nickdb.is_admin(scope, state.nick)
 
                 if info.moderator != session_id and not is_admin:

@@ -1,0 +1,17 @@
+USAGE
+     /stats {-s|-t|-m|-y|-a}
+
+DESCRIPTION
+     Lists various server statistics. There are several time
+     frame filters available:
+
+          Flag  Filter
+          ------------------------
+          s     since server start
+          t     today
+          m     this month
+          y     this year
+          a     overall
+
+SEE ALSO
+     /news /v

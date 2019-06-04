@@ -47,9 +47,11 @@ import reputation
 import reputation.memory
 import group
 import group.memory
-import database
+import sqlite
 import nickdb
 import nickdb.sqlite
+import statsdb
+import statsdb.sqlite
 import motd
 import motd.plaintext
 import manual
@@ -255,14 +257,14 @@ class Server(di.Injected):
                store: session.Store,
                broker: broker.Broker,
                groups: group.Store,
-               db_connection: database.Connection,
+               nickdb_connection: nickdb.Connection,
                nickdb: nickdb.NickDb):
         self.__log = log
         self.__config = config
         self.__session_store = store
         self.__broker = broker
         self.__groups = groups
-        self.__db_connection = db_connection
+        self.__nickdb_connection = nickdb_connection
         self.__nickdb = nickdb
 
     async def run(self):
@@ -304,7 +306,7 @@ class Server(di.Injected):
                                                      signon=now,
                                                      t_recv=timer.Timer())
 
-        with self.__db_connection.enter_scope() as scope:
+        with self.__nickdb_connection.enter_scope() as scope:
             state = self.__session_store.get(self.__session_id)
 
             self.__nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
@@ -355,6 +357,8 @@ async def run(opts):
 
     container = di.default_container
 
+    connection = sqlite.Connection(preferences.database_filename)
+
     container.register(logging.Logger, logger)
     container.register(config.Config, preferences)
     container.register(broker.Broker, broker.memory.Broker())
@@ -363,14 +367,18 @@ async def run(opts):
     container.register(session.NotificationTimeoutTable, timer.TimeoutTable())
     container.register(reputation.Reputation, reputation.memory.Reputation())
     container.register(group.Store, group.memory.Store())
-    container.register(database.Connection, nickdb.sqlite.Connection(preferences.database_filename))
-    container.register(nickdb.NickDb, nickdb.sqlite.NickDb)
+    container.register(nickdb.Connection, connection)
+    container.register(nickdb.NickDb, nickdb.sqlite.NickDb())
+    container.register(statsdb.Connection, connection)
+    container.register(statsdb.StatsDb, statsdb.sqlite.StatsDb())
     container.register(motd.Motd, motd.plaintext.Motd(os.path.join(data_dir, "motd")))
     container.register(manual.Manual, manual.plaintext.Manual(os.path.join(data_dir, "help")))
     container.register(news.News, news.plaintext.News(os.path.join(data_dir, "news")))
 
-    with container.resolve(database.Connection).enter_scope() as scope:
+    with connection.enter_scope() as scope:
         container.resolve(nickdb.NickDb).setup(scope)
+        container.resolve(statsdb.StatsDb).setup(scope)
+
         scope.complete()
 
     server = Server()

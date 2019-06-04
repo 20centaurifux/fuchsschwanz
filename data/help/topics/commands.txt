@@ -13,7 +13,7 @@ COMMANDS
      N    /name, /news, /noaway, /nobeep, notify
      P    /p, /phone
      R    /read, /reputation, /rname
-     S    /secure, /shush, /status
+     S    /secure, /shush, /stats, /status
      T    /talk, /text, /topic
      U    /unsecure
      V    /v

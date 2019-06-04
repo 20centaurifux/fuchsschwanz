@@ -90,13 +90,18 @@ class Admin(Injected):
             else:
                 self.broker.deliver(session_id, ltd.encode_str("e", "%s not found." % nick))
 
+        with self.statsdb_connection.enter_scope() as scope:
+            self.statsdb.add_drop(scope)
+
+            scope.complete()
+
     def __test_admin__(self, session_id):
         is_admin = False
 
         state = self.session.get(session_id)
 
         if state.authenticated:
-            with self.db_connection.enter_scope() as scope:
+            with self.nickdb_connection.enter_scope() as scope:
                 is_admin = self.nickdb.is_admin(scope, state.nick)
 
         if not is_admin:

@@ -211,16 +211,18 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
 
         state = self.__session_store.get(self.__session_id)
 
-        elapsed = state.t_recv.elapsed() if state.t_recv else None
+        elapsed = state.t_recv.elapsed() if state.t_recv else 0
 
         old_reputation = self.__reputation.get(self.__session_id)
 
-        if type_id != "m":
+        if type_id == "m":
+            elapsed = self.__config.timeouts_time_between_messages
+        else:
             self.__session_store.update(self.__session_id, t_recv=timer.Timer())
 
         msg = None
 
-        if not state.loggedin or elapsed > self.__config.timeouts_time_between_messages:
+        if not state.loggedin or elapsed >= self.__config.timeouts_time_between_messages:
             msg = MESSAGES.get(type_id)
 
             if not msg:

@@ -92,7 +92,7 @@ class Info(Injected):
                 stats = self.statsdb.all(scope)
                 description = "overall"
 
-        users_n = len(self.session) - 1
+        users_n = len(self.session.get_nicks()) - 1
         groups_n = len(self.groups)
         away_n = len([kv for kv in self.session if kv[1].away])
 

@@ -514,9 +514,6 @@ class UserSession(Injected):
 
         self.broker.deliver(session_id, ltd.encode_status_msg("Status", msg))
 
-        if new_status:
-            ACTION(Group).change_status(session_id, new_status)
-
         if info.volume != group.Volume.QUIET:
             category = "Sign-on" if not old_group else "Arrive"
             self.broker.to_channel_from(session_id,
@@ -525,6 +522,9 @@ class UserSession(Injected):
                                                               "%s (%s) entered group." % (state.nick, state.address)))
 
         self.session.update(session_id, group=info.key)
+
+        if new_status:
+            ACTION(Group).change_status(session_id, new_status)
 
         with self.statsdb_connection.enter_scope() as scope:
             self.statsdb.set_max_groups(scope, len(self.groups))

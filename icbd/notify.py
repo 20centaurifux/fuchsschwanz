@@ -35,7 +35,8 @@ class Notifylist:
     def watch_site(self, site):
         return self.__watch__(self.__sites, site)
 
-    def __watch__(self, m, name):
+    @staticmethod
+    def __watch__(m, name):
         k = name.lower()
 
         added = not k in m

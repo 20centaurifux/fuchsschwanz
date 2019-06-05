@@ -58,7 +58,7 @@ class OpenMessage(Injected):
             if exclude:
                 excluded_sessions = set()
 
-                excluded_id  = self.session.find_nick(exclude)
+                excluded_id = self.session.find_nick(exclude)
 
                 if not excluded_id:
                     raise LtdStatusException("Exclude", "Nick not found.")

@@ -43,24 +43,24 @@ class Reputation(reputation.Reputation, di.Injected):
         del self.__m[session_id]
 
     def ok(self, session_id):
-        self.__add__(session_id, 0.05)
+        self.__add_val__(session_id, 0.05)
 
     def good(self, session_id):
-        self.__add__(session_id, 0.1)
+        self.__add_val__(session_id, 0.1)
 
     def warning(self, session_id):
-        self.__add__(session_id, -0.1)
+        self.__add_val__(session_id, -0.1)
 
     def critical(self, session_id):
-        self.__add__(session_id, -0.2)
+        self.__add_val__(session_id, -0.2)
 
     def fatal(self, session_id):
-        self.__add__(session_id, -0.4)
+        self.__add_val__(session_id, -0.4)
 
     def get(self, session_id):
         return self.__m[session_id]
 
-    def __add__(self, session_id, value):
+    def __add_val__(self, session_id, value):
         old_value = self.__m[session_id]
         new_value = round(max(min(1.0, old_value + value), 0.0), 2)
 

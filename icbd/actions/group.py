@@ -38,7 +38,7 @@ class Group(Injected):
 
         if not validate.is_valid_topic(topic):
             raise LtdErrorException("Topic must consist of at least %d and at most %d characters."
-                                    % (validate.TOP_MIN, validate.TOPIC_MAX))
+                                    % (validate.TOPIC_MIN, validate.TOPIC_MAX))
 
         info.topic = topic
 
@@ -76,8 +76,9 @@ class Group(Injected):
                             self.__change_idle_boot__(state.nick, info, minutes)
                         else:
                             self.broker.deliver(session_id,
-                                                ltd.encode_str("e", "Idle-Boot must be between %d and %d minutes."
-                                                                    % (core.MIN_IDLE_BOOT, core.MAX_IDLE_BOOT)))
+                                                ltd.encode_str("e",
+                                                               "Idle-Boot must be between %d and %d minutes."
+                                                               % (core.MIN_IDLE_BOOT, core.MAX_IDLE_BOOT)))
                     else:
                         self.broker.deliver(session_id, ltd.encode_str("e", "Idle-Boot must be a number."))
                 elif opt == "im":
@@ -88,8 +89,9 @@ class Group(Injected):
                             self.__change_idle_mod__(state.nick, info, minutes)
                         else:
                             self.broker.deliver(session_id,
-                                                ltd.encode_str("e", "Idle-Mod must be between %d and %d minutes."
-                                                                    % (core.MIN_IDLE_MOD, core.MAX_IDLE_MOD)))
+                                                ltd.encode_str("e",
+                                                               "Idle-Mod must be between %d and %d minutes."
+                                                               % (core.MIN_IDLE_MOD, core.MAX_IDLE_MOD)))
                     else:
                         self.broker.deliver(session_id, ltd.encode_str("e", "Idle-Mod must be a number."))
                 elif opt == "#":
@@ -100,8 +102,9 @@ class Group(Injected):
                             self.__change_group_limit__(state.nick, info, limit)
                         else:
                             self.broker.deliver(session_id,
-                                                ltd.encode_str("e", "Group limit must be between 0 and %d."
-                                                                    % self.control.server_max_logins))
+                                                ltd.encode_str("e",
+                                                               "Group limit must be between 0 and %d."
+                                                               % self.config.server_max_logins))
                     else:
                         self.broker.deliver(session_id, ltd.encode_str("e", "Group limit must be a number."))
 
@@ -115,8 +118,8 @@ class Group(Injected):
                     arg_required = False
 
                     if (not (self.__try_change_visibility__(session_id, state.nick, info, opt)
-                                 or self.__try_change_volume__(session_id, state.nick, info, opt)
-                                 or self.__try_change_control__(session_id, state.nick, info, opt))):
+                             or self.__try_change_volume__(session_id, state.nick, info, opt)
+                             or self.__try_change_control__(session_id, state.nick, info, opt))):
                         self.broker.deliver(session_id, ltd.encode_str("e", "Option %s is unknown." % opt))
                 else:
                     self.broker.deliver(session_id, ltd.encode_str("e", "Option \"%s\" is unknown." % opt))
@@ -205,7 +208,7 @@ class Group(Injected):
     def __change_idle_boot__(self, moderator, info, minutes):
         old_val = info.idle_boot
         info.idle_boot = minutes
-        
+
         self.broker.to_channel(info.key, ltd.encode_status_msg("Change", "%s changed idle-boot to %s." % (moderator, info.idle_boot_str)))
 
         if old_val > minutes and minutes > 0:
@@ -224,7 +227,7 @@ class Group(Injected):
     def __change_idle_mod__(self, moderator, info, minutes):
         old_val = info.idle_mod
         info.idle_mod = minutes
-        
+
         self.broker.to_channel(info.key, ltd.encode_status_msg("Change", "%s changed idle-mod to %s." % (moderator, info.idle_mod_str)))
 
         if old_val > minutes and minutes > 0 and info.moderator:
@@ -329,7 +332,6 @@ class Group(Injected):
                 loggedin_session = self.session.find_nick(invitee)
 
                 if loggedin_session:
-                    loggedin_state = self.session.get(loggedin_session)
                     state = self.session.get(session_id)
 
                     self.broker.deliver(loggedin_session,
@@ -478,10 +480,14 @@ class Group(Injected):
 
         state = self.session.get(session_id)
 
-        self.broker.deliver(loggedin_session, ltd.encode_status_msg("Pass", "%s just passed moderation of group %s." % (state.nick, info.display_name)))
+        self.broker.deliver(loggedin_session, ltd.encode_status_msg("Pass",
+                                                                    "%s just passed moderation of group %s."
+                                                                    % (state.nick, info.display_name)))
 
         if info.volume != group.Volume.QUIET:
-            self.broker.to_channel(info.key, ltd.encode_status_msg("Pass", "%s has passed moderation to %s." % (state.nick, loggedin_state.nick)))
+            self.broker.to_channel(info.key, ltd.encode_status_msg("Pass",
+                                                                   "%s has passed moderation to %s."
+                                                                   % (state.nick, loggedin_state.nick)))
 
     def relinquish(self, session_id):
         info = self.__get_group_if_can_moderate__(session_id)

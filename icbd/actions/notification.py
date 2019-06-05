@@ -27,7 +27,6 @@ from actions import Injected
 import core
 import group
 import ltd
-from exception import LtdErrorException
 
 class Notify(Injected):
     def list(self, session_id):
@@ -90,7 +89,7 @@ class Notify(Injected):
         for k, v in self.session:
             if k != session_id and v.nick != core.NICKSERV and not v.notifylist.empty():
                 hidden = not info or info.visibility == group.Visibility.INVISIBLE
-                same_group= v.group and v.group.lower() == info.key
+                same_group = v.group and v.group.lower() == info.key
 
                 if not hidden or same_group:
                     if v.notifylist.nick_watched(state.nick) and not same_group:

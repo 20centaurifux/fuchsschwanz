@@ -25,7 +25,6 @@
 """
 from actions import Injected
 import ltd
-from exception import LtdErrorException
 
 class Hush(Injected):
     def list(self, session_id):

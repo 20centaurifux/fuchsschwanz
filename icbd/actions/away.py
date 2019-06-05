@@ -26,7 +26,7 @@
 from actions import Injected
 import ltd
 from exception import LtdStatusException
-from timer import Timer 
+from timer import Timer
 
 class Away(Injected):
     def __init__(self):

@@ -32,13 +32,13 @@ NICK_MIN = 1
 NICK_MAX = 12
 
 def is_valid_nick(nick):
-    return re.match("^[\w\-]{1,12}$", nick)
+    return re.match(r"^[\w\-]{1,12}$", nick)
 
 LOGINID_MIN = 1
 LOGINID_MAX = 12
 
 def is_valid_loginid(loginid):
-    return re.match("^[A-Za-z0-9\-]{1,12}$", loginid)
+    return re.match(r"^[A-Za-z0-9\-]{1,12}$", loginid)
 
 GROUP_MIN = 1
 GROUP_MAX = 12

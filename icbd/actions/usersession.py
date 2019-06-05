@@ -26,7 +26,6 @@
 from datetime import datetime
 import secrets
 import re
-from textwrap import wrap
 from actions import Injected, ACTION
 from actions.motd import Motd
 from actions.registration import Registration
@@ -363,8 +362,6 @@ class UserSession(Injected):
             self.session.update(session_id, nick=None, authenticated=False)
 
     def idle_mod(self, session_id):
-        state = self.session.get(session_id)
-
         self.broker.deliver(session_id, ltd.encode_status_msg("Idle-Mod", "You were booted."))
 
         self.join(session_id, core.BOOT_GROUP)
@@ -376,8 +373,6 @@ class UserSession(Injected):
             scope.complete()
 
     def idle_boot(self, session_id):
-        state = self.session.get(session_id)
-
         self.broker.deliver(session_id, ltd.encode_status_msg("Idle-Boot", "You were booted."))
 
         self.join(session_id, core.BOOT_GROUP)

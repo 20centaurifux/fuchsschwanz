@@ -383,11 +383,13 @@ async def run(opts):
 
     server = Server()
 
-    await server.run()
+    try:
+        await server.run()
+    except: pass
 
     logger.info("Server stopped.")
 
-    with container.resolve(database.Connection).enter_scope() as scope:
+    with container.resolve(nickdb.Connection).enter_scope() as scope:
         container.resolve(nickdb.NickDb).set_signoff(scope, core.NICKSERV, datetime.utcnow())
         scope.complete()
 

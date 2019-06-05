@@ -30,7 +30,7 @@ import reputation
 import broker
 import group
 import nickdb
-import statsdb 
+import statsdb
 import di
 
 class Injected(di.Injected):

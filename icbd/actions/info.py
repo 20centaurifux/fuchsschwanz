@@ -48,7 +48,7 @@ class Info(Injected):
             raise LtdStatusException("News", "No news.")
 
         self.broker.deliver(session_id, ltd.encode_co_output("-" * 64, msgid))
-        
+
         for item in news:
             for line in item:
                 self.broker.deliver(session_id, ltd.encode_co_output(line, msgid))

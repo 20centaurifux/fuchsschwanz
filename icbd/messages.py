@@ -31,7 +31,6 @@ import validate
 import ltd
 from actions import ACTION
 import actions.away
-import actions.beep
 import actions.group
 import actions.messagebox
 import actions.motd
@@ -681,7 +680,7 @@ class Version:
         except LtdErrorException as ex:
             raise ex
         except:
-                raise LtdErrorException(usage)
+            raise LtdErrorException(usage)
 
 @command("news")
 class News:

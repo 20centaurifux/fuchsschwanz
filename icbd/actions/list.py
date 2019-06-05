@@ -23,14 +23,11 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from datetime import datetime
 from textwrap import wrap
 from actions import Injected
-import core
 import group
-import validate
 import ltd
-from exception import LtdErrorException, LtdStatusException
+from exception import LtdErrorException
 
 class List(Injected):
     def list_and_quit(self, session_id, msgid=""):
@@ -80,7 +77,7 @@ class List(Injected):
         logins = self.session.get_nicks()
 
         self.__show_group__(session_id, state, info, logins, is_admin, True, msgid)
-        
+
     def __show_group__(self, session_id, state, info, logins, is_admin, ignore_visibility, msgid):
         show_group = True
         display_name = str(info)

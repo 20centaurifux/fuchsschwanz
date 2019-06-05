@@ -28,6 +28,4 @@ import ltd
 
 class Ping(Injected):
     def ping(self, session_id, msgid=""):
-        state = self.session.get(session_id)
-
         self.broker.deliver(session_id, ltd.encode_str("m", msgid))

@@ -51,7 +51,8 @@ class Hushlist:
     def hush_site_private(self, site):
         return self.__hush__(self.__sites, site, public=False)
 
-    def __hush__(self, m, name, public):
+    @staticmethod
+    def __hush__(m, name, public):
         k = name.lower()
         entry = m.get(k, Entry(display_name=name))
 
@@ -82,7 +83,8 @@ class Hushlist:
     def site_private_hushed(self, name):
         return self.__hushed__(self.__sites, name, public=False)
 
-    def __hushed__(self, m, name, public):
+    @staticmethod
+    def __hushed__(m, name, public):
         entry = m.get(name.lower(), Entry(display_name=name))
 
         return getattr(entry, "public" if public else "private")

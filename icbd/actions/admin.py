@@ -45,7 +45,7 @@ class Admin(Injected):
                             ltd.encode_co_output("%s (%s): %.2f"
                                                  % (nick, loggedin_state.address, reputation), msgid))
 
-    def wall(self, session_id, message, msgid=""):
+    def wall(self, session_id, message):
         self.__test_admin__(session_id)
 
         e = ltd.Encoder("f")

@@ -36,7 +36,11 @@ class Timer:
         return timer() - self.__timer
 
     def elapsed_str(self):
-        total_seconds = int(self.elapsed())
+        return self.display_str(self.elapsed())
+
+    @staticmethod
+    def display_str(elapsed):
+        total_seconds = int(elapsed)
         total_minutes = int(total_seconds / 60)
         total_hours = int(total_minutes / 60)
         minutes = total_minutes - (total_hours * 60)

@@ -85,6 +85,7 @@ class UserSession(Injected):
 
         with self.statsdb_connection.enter_scope() as scope:
             self.statsdb.add_signon(scope)
+            self.statsdb.set_max_logins(scope, self.session.count_logins())
 
             scope.complete()
 
@@ -238,7 +239,7 @@ class UserSession(Injected):
         return guessed
 
     def __test_connection_limit__(self, session_id):
-        if len(self.session) - 1 > self.config.server_max_logins:
+        if self.session.count_logins() > self.config.server_max_logins:
             self.log.warning("Connection limit (%d) reached.", self.config.server_max_logins)
 
             state = self.session.get(session_id)
@@ -524,6 +525,11 @@ class UserSession(Injected):
                                                               "%s (%s) entered group." % (state.nick, state.address)))
 
         self.session.update(session_id, group=info.key)
+
+        with self.statsdb_connection.enter_scope() as scope:
+            self.statsdb.set_max_groups(scope, len(self.groups))
+
+            scope.complete()
 
         if old_group:
             info = self.groups.get(old_group)

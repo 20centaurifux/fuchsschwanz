@@ -258,7 +258,9 @@ class Server(di.Injected):
                broker: broker.Broker,
                groups: group.Store,
                nickdb_connection: nickdb.Connection,
-               nickdb: nickdb.NickDb):
+               nickdb: nickdb.NickDb,
+               statsdb_connection: statsdb.Connection,
+               statsdb: statsdb.StatsDb):
         self.__log = log
         self.__config = config
         self.__session_store = store
@@ -266,6 +268,8 @@ class Server(di.Injected):
         self.__groups = groups
         self.__nickdb_connection = nickdb_connection
         self.__nickdb = nickdb
+        self.__statsdb_connection = statsdb_connection
+        self.__statsdb = statsdb
 
     async def run(self):
         self.__signon_server__()
@@ -318,10 +322,16 @@ class Server(di.Injected):
         while True:
             interval = self.__config.timeouts_ping
             sessions = {k: v for k, v in self.__session_store if k != self.__session_id}
+            max_idle_time = None
+            max_idle_nick = None
 
             for k, v in sessions.items():
                 if k != self.__session_id:
                     elapsed = v.t_recv.elapsed()
+
+                    if not max_idle_time or elapsed > max_idle_time:
+                        max_idle_time = elapsed
+                        max_idle_nick = v.nick
 
                     if elapsed > self.__config.timeouts_ping:
                         self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
@@ -342,6 +352,12 @@ class Server(di.Injected):
                                 ACTION(actions.usersession.UserSession).idle_boot(k)
                             else:
                                 interval = min(interval, (info.idle_boot * 60) - elapsed)
+
+            if max_idle_time:
+                with self.__statsdb_connection.enter_scope() as scope:
+                    self.__statsdb.set_max_idle(scope, max_idle_time, max_idle_nick)
+
+                    scope.complete()
 
             await asyncio.sleep(interval)
 

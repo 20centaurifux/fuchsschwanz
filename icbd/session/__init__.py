@@ -83,6 +83,9 @@ class Store:
     def get_nicks(self):
         raise NotImplementedError
 
+    def count_logins(self):
+        raise NotImplementedError
+
     def update(self, id, **kwargs):
         raise NotImplementedError
 

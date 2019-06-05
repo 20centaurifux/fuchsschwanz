@@ -50,6 +50,9 @@ class Store(session.Store):
     def get_nicks(self):
         return {k: v for k, v in self.__m.items() if v.nick}
 
+    def count_logins(self):
+        return len([s for s in self.__m.values() if s.loggedin])
+
     def update(self, id, **kwargs):
         for k, v in kwargs.items():
             setattr(self.__m[id], k, v)

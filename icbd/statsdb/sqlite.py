@@ -64,10 +64,15 @@ class StatsDb(statsdb.StatsDb, di.Injected):
                          Signons int default 0,
                          Boots int default 0,
                          Drops int default 0,
-                         Idleboots int default 0,
+                         IdleBoots int default 0,
                          IdleMods int default 0,
+                         MaxLogins int default 0,
+                         MaxGroups int default 0,
+                         MaxIdleTime read default 0.0,
+                         MaxIdleNick varchar(16),
                          primary key (Year, Month, Day))""")
 
+        cur.execute("create index MaxIdleTime on Stats (MaxIdleTime desc)")
         cur.execute("update Version set Revision=2")
 
     def add_signon(self, scope):
@@ -94,6 +99,36 @@ class StatsDb(statsdb.StatsDb, di.Injected):
         self.__running.idlemods += 1
         self.__get_today__(scope).idlemods += 1
         self.__update_today__(scope)
+
+    def set_max_logins(self, scope, max_logins):
+        self.__set_max_logins__(self.__running, max_logins)
+        self.__set_max_logins__(self.__get_today__(scope), max_logins)
+        self.__update_today__(scope)
+
+    @staticmethod
+    def __set_max_logins__(stats, max_logins):
+        stats.max_logins = max(stats.max_logins, max_logins)
+
+    def set_max_groups(self, scope, max_groups):
+        self.__set_max_groups__(self.__running, max_groups)
+        self.__set_max_groups__(self.__get_today__(scope), max_groups)
+        self.__update_today__(scope)
+
+    @staticmethod
+    def __set_max_groups__(stats, max_groups):
+        stats.max_groups = max(stats.max_groups, max_groups)
+
+    def set_max_idle(self, scope, idle_time, idle_nick):
+        self.__set_max_idle__(self.__running, idle_time, idle_nick)
+        self.__set_max_idle__(self.__get_today__(scope), idle_time, idle_nick)
+        self.__update_today__(scope)
+
+    @staticmethod
+    def __set_max_idle__(stats, idle_time, idle_nick):
+        max_idle = stats.max_idle[0] if stats.max_idle else 0.0
+
+        if idle_time > max_idle:
+            stats.max_idle = (idle_time, idle_nick)
 
     def __get_today__(self, scope):
         now = datetime.utcnow()
@@ -122,9 +157,29 @@ class StatsDb(statsdb.StatsDb, di.Injected):
     def __update_today__(self, scope):
         cur = scope.get_handle()
 
-        cur.execute("update Stats set Signons=?, Boots=?, Drops=?, Idleboots=?, Idlemods=? where Year=? and Month=? and Day=?",
-                    (self.__stats.signons, self.__stats.boots, self.__stats.drops, self.__stats.idleboots, self.__stats.idlemods,
-                     self.__date.year, self.__date.month, self.__date.day))
+        cur.execute("""update Stats
+                         set Signons=?,
+                         Boots=?,
+                         Drops=?,
+                         IdleBoots=?,
+                         IdleMods=?,
+                         MaxLogins=?,
+                         MaxGroups=?,
+                         MaxIdleTime=?,
+                         MaxIdleNick=?
+                         where Year=? and Month=? and Day=?""",
+                    (self.__stats.signons,
+                     self.__stats.boots,
+                     self.__stats.drops,
+                     self.__stats.idleboots,
+                     self.__stats.idlemods,
+                     self.__stats.max_logins,
+                     self.__stats.max_groups,
+                     self.__stats.max_idle[0] if self.__stats.max_idle else None,
+                     self.__stats.max_idle[1] if self.__stats.max_idle else None,
+                     self.__date.year,
+                     self.__date.month,
+                     self.__date.day))
 
     def start(self, scope):
         return self.__running
@@ -163,8 +218,12 @@ class StatsDb(statsdb.StatsDb, di.Injected):
                          sum(Boots) as Boots,
                          sum(Drops) as Drops,
                          sum(IdleBoots) as IdleBoots,
-                         sum(IdleMods) as IdleMods
-                         from Stats %s""" % where_clause
+                         sum(IdleMods) as IdleMods,
+                         sum(MaxLogins) as MaxLogins,
+                         sum(MaxGroups) as MaxGroups,
+                         max(MaxIdleTime) as MaxIdleTime,
+                         (select (MaxIdleNick) from Stats %s order by MaxIdleTime desc limit 1) as MaxIdleNick
+                         from Stats %s""" % (where_clause, where_clause)
 
     def __create_stats__(self, row):
         record = statsdb.Stats()
@@ -173,7 +232,12 @@ class StatsDb(statsdb.StatsDb, di.Injected):
             record.signons = row["Signons"]
             record.boots = row["Boots"]
             record.drops = row["Drops"]
-            record.idleboots = row["Idleboots"]
-            record.idlemods = row["Idlemods"]
+            record.idleboots = row["IdleBoots"]
+            record.idlemods = row["IdleMods"]
+            record.max_logins = row["MaxLogins"]
+            record.max_groups = row["MaxGroups"]
+
+            if row["MaxIdleTime"] or row["MaxIdleNick"]:
+                record.max_idle = (row["MaxIdleTime"], row["MaxIdleNick"])
 
         return record

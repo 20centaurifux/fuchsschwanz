@@ -27,6 +27,7 @@ from actions import Injected
 import core
 import news
 import ltd
+import timer
 from exception import LtdStatusException
 
 class Info(Injected):
@@ -92,7 +93,7 @@ class Info(Injected):
                 stats = self.statsdb.all(scope)
                 description = "overall"
 
-        users_n = len(self.session.get_nicks()) - 1
+        users_n = self.session.count_logins()
         groups_n = len(self.groups)
         away_n = len([kv for kv in self.session if kv[1].away])
 
@@ -120,7 +121,16 @@ class Info(Injected):
         self.broker.deliver(session_id, ltd.encode_co_output("Server Stats (%s):" % description, msgid))
 
         self.broker.deliver(session_id,
+                            ltd.encode_co_output("  Max Logins: %d, Max Groups: %d" % (stats.max_logins, stats.max_groups), msgid))
+
+        if stats.max_idle:
+            self.broker.deliver(session_id,
+                                ltd.encode_co_output("  Max Idle: %s (%s)" % (stats.max_idle[1], timer.Timer.display_str(stats.max_idle[0])), msgid))
+        else:
+            self.broker.deliver(session_id, ltd.encode_co_output("  Max Idle: (None)", msgid))
+
+        self.broker.deliver(session_id,
                             ltd.encode_co_output("  Signons: %d, Boots: %d, Drops: %d" % (stats.signons, stats.boots, stats.drops), msgid))
 
         self.broker.deliver(session_id,
-                            ltd.encode_co_output("  Idle-Boots: %d, Idle-Boots (mod): %d" % (stats.idleboots, stats.idlemods), msgid))
+                            ltd.encode_co_output("  Idle-Boots: %d, Idle-Mod-Boots: %d" % (stats.idleboots, stats.idlemods), msgid))

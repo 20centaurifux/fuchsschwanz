@@ -113,7 +113,7 @@ class NickDb(nickdb.NickDb, di.Injected):
                            references Nick(Name)
                            on delete cascade)""")
 
-        cur.execute("create index foobar on Message (Receiver, Timestamp)")
+        cur.execute("create index MessageReceiver on Message (Receiver, Timestamp)")
 
     @staticmethod
     def __generate_password__():

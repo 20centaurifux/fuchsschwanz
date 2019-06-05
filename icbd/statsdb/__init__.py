@@ -24,7 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from dataclasses import dataclass
-from typing import NewType
+from typing import NewType, Tuple
 import database
 
 @dataclass
@@ -34,6 +34,9 @@ class Stats:
     drops: int = 0
     idleboots: int = 0
     idlemods: int = 0
+    max_logins: int = 0
+    max_groups: int = 0
+    max_idle: Tuple[str, float] = None
 
 Connection = NewType("Connection", database.Connection)
 
@@ -55,6 +58,15 @@ class StatsDb:
 
     def add_idlemod(self, scope):
         raise NotImplementedError
+
+    def set_max_logins(self, scope, max_logins):
+        raise NotImplementedError
+
+    def set_max_groups(self, scope, max_groups):
+        raise NotImplementedError#
+
+    def set_max_idle(self, scope, idle_time, idle_nick):
+        raise NotImplementedError#
 
     def start(self, scope):
         raise NotImplementedError

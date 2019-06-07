@@ -579,13 +579,24 @@ class UserSession(Injected):
             state = self.session.get(loggedin_session)
 
             if mode == "a":
-                self.broker.deliver(session_id,
-                                    ltd.encode_co_output("User: %s (%s)%s, Idle: %s"
-                                                         % (state.nick,
-                                                            state.address,
-                                                            " (nr)" if state.authenticated else "",
-                                                            state.t_recv.elapsed_str()),
-                                                         msgid))
+                with self.nickdb_connection.enter_scope() as scope:
+                    status_flags = []
+
+                    if not state.authenticated or self.nickdb.lookup(scope, state.nick).real_name:
+                        status_flags.append("nr")
+
+                    if state.away:
+                        status_flags.append("aw")
+
+                    status = " (%s)" %  ", ".join(status_flags) if status_flags else ""
+
+                    self.broker.deliver(session_id,
+                                        ltd.encode_co_output("User: %s (%s)%s, Idle: %s"
+                                                             % (state.nick,
+                                                                state.address,
+                                                                status,
+                                                                state.t_recv.elapsed_str()),
+                                                             msgid))
 
                 if state.away:
                     self.broker.deliver(session_id,

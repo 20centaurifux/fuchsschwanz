@@ -104,25 +104,36 @@ class List(Injected):
             subscribers = sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(info.key)],
                                  key=lambda arg: arg[1].nick.lower())
 
-            for sub_id, sub_state in subscribers:
-                admin_flag = "*" if info.moderator == sub_id else " "
+            with self.nickdb_connection.enter_scope() as scope:
+                for sub_id, sub_state in subscribers:
+                    admin_flag = "*" if info.moderator == sub_id else " "
 
-                e = ltd.Encoder("i")
+                    status_flags = []
 
-                idle = int(sub_state.t_recv.elapsed()) if sub_state.t_recv else 0
-                signon = int(sub_state.signon.timestamp())
+                    if not sub_state.authenticated or self.nickdb.lookup(scope, sub_state.nick).real_name:
+                        status_flags.append("nr")
 
-                e.add_field_str("wl", append_null=False)
-                e.add_field_str(admin_flag, append_null=False)
-                e.add_field_str(sub_state.nick, append_null=False)
-                e.add_field_str(str(idle), append_null=False)
-                e.add_field_str("0", append_null=False)
-                e.add_field_str(str(signon), append_null=False)
-                e.add_field_str(sub_state.loginid, append_null=False)
-                e.add_field_str(sub_state.address, append_null=False)
-                e.add_field_str(sub_state.status, append_null=True)
+                    if sub_state.away:
+                        status_flags.append("aw")
 
-                self.broker.deliver(session_id, e.encode())
+                    status = "(%s)" %  ", ".join(status_flags) if status_flags else ""
+
+                    idle = int(sub_state.t_recv.elapsed()) if sub_state.t_recv else 0
+                    signon = int(sub_state.signon.timestamp())
+
+                    e = ltd.Encoder("i")
+
+                    e.add_field_str("wl", append_null=False)
+                    e.add_field_str(admin_flag, append_null=False)
+                    e.add_field_str(sub_state.nick, append_null=False)
+                    e.add_field_str(str(idle), append_null=False)
+                    e.add_field_str("0", append_null=False)
+                    e.add_field_str(str(signon), append_null=False)
+                    e.add_field_str(sub_state.loginid, append_null=False)
+                    e.add_field_str(sub_state.address, append_null=False)
+                    e.add_field_str(status, append_null=True)
+
+                    self.broker.deliver(session_id, e.encode())
 
         return show_group
 

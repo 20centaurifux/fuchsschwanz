@@ -45,14 +45,31 @@ class Timer:
         total_hours = int(total_minutes / 60)
         minutes = total_minutes - (total_hours * 60)
 
-        if total_hours > 0:
-            time_elapsed = "%dh%dm"  % (total_hours, minutes)
-        elif total_minutes > 0:
-            time_elapsed = "%dm"  % minutes
-        else:
-            time_elapsed = "%ds"  % total_seconds
+        parts = []
 
-        return time_elapsed
+        if total_hours > 23:
+            days = int(total_hours / 24)
+
+            parts.append("%dd" % days)
+
+            hours = total_hours - (days * 24)
+
+            if hours > 0:
+                parts.append("%dh" % hours)
+
+            if minutes > 0:
+                parts.append("%dm" % minutes)
+        elif total_hours > 0:
+            parts.append("%dh" % total_hours)
+
+            if minutes > 0:
+                parts.append("%dm" % minutes)
+        elif total_minutes > 0:
+            parts.append("%dm" % minutes)
+        else:
+            parts.append("%ds" % total_seconds)
+
+        return "".join(parts)
 
 class TimeoutTable:
     def __init__(self):

@@ -23,57 +23,18 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from logging import Logger
 from datetime import datetime
-import di
 import statsdb
+from sqlite_schema import Schema
 
-class StatsDb(statsdb.StatsDb, di.Injected):
+class StatsDb(statsdb.StatsDb):
     def __init__(self):
-        super(StatsDb, self).__init__()
-
         self.__running = statsdb.Stats()
         self.__stats = None
         self.__date = None
 
-    def inject(self, log: Logger):
-        self.log = log
-
     def setup(self, scope):
-        revision = self.__get_revision__(scope)
-
-        if revision == 1:
-            self.__create_tables__(scope)
-
-    @staticmethod
-    def __get_revision__(scope):
-        cur = scope.get_handle()
-        cur.execute("select Revision FROM Version limit 1")
-
-        return cur.fetchone()[0]
-
-    def __create_tables__(self, scope):
-        self.log.info("Creating stats table.")
-
-        cur = scope.get_handle()
-
-        cur.execute("""create table Stats (
-                         Year int not null,
-                         Month int not null,
-                         Day int not null,
-                         Signons int default 0,
-                         Boots int default 0,
-                         Drops int default 0,
-                         IdleBoots int default 0,
-                         IdleMods int default 0,
-                         MaxLogins int default 0,
-                         MaxGroups int default 0,
-                         MaxIdleTime read default 0.0,
-                         MaxIdleNick varchar(16),
-                         primary key (Year, Month, Day))""")
-
-        cur.execute("create index MaxIdleTime on Stats (MaxIdleTime desc)")
-        cur.execute("update Version set Revision=2")
+        Schema().upgrade(scope)
 
     def add_signon(self, scope):
         self.__running.signons += 1
@@ -225,7 +186,8 @@ class StatsDb(statsdb.StatsDb, di.Injected):
                          (select (MaxIdleNick) from Stats %s order by MaxIdleTime desc limit 1) as MaxIdleNick
                          from Stats %s""" % (where_clause, where_clause)
 
-    def __create_stats__(self, row):
+    @staticmethod
+    def __create_stats__(row):
         record = statsdb.Stats()
 
         if row:

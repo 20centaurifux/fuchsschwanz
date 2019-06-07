@@ -25,13 +25,14 @@
 """
 import uuid
 import secrets
-import string
+from logging import Logger
 from hashlib import sha256
 from datetime import datetime
-from logging import Logger
+import string
 import nickdb
-import core
+from sqlite_schema import Schema
 import di
+import core
 from textutils import tolower
 
 class NickDb(nickdb.NickDb, di.Injected):
@@ -42,78 +43,21 @@ class NickDb(nickdb.NickDb, di.Injected):
         self.log = log
 
     def setup(self, scope):
-        revision = self.__get_revision__(scope)
+        Schema().upgrade(scope)
 
-        if revision == 0:
-            self.__create_tables__(scope)
-
+        if not self.exists(scope, core.NICKSERV):
             self.log.debug("Creating server account: nick='%s'", core.NICKSERV)
 
             self.__create_user__(scope, nick=core.NICKSERV, password=self.__generate_password__(), is_admin=False)
 
             password = self.__generate_password__()
 
+        if not self.exists(scope, "admin"):
             self.log.debug("Creating admin account: nick='admin'")
 
             self.__create_user__(scope, nick="admin", password=password, is_admin=True)
 
             self.log.info("Initial admin created with password '%s'." % password)
-
-    @staticmethod
-    def __get_revision__(scope):
-        revision = 0
-
-        cur = scope.get_handle()
-        cur.execute("select count(name) from sqlite_master where type='table' AND name='Version'")
-
-        if cur.fetchone()[0] == 1:
-            cur.execute("select Revision from Version limit 1")
-            revision = cur.fetchone()[0]
-
-        return revision
-
-    def __create_tables__(self, scope):
-        self.log.info("Creating initial database.")
-
-        cur = scope.get_handle()
-
-        cur.execute("""create table Version (
-                         Revision integer not null)""")
-
-        cur.execute("insert into Version (Revision) values (1)")
-
-        cur.execute("""create table Nick (
-                         Name varchar(16) not null,
-                         Password char(20),
-                         Salt char(20),
-                         RealName varchar(32),
-                         Phone varchar(32),
-                         Address varchar(64),
-                         Email varchar(32),
-                         Text varchar(128),
-                         WWW varchar(32),
-                         IsSecure integer not null default 0,
-                         IsAdmin integer,
-                         LastLoginID varchar(16),
-                         LastLoginHost varchar(32),
-                         Signon integer,
-                         Signoff integer,
-                         MBoxLimit integer not null default 0,
-                         primary key (Name))""")
-
-        cur.execute("""create table Message (
-                         UUID char(32) not null,
-                         Sender varchar(16) not null,
-                         Receiver varchar(16) not null,
-                         Timestamp integer not null,
-                         Message varchar(128) not null,
-                         primary key (UUID),
-                         constraint fk_receiver
-                           foreign key (Receiver)
-                           references Nick(Name)
-                           on delete cascade)""")
-
-        cur.execute("create index MessageReceiver on Message (Receiver, Timestamp)")
 
     @staticmethod
     def __generate_password__():

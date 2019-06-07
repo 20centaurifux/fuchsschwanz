@@ -215,7 +215,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
 
         old_reputation = self.__reputation.get(self.__session_id)
 
-        if type_id != "m":
+        if not type_id in ["m", "n"]:
             self.__session_store.update(self.__session_id, t_recv=timer.Timer())
 
         msg = None

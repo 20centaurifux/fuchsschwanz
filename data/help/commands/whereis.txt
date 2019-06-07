@@ -1,8 +1,9 @@
 USAGE
-     /whereis {nickname}
+     /whereis {-a} {nickname}
 
 DESCRIPTION
-     Displays the address of a user.
+     Displays the address of a user. Use the -a flag to show
+     more details.
 
 SEE ALSO
      user

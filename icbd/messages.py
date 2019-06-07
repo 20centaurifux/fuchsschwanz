@@ -361,10 +361,21 @@ class Whereis:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        if not fields[0]:
-            raise LtdErrorException("Usage: /whereis {nick}")
+        usage = "Usage: whereis {-a} {nickname}"
 
-        ACTION(actions.usersession.UserSession).whereis(session_id, fields[0], msgid(fields))
+        if fields[0]:
+            try:
+                opts, nick = ltd.get_opts(fields[0], mode="a")
+
+                if not nick:
+                    raise LtdErrorException(usage)
+
+            except:
+                raise LtdErrorException(usage)
+
+            ACTION(actions.usersession.UserSession).whereis(session_id, nick, **opts, msgid=msgid(fields))
+        else:
+            raise LtdErrorException(usage)
 
 @command("beep")
 class Beep:

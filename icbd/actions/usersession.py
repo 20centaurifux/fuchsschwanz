@@ -574,12 +574,24 @@ class UserSession(Injected):
 
         return visibility, name
 
-    def whereis(self, session_id, nick, msgid=""):
+    def whereis(self, session_id, nick, mode="", msgid=""):
         loggedin_session = self.session.find_nick(nick)
 
         if loggedin_session:
             state = self.session.get(loggedin_session)
 
-            self.broker.deliver(session_id, ltd.encode_co_output("%-16s %s (%s)" % (nick, state.host, state.ip), msgid))
+            if mode == "a":
+                self.broker.deliver(session_id,
+                                    ltd.encode_co_output("User: %s (%s)%s"
+                                                         % (state.nick, state.address, " (r)" if state.authenticated else ""),
+                                                         msgid))
+
+                self.broker.deliver(session_id, ltd.encode_co_output("Idle: %s" % (state.t_recv.elapsed_str()), msgid))
+
+                if state.away:
+                    self.broker.deliver(session_id,
+                                        ltd.encode_co_output("Away: %s since %s" % (state.away, state.t_away.elapsed_str()), msgid))
+            else:
+                self.broker.deliver(session_id, ltd.encode_co_output("%-16s %s (%s)" % (nick, state.host, state.ip), msgid))
         else:
             self.broker.deliver(session_id, ltd.encode_co_output("User not found.", msgid))

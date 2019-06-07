@@ -418,7 +418,7 @@ def get_opts(argv):
     for opt, arg in options:
         if opt in ('-c', '--config'):
             m["config"] = arg
-        if opt in ('-w', '--data-dir'):
+        if opt in ('-d', '--data-dir'):
             m["data_dir"] = arg
 
     if not m.get("config"):

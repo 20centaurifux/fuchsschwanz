@@ -739,7 +739,12 @@ class Ping:
 class Pong:
     @staticmethod
     @loginrequired
-    @textfields
-    @catchltdexceptions
+    def process(session_id, fields):
+        pass
+
+@code("n")
+class Noop:
+    @staticmethod
+    @loginrequired
     def process(session_id, fields):
         pass

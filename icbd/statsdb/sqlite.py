@@ -192,7 +192,7 @@ class StatsDb(statsdb.StatsDb, di.Injected):
 
         cur = scope.get_handle()
 
-        cur.execute(self.__build_sum_query__("where Year=%d and Month=%d" % (now.year, now.month)))
+        cur.execute(self.__build_accumulate_query__("where Year=%d and Month=%d" % (now.year, now.month)))
 
         return self.__create_stats__(cur.fetchone())
 
@@ -201,26 +201,26 @@ class StatsDb(statsdb.StatsDb, di.Injected):
 
         cur = scope.get_handle()
 
-        cur.execute(self.__build_sum_query__("where Year=%d" % now.year))
+        cur.execute(self.__build_accumulate_query__("where Year=%d" % now.year))
 
         return self.__create_stats__(cur.fetchone())
 
     def all(self, scope):
         cur = scope.get_handle()
 
-        cur.execute(self.__build_sum_query__())
+        cur.execute(self.__build_accumulate_query__())
 
         return self.__create_stats__(cur.fetchone())
 
     @staticmethod
-    def __build_sum_query__(where_clause=""):
+    def __build_accumulate_query__(where_clause=""):
         return """select sum(Signons) as Signons,
                          sum(Boots) as Boots,
                          sum(Drops) as Drops,
                          sum(IdleBoots) as IdleBoots,
                          sum(IdleMods) as IdleMods,
-                         sum(MaxLogins) as MaxLogins,
-                         sum(MaxGroups) as MaxGroups,
+                         max(MaxLogins) as MaxLogins,
+                         max(MaxGroups) as MaxGroups,
                          max(MaxIdleTime) as MaxIdleTime,
                          (select (MaxIdleNick) from Stats %s order by MaxIdleTime desc limit 1) as MaxIdleNick
                          from Stats %s""" % (where_clause, where_clause)

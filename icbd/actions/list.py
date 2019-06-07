@@ -110,7 +110,7 @@ class List(Injected):
 
                     status_flags = []
 
-                    if not sub_state.authenticated or self.nickdb.lookup(scope, sub_state.nick).real_name:
+                    if not sub_state.authenticated or not self.nickdb.lookup(scope, sub_state.nick).real_name:
                         status_flags.append("nr")
 
                     if sub_state.away:

@@ -582,7 +582,7 @@ class UserSession(Injected):
                 with self.nickdb_connection.enter_scope() as scope:
                     status_flags = []
 
-                    if not state.authenticated or self.nickdb.lookup(scope, state.nick).real_name:
+                    if not state.authenticated or not self.nickdb.lookup(scope, state.nick).real_name:
                         status_flags.append("nr")
 
                     if state.away:

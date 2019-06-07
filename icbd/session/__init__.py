@@ -70,6 +70,18 @@ class State:
     def address(self):
         return "%s@%s" % (self.loginid, self.host)
 
+    @property
+    def status(self):
+        flags = []
+
+        if self.loggedin:
+            flags.append("nr")
+
+        if self.away:
+            flags.append("aw")
+
+        return "(%s)" % ", ".join(flags)
+
 AwayTimeoutTable = NewType("AwayTimeoutTable", TimeoutTable)
 NotificationTimeoutTable = NewType("NotificationTimeoutTable", TimeoutTable)
 

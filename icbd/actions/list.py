@@ -92,15 +92,14 @@ class List(Injected):
         if show_group:
             moderator = logins[info.moderator].nick if info.moderator else "(None)"
             flags = "%s%s%s" % (chr(info.control.value), chr(info.visibility.value), chr(info.volume.value))
+            topic = info.topic if info.topic else "(None)"
 
             self.broker.deliver(session_id,
-                                ltd.encode_co_output("Group: %-14s (%s)           Mod: %-16s" % (display_name, flags, moderator), msgid))
+                                ltd.encode_co_output("Group: %-8s (%s) Mod: %-13s Topic: %s" % (display_name, flags, moderator, topic),
+                                                     msgid))
 
             self.broker.deliver(session_id,
-                                ltd.encode_co_output("Topic: %s" % (info.topic if info.topic else "(None)"), msgid))
-
-            self.broker.deliver(session_id,
-                                ltd.encode_co_output("Nickname              Idle            Signon (UTC)      Account", msgid))
+                                ltd.encode_co_output("   Nickname         Idle Sign-On  Account", msgid))
 
             subscribers = sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(info.key)],
                                  key=lambda arg: arg[1].nick.lower())
@@ -108,13 +107,22 @@ class List(Injected):
             for sub_id, sub_state in subscribers:
                 admin_flag = "*" if info.moderator == sub_id else " "
 
-                self.broker.deliver(session_id,
-                                    ltd.encode_co_output("%s  %-19s%-16s%-18s%s" % (admin_flag,
-                                                                                    sub_state.nick,
-                                                                                    sub_state.t_recv.elapsed_str(),
-                                                                                    sub_state.signon.strftime("%Y/%m/%d %H:%M"),
-                                                                                    sub_state.address),
-                                                         msgid))
+                e = ltd.Encoder("i")
+
+                idle = int(sub_state.t_recv.elapsed()) if sub_state.t_recv else 0
+                signon = int(sub_state.signon.timestamp())
+
+                e.add_field_str("wl", append_null=False)
+                e.add_field_str(admin_flag, append_null=False)
+                e.add_field_str(sub_state.nick, append_null=False)
+                e.add_field_str(str(idle), append_null=False)
+                e.add_field_str("0", append_null=False)
+                e.add_field_str(str(signon), append_null=False)
+                e.add_field_str(sub_state.loginid, append_null=False)
+                e.add_field_str(sub_state.address, append_null=False)
+                e.add_field_str(sub_state.status, append_null=True)
+
+                self.broker.deliver(session_id, e.encode())
 
         return show_group
 

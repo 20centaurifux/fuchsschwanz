@@ -505,12 +505,10 @@ class UserSession(Injected):
 
                 self.groups.update(info)
 
-        msg = "You are now in group %s" % group_name
+        msg = "You are now in group %s" % group_name # no trailing dot due to icbd compatibility
 
         if info.moderator == session_id:
             msg += " as moderator"
-
-        msg += "."
 
         self.broker.deliver(session_id, ltd.encode_status_msg("Status", msg))
 
@@ -582,11 +580,12 @@ class UserSession(Injected):
 
             if mode == "a":
                 self.broker.deliver(session_id,
-                                    ltd.encode_co_output("User: %s (%s)%s"
-                                                         % (state.nick, state.address, " (r)" if state.authenticated else ""),
+                                    ltd.encode_co_output("User: %s (%s)%s, Idle: %s"
+                                                         % (state.nick,
+                                                            state.address,
+                                                            " (nr)" if state.authenticated else "",
+                                                            state.t_recv.elapsed_str()),
                                                          msgid))
-
-                self.broker.deliver(session_id, ltd.encode_co_output("Idle: %s" % (state.t_recv.elapsed_str()), msgid))
 
                 if state.away:
                     self.broker.deliver(session_id,

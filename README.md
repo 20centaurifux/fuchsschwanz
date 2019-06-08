@@ -1,7 +1,7 @@
 # Fuchsschwanz
 
-Fuchsschwanz is a cross-platform [ICB](http://www.icb.net/) server written in Python. It supports
-TLS and UTF-8 out of the box.
+Fuchsschwanz is a cross-platform [ICB](http://www.icb.net/) server written in Python. It's the
+first ICB server supporting TLS and UTF-8 out of the box :)
 
 # Running Fuchsschwanz
 

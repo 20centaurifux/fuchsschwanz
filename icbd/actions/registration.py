@@ -217,7 +217,7 @@ class Registration(Injected):
             raise LtdErrorException("You must be registered to delete your entry.")
 
         if not password:
-            raise LtdErrorException("Usage: /delete password")
+            raise LtdErrorException("Usage: /delete {password}")
 
         with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.check_password(scope, state.nick, password):
@@ -233,7 +233,7 @@ class Registration(Injected):
 
     def whois(self, session_id, nick, msgid=""):
         if not nick:
-            raise LtdErrorException("Usage: /whois nickname")
+            raise LtdErrorException("Usage: /whois {nick}")
 
         with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, nick):

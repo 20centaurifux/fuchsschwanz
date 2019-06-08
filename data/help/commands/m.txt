@@ -1,5 +1,5 @@
 USAGE
-     /m {nickname} {message}
+     /m {nick} {message}
 
 DESCRIPTION
      Sends a private message to a user.

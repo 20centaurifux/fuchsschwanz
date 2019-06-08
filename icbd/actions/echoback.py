@@ -31,7 +31,7 @@ from exception import LtdErrorException
 class Echoback(Injected):
     def set_mode(self, session_id, mode):
         if not mode in ["on", "off", "verbose"]:
-            raise LtdErrorException("Usage: /echoback on/off/verbose")
+            raise LtdErrorException("Usage: /echoback on|off|verbose")
 
         real_mode = session.EchoMode.OFF
 

@@ -361,7 +361,7 @@ class Whereis:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: whereis {-a} {nickname}"
+        usage = "Usage: whereis {-a} {nick}"
 
         if fields[0]:
             try:
@@ -416,7 +416,7 @@ class Hush:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: hush {-q} {-n nickname|-s address}"
+        usage = "Usage: hush {-q} {-n nick|-s address}"
 
         if fields[0]:
             try:
@@ -438,7 +438,7 @@ class Notify:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: notify {-q} {-n nickname|-s address}"
+        usage = "Usage: notify {-q} {-n nick|-s address}"
 
         if fields[0]:
             try:
@@ -529,7 +529,7 @@ class Invite:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: invite {-q} {-r} {-n nickname|-s address}"
+        usage = "Usage: invite {-q} {-r} {-n nick|-s address}"
 
         try:
             opts, nick = ltd.get_opts(fields[0], quiet="q", registered="r", mode="ns")
@@ -548,7 +548,7 @@ class Cancel:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: cancel {-q} {-n nickname|-s address}"
+        usage = "Usage: cancel {-q} {-n nick|-s address}"
 
         try:
             opts, nick = ltd.get_opts(fields[0], quiet="q", mode="ns")
@@ -567,7 +567,7 @@ class Talk:
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        usage = "Usage: talk {-q} {-d} {-r} {-n nickname|-s address}"
+        usage = "Usage: talk {-q} {-d} {-r} {-n nick|-s address}"
 
         try:
             opts, nick = ltd.get_opts(fields[0], quiet="q", delete="d", registered="r", mode="ns")

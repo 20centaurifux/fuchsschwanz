@@ -1,5 +1,5 @@
 USAGE
-     /hush  {-q} {-o} {-p} {-n nickname | -s site}
+     /hush  {-q} {-o} {-p} {-n nick|-s site}
 
 DESCRIPTION
      Hush nicknames or sites.

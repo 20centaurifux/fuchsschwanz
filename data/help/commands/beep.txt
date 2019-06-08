@@ -1,5 +1,5 @@
 USAGE
-     /beep {nickname}
+     /beep {nick}
 
 DESCRIPTION
      Notifies a user.

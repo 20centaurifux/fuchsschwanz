@@ -1,5 +1,5 @@
 USAGE
-     /status {flags | options}
+     /status {flags|options}
      /status
 
 DESCRIPTION

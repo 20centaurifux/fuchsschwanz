@@ -1,5 +1,5 @@
 USAGE
-     /notify  {-q} {-n nickname | -s site}
+     /notify  {-q} {-n nick|-s site}
 
 DESCRIPTION
      Receive a notification when nickname or site signs on/off.

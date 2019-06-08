@@ -1,8 +1,8 @@
 USAGE
-     /boot {nickname}
+     /boot {nick}
 
 DESCRIPTION
-     Moderators can throw users out.
+     Throws a user out of the group.
 
 SEE ALSO
      group idle ~OUTLAWS~

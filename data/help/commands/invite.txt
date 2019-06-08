@@ -1,5 +1,5 @@
 USAGE
-     /invite  {-q} {-r} {-n nickname | -s address}
+     /invite  {-q} {-r} {-n nick|-s address}
 
 DESCRIPTION
      Invites a nickname (-n) or address (-s) to a restricted group. Use the

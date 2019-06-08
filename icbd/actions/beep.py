@@ -66,7 +66,7 @@ class Beep(Injected):
 
     def set_mode(self, session_id, mode):
         if not mode in ["on", "off", "verbose"]:
-            raise LtdErrorException("Usage: /nobeep on/off/verbose")
+            raise LtdErrorException("Usage: /nobeep on|off|verbose")
 
         real_mode = session.BeepMode.ON
 

@@ -674,7 +674,7 @@ class Version:
         ACTION(actions.info.Info).version(session_id, msgid(fields))
 
 @command("stats")
-class Version:
+class Stats:
     @staticmethod
     @loginrequired
     @fieldslength(min=1, max=2)

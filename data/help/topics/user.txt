@@ -4,8 +4,18 @@ USER
      Use /w to receive a list of available groups and connected users. You
      can change your group membership with /g.
 
-     To see the address of a user use the /whereis command. Registered
+     To see the status of a user use the /whereis command. Registered
      profiles can be displayed with /whois.
+
+     The following flags describe the status of a user session:
+
+          Flag Description
+          ------------------------
+          r    registered user
+          a    administrator
+          nr   real name not known
+          ssl  secure connection
+          aw   away flag is set
 
      Chat directly with /m. To send a notification use the /beep command.
 

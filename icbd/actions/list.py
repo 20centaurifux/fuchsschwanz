@@ -24,7 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from textwrap import wrap
-from actions import Injected
+from actions import Injected, UserStatus
 import group
 import ltd
 from exception import LtdErrorException
@@ -104,36 +104,31 @@ class List(Injected):
             subscribers = sorted([[sub_id, logins[sub_id]] for sub_id in self.broker.get_subscribers(info.key)],
                                  key=lambda arg: arg[1].nick.lower())
 
-            with self.nickdb_connection.enter_scope() as scope:
-                for sub_id, sub_state in subscribers:
-                    admin_flag = "*" if info.moderator == sub_id else " "
+            status_util = UserStatus()
 
-                    status_flags = []
+            for sub_id, sub_state in subscribers:
+                admin_flag = "*" if info.moderator == sub_id else " "
 
-                    if not sub_state.authenticated or not self.nickdb.lookup(scope, sub_state.nick).real_name:
-                        status_flags.append("nr")
+                status_flags = status_util.get_flags(sub_state)
 
-                    if sub_state.away:
-                        status_flags.append("aw")
+                status = "(%s)" %  ", ".join(status_flags) if status_flags else ""
 
-                    status = "(%s)" %  ", ".join(status_flags) if status_flags else ""
+                idle = int(sub_state.t_recv.elapsed()) if sub_state.t_recv else 0
+                signon = int(sub_state.signon.timestamp())
 
-                    idle = int(sub_state.t_recv.elapsed()) if sub_state.t_recv else 0
-                    signon = int(sub_state.signon.timestamp())
+                e = ltd.Encoder("i")
 
-                    e = ltd.Encoder("i")
+                e.add_field_str("wl", append_null=False)
+                e.add_field_str(admin_flag, append_null=False)
+                e.add_field_str(sub_state.nick, append_null=False)
+                e.add_field_str(str(idle), append_null=False)
+                e.add_field_str("0", append_null=False)
+                e.add_field_str(str(signon), append_null=False)
+                e.add_field_str(sub_state.loginid, append_null=False)
+                e.add_field_str(sub_state.address, append_null=False)
+                e.add_field_str(status, append_null=True)
 
-                    e.add_field_str("wl", append_null=False)
-                    e.add_field_str(admin_flag, append_null=False)
-                    e.add_field_str(sub_state.nick, append_null=False)
-                    e.add_field_str(str(idle), append_null=False)
-                    e.add_field_str("0", append_null=False)
-                    e.add_field_str(str(signon), append_null=False)
-                    e.add_field_str(sub_state.loginid, append_null=False)
-                    e.add_field_str(sub_state.address, append_null=False)
-                    e.add_field_str(status, append_null=True)
-
-                    self.broker.deliver(session_id, e.encode())
+                self.broker.deliver(session_id, e.encode())
 
         return show_group
 

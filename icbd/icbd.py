@@ -91,8 +91,15 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
 
         self.__log.info("Client connected: %s:%d", address[0], address[1])
 
+        cipher = transport.get_extra_info("cipher")
+        tls = False
+
+        if cipher:
+            self.__log.info("Cipher: %s", cipher)
+            tls = True
+
         self.__transport = transport
-        self.__session_id = self.__session_store.new(ip=address[0], host=socket.getfqdn(address[0]), t_recv=timer.Timer())
+        self.__session_id = self.__session_store.new(ip=address[0], host=socket.getfqdn(address[0]), tls=tls, t_recv=timer.Timer())
         self.__broker.add_session(self.__session_id, self.__handle_write__)
         self.__reputation.add_session(self.__session_id)
         self.__buffer = bytearray()

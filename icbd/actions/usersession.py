@@ -26,7 +26,7 @@
 from datetime import datetime
 import secrets
 import re
-from actions import Injected, ACTION
+from actions import Injected, ACTION, UserStatus
 from actions.motd import Motd
 from actions.registration import Registration
 from actions.notification import Notify
@@ -579,29 +579,20 @@ class UserSession(Injected):
             state = self.session.get(loggedin_session)
 
             if mode == "a":
-                with self.nickdb_connection.enter_scope() as scope:
-                    status_flags = []
+                status_flags = UserStatus().get_flags(state)
 
-                    if not state.authenticated or not self.nickdb.lookup(scope, state.nick).real_name:
-                        status_flags.append("nr")
+                status = " (%s)" %  ", ".join(status_flags) if status_flags else ""
 
-                    if state.away:
-                        status_flags.append("aw")
-
-                    status = " (%s)" %  ", ".join(status_flags) if status_flags else ""
-
-                    self.broker.deliver(session_id,
-                                        ltd.encode_co_output("User: %s (%s)%s, Idle: %s"
-                                                             % (state.nick,
-                                                                state.address,
-                                                                status,
-                                                                state.t_recv.elapsed_str()),
-                                                             msgid))
+                self.broker.deliver(session_id,
+                                    ltd.encode_co_output("%-16s %s (%s)%s %s"
+                                                         % (nick, state.address, state.ip, status, state.t_recv.elapsed_str()),
+                                                         msgid))
 
                 if state.away:
                     self.broker.deliver(session_id,
                                         ltd.encode_co_output("Away: %s since %s" % (state.away, state.t_away.elapsed_str()), msgid))
             else:
-                self.broker.deliver(session_id, ltd.encode_co_output("%-16s %s (%s)" % (nick, state.host, state.ip), msgid))
+                self.broker.deliver(session_id, ltd.encode_co_output("%-16s %s (%s) %s"
+                                                                     % (nick, state.address, state.ip, state.t_recv.elapsed_str()), msgid))
         else:
             self.broker.deliver(session_id, ltd.encode_co_output("User not found.", msgid))

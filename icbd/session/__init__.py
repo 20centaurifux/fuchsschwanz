@@ -46,6 +46,7 @@ class State:
     loginid: str = None
     ip: str = None
     host: str = None
+    tls: bool = False
     nick: str = None
     group: str = None
     authenticated: bool = False

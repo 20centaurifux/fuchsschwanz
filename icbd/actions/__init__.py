@@ -64,4 +64,44 @@ def cache():
 
     return lambda T: m.get(T, T())
 
+class UserStatus(di.Injected):
+    def inject(self, nickdb_connection: nickdb.Connection, nickdb: nickdb.NickDb):
+        self.nickdb_connection = nickdb_connection
+        self.nickdb = nickdb
+
+    def get_flags(self, state, scope=None):
+        flags = []
+
+        if state.authenticated:
+            flags.append("r")
+
+            if scope:
+                flags.extend(self.__lookup_flags__(scope, state.nick))
+            else:
+                with self.nickdb_connection.enter_scope() as scope:
+                    flags.extend(self.__lookup_flags__(scope, state.nick))
+        else:
+            flags.append("nr")
+
+        if state.away:
+            flags.append("aw")
+
+        if state.tls:
+            flags.append("ssl")
+
+        return flags
+
+    def __lookup_flags__(self, scope, nick):
+        flags = []
+
+        user = self.nickdb.lookup(scope, nick)
+
+        if self.nickdb.is_admin(scope, nick):
+            flags.append("a")
+
+        if not user.real_name:
+            flags.append("nr")
+
+        return flags
+
 ACTION = cache()

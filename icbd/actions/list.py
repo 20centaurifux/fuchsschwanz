@@ -125,7 +125,7 @@ class List(Injected):
                 e.add_field_str("0", append_null=False)
                 e.add_field_str(str(signon), append_null=False)
                 e.add_field_str(sub_state.loginid, append_null=False)
-                e.add_field_str(sub_state.address, append_null=False)
+                e.add_field_str(sub_state.host, append_null=False)
                 e.add_field_str(status, append_null=True)
 
                 self.broker.deliver(session_id, e.encode())

@@ -53,7 +53,7 @@ class Group(Injected):
         info = self.__get_group__(session_id)
 
         if info.topic:
-            self.broker.deliver(session_id, ltd.encode_co_output("The topic is: '%s'." % info.topic, msgid))
+            self.broker.deliver(session_id, ltd.encode_co_output("The topic is: %s" % info.topic, msgid))
         else:
             self.broker.deliver(session_id, ltd.encode_co_output("The topic is not set.", msgid))
 

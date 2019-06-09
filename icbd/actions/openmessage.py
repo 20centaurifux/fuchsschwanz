@@ -47,6 +47,9 @@ class OpenMessage(Injected):
 
                 raise LtdErrorException("You do not have permission to talk in this group.")
 
+        if len(self.broker.get_subscribers(state.group)) == 1:
+            raise LtdErrorException("No one else in group.")
+
         max_len = 254 - validate.NICK_MAX - 2
 
         for part in wrap(message, max_len):
@@ -78,12 +81,7 @@ class OpenMessage(Injected):
                 for sub_id in [s for s in subscribers if not s in excluded_sessions]:
                     self.broker.deliver(sub_id, msg)
             else:
-                receivers = 0
-
                 if state.echo == session.EchoMode.OFF:
-                    receivers = self.broker.to_channel_from(session_id, state.group, e.encode())
+                    self.broker.to_channel_from(session_id, state.group, e.encode())
                 else:
-                    receivers = self.broker.to_channel(state.group, e.encode())
-
-                if receivers == 0:
-                    raise LtdErrorException("No one else in group.")
+                    self.broker.to_channel(state.group, e.encode())

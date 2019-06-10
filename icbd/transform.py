@@ -47,7 +47,7 @@ class Transform(di.Injected):
             if len(fields) >= 2 and fields[0] == "m":
                 args = [arg.rstrip(" \0") for arg in fields[1].split(" ", 2)]
 
-                if args[0] == core.NICKSERV:
+                if len(args) >= 2 and args[0] == core.NICKSERV:
                     type_id = "h"
 
                     payload = bytearray()

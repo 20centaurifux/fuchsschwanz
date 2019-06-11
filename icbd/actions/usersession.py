@@ -348,15 +348,15 @@ class UserSession(Injected):
                 if self.broker.part(session_id, state.group):
                     info = self.groups.get(state.group)
 
-                    if info.volume != group.Volume.QUIET:
+                    if info.volume != group.Volume.QUIET and info.moderator != session_id:
                         self.broker.to_channel_from(session_id,
                                                     state.group,
                                                     ltd.encode_status_msg("Sign-off",
                                                                           "%s (%s) has signed off." % (state.nick, state.address)))
-
-                    self.drop_moderator(session_id, "Sign-off", "Your moderator signed off.")
                 else:
                     self.groups.delete(state.group)
+
+                self.drop_moderator(session_id, "Sign-off", "Your moderator signed off.")
 
             self.log.debug("Removing nick %s from session %s.", state.nick, session_id)
 

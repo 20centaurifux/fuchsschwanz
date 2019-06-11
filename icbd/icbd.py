@@ -417,7 +417,7 @@ async def run(opts):
         scope.complete()
 
 def get_opts(argv):
-    options, _ = getopt.getopt(argv, '-c:d:', ['config=', 'data-dir='])
+    options, _ = getopt.getopt(argv, 'c:d:', ['config=', 'data-dir='])
     m = {}
 
     for opt, arg in options:

@@ -114,7 +114,7 @@ class Group(Injected):
 
                 if opt in ["b", "im", "#"]:
                     arg_required = True
-                elif opt in ["r", "m", "p", "i", "s", "v", "q", "n", "l"]:
+                elif opt in ["r", "m", "p", "c", "i", "s", "v", "q", "n", "l"]:
                     arg_required = False
 
                     if (not (self.__try_change_visibility__(session_id, state.nick, info, opt)
@@ -200,10 +200,13 @@ class Group(Injected):
         for sub_id in self.broker.get_subscribers(str(info)):
             sub_state = self.session.get(sub_id)
 
-            self.broker.deliver(session_id, ltd.encode_status_msg("FYI", "%s invited." % sub_state.nick))
-            self.broker.deliver(sub_id, ltd.encode_status_msg("FYI", "You are invited to group %s by default." % sub_state.nick))
+            try:
+                info.invite_nick(sub_state.nick, sub_state.authenticated)
 
-            info.invite_nick(sub_state.nick, sub_state.authenticated)
+                self.broker.deliver(session_id, ltd.encode_status_msg("FYI", "%s invited." % sub_state.nick))
+                self.broker.deliver(sub_id, ltd.encode_status_msg("FYI", "You are invited to group %s by default." % sub_state.nick))
+            except OverflowError:
+                self.broker.deliver(session_id, ltd.encode_str("e", "Invitation list is full."))
 
     def __change_idle_boot__(self, moderator, info, minutes):
         old_val = info.idle_boot
@@ -286,15 +289,20 @@ class Group(Injected):
         state = self.session.get(session_id)
         loggedin_session = None
 
-        if mode == "n":
-            if registered:
-                with self.nickdb_connection.enter_scope() as scope:
-                    if not self.nickdb.exists(scope, invitee):
-                        raise LtdErrorException("User not found.")
+        try:
+            if mode == "n":
+                if registered:
+                    with self.nickdb_connection.enter_scope() as scope:
+                        if not self.nickdb.exists(scope, invitee):
+                            raise LtdErrorException("User not found.")
 
-            loggedin_session = self.session.find_nick(invitee)
+                loggedin_session = self.session.find_nick(invitee)
 
-            if loggedin_session:
+                if not registered and not loggedin_session:
+                    raise LtdErrorException("%s is not signed on." % invitee)
+
+                info.invite_nick(invitee, registered)
+
                 self.broker.deliver(loggedin_session,
                                     ltd.encode_status_msg("RSVP", "You are invited to group %s by %s." % (str(info), state.nick)))
 
@@ -304,12 +312,10 @@ class Group(Injected):
                     if not loggedin_state.authenticated:
                         self.broker.deliver(loggedin_session,
                                             ltd.encode_status_msg("RSVP", "You need to be registered to enter group %s." % str(info)))
-            elif not registered:
-                raise LtdErrorException("%s is not signed on." % invitee)
-
-            info.invite_nick(invitee, registered)
-        else:
-            info.invite_address(invitee, registered)
+            else:
+                info.invite_address(invitee, registered)
+        except OverflowError:
+            raise LtdErrorException("Invitation list is full.")
 
         if not quiet:
             self.broker.deliver(session_id,
@@ -376,17 +382,22 @@ class Group(Injected):
             if not quiet:
                 self.broker.deliver(session_id, ltd.encode_status_msg("FYI", "%s removed from talker list." % talker))
         else:
-            loggedin_session = None
+            try:
+                loggedin_session = None
 
-            if mode == "n":
-                if registered:
-                    with self.nickdb_connection.enter_scope() as scope:
-                        if not self.nickdb.exists(scope, talker):
-                            raise LtdErrorException("User not found.")
+                if mode == "n":
+                    if registered:
+                        with self.nickdb_connection.enter_scope() as scope:
+                            if not self.nickdb.exists(scope, talker):
+                                raise LtdErrorException("User not found.")
 
-                loggedin_session = self.session.find_nick(talker)
+                    loggedin_session = self.session.find_nick(talker)
 
-                if loggedin_session:
+                    if not registered and not loggedin_session:
+                        raise LtdErrorException("%s is not signed on." % talker)
+
+                    info.unmute_nick(talker, registered)
+
                     self.broker.deliver(loggedin_session, ltd.encode_status_msg("RSVP", "You can now talk in group %s." % str(info)))
 
                     if registered:
@@ -396,12 +407,10 @@ class Group(Injected):
                             self.broker.deliver(loggedin_session,
                                                 ltd.encode_status_msg("RSVP",
                                                                       "You need to be registered to talk in group %s." % str(info)))
-                elif not registered:
-                    raise LtdErrorException("%s is not signed on." % talker)
-
-                info.unmute_nick(talker, registered)
-            else:
-                info.unmute_address(talker, registered)
+                else:
+                    info.unmute_address(talker, registered)
+            except OverflowError:
+                raise LtdErrorException("Talker list is full.")
 
             if not quiet:
                 self.broker.deliver(session_id,

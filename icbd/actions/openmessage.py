@@ -40,7 +40,7 @@ class OpenMessage(Injected):
         if info.volume == group.Volume.QUIET:
             raise LtdErrorException("Open messages are not permitted in quiet groups.")
 
-        if info.control == group.Control.CONTROLLED:
+        if info.control == group.Control.CONTROLLED and info.moderator != session_id:
             if (not info.nick_can_talk(state.nick, state.authenticated)
                     and not info.address_can_talk(state.loginid, state.ip, state.host, state.authenticated)):
                 self.reputation.warning(session_id)

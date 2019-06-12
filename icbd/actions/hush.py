@@ -24,6 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from actions import Injected
+from exception import LtdErrorException
 import ltd
 
 class Hush(Injected):
@@ -58,33 +59,36 @@ class Hush(Injected):
 
         state = self.session.get(session_id)
 
-        if mode == "n":
-            if not msg_type or msg_type == "o":
-                if state.hushlist.hush_nick_public(target):
-                    if not quiet:
-                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s added to nickname open hush list." % target))
-                elif not quiet:
-                    self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s removed from nickname open hush list." % target))
+        try:
+            if mode == "n":
+                if not msg_type or msg_type == "o":
+                    if state.hushlist.hush_nick_public(target):
+                        if not quiet:
+                            self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s added to nickname open hush list." % target))
+                    elif not quiet:
+                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s removed from nickname open hush list." % target))
 
-            if not msg_type or msg_type == "p":
-                if state.hushlist.hush_nick_private(target):
-                    if not quiet:
-                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s added to nickname personal hush list." % target))
-                elif not quiet:
-                    self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s removed from nickname personal hush list." % target))
-        else:
-            if not msg_type or msg_type == "o":
-                if state.hushlist.hush_site_public(target):
-                    if not quiet:
-                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s added to site open hush list." % target))
-                elif not quiet:
-                    self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s removed from site open hush list." % target))
+                if not msg_type or msg_type == "p":
+                    if state.hushlist.hush_nick_private(target):
+                        if not quiet:
+                            self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s added to nickname personal hush list." % target))
+                    elif not quiet:
+                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s removed from nickname personal hush list." % target))
+            else:
+                if not msg_type or msg_type == "o":
+                    if state.hushlist.hush_site_public(target):
+                        if not quiet:
+                            self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s added to site open hush list." % target))
+                    elif not quiet:
+                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s removed from site open hush list." % target))
 
-            if not msg_type or msg_type == "p":
-                if state.hushlist.hush_site_private(target):
-                    if not quiet:
-                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s added to site personal hush list." % target))
-                elif not quiet:
-                    self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s removed from site personal hush list." % target))
+                if not msg_type or msg_type == "p":
+                    if state.hushlist.hush_site_private(target):
+                        if not quiet:
+                            self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s added to site personal hush list." % target))
+                    elif not quiet:
+                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s removed from site personal hush list." % target))
+        except OverflowError:
+            raise LtdErrorException("Hush list is full.")
 
         self.session.set(session_id, state)

@@ -24,6 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from dataclasses import dataclass
+import core
 
 @dataclass
 class Entry:
@@ -62,6 +63,9 @@ class Hushlist:
         setattr(entry, attr, new_val)
 
         if entry.public or entry.private:
+            if not k in m and len(m) >= core.MAX_HUSH_LIST:
+                raise OverflowError
+
             m[k] = entry
         else:
             del m[k]

@@ -162,10 +162,10 @@ class GroupInfo:
         self.__addrs_inv.clear()
 
     def invite_nick(self, nick, registered):
-        self.__invite__(self.__nicks_inv, nick, registered)
+        self.__invite__(self.__nicks_inv, nick, registered, core.MAX_INVITATION_LIST)
 
     def invite_address(self, addr, registered):
-        self.__invite__(self.__addrs_inv, addr, registered)
+        self.__invite__(self.__addrs_inv, addr, registered, core.MAX_INVITATION_LIST)
 
     def nick_invited(self, nick, authenticated):
         return self.__is_invited__(self.__nicks_inv, nick, authenticated)
@@ -184,10 +184,10 @@ class GroupInfo:
         self.__talker_addrs.clear()
 
     def unmute_nick(self, nick, registered):
-        self.__invite__(self.__talker_nicks, nick, registered)
+        self.__invite__(self.__talker_nicks, nick, registered, core.MAX_TALKER_LIST)
 
     def unmute_address(self, addr, registered):
-        self.__invite__(self.__talker_addrs, addr, registered)
+        self.__invite__(self.__talker_addrs, addr, registered, core.MAX_TALKER_LIST)
 
     def nick_can_talk(self, nick, authenticated):
         return self.__is_invited__(self.__talker_nicks, nick, authenticated)
@@ -206,12 +206,15 @@ class GroupInfo:
         return sorted([str(inv) for inv in m.values()], key=lambda s: s.lower())
 
     @staticmethod
-    def __invite__(m, name, registered):
+    def __invite__(m, name, registered, limit):
         k = name.lower()
 
         added = not k in m
 
         if added:
+            if len(m) >= limit:
+                raise OverflowError
+
             m[k] = Invitation(name, registered)
 
         return added

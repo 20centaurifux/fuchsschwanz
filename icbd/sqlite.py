@@ -56,7 +56,12 @@ class Connection(database.Connection):
             self.__conn = sqlite3.connect(self.__db)
             self.__conn.row_factory = sqlite3.Row
 
-            self.__conn.cursor().execute("pragma foreign_keys=on")
+            cur = self.__conn.cursor()
+
+            cur.execute("pragma foreign_keys=on")
+            cur.execute("pragma journal_mode=memory")
+            cur.execute("pragma synchronous=normal")
+            cur.execute("pragma locking_mode=exlusive")
 
     def __create_transaction_scope__(self):
         self.__connect__()

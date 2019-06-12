@@ -332,6 +332,8 @@ class Server(di.Injected):
             max_idle_time = None
             max_idle_nick = None
 
+            self.__log.debug("Processing idling session...")
+
             for k, v in sessions.items():
                 if k != self.__session_id:
                     elapsed = v.t_recv.elapsed()
@@ -340,8 +342,17 @@ class Server(di.Injected):
                         max_idle_time = elapsed
                         max_idle_nick = v.nick
 
-                    if elapsed > self.__config.timeouts_ping:
-                        self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
+                    if elapsed >= self.__config.timeouts_ping:
+                        last_ping = v.t_ping.elapsed() if v.t_ping else 0.0
+
+                        if not v.t_ping or last_ping >= self.__config.timeouts_ping:
+                            self.__log.debug("Sending ping message to session %s (idle=%2.2f, ping timeout=%2.2f).", k, elapsed, last_ping)
+
+                            self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
+
+                            self.__session_store.update(k, t_ping=timer.Timer())
+                        else:
+                            interval = min(interval, self.__config.timeouts_ping - last_ping)
                     else:
                         interval = min(interval, self.__config.timeouts_ping - elapsed)
 
@@ -365,6 +376,8 @@ class Server(di.Injected):
                     self.__statsdb.set_max_idle(scope, max_idle_time, max_idle_nick)
 
                     scope.complete()
+
+            self.__log.debug("Next interval: %2.2f", interval)
 
             await asyncio.sleep(interval)
 

@@ -52,6 +52,7 @@ class State:
     authenticated: bool = False
     signon: datetime = datetime.utcnow()
     t_recv: Timer = None
+    t_ping: Timer = None
     beep: BeepMode = BeepMode.ON
     echo: EchoMode = EchoMode.OFF
     away: str = None

@@ -26,7 +26,7 @@
 from enum import Enum
 
 NAME = "Fuchsschwanz"
-VERSION = "0.1.2"
+VERSION = "0.1.3"
 
 PROTOCOL_VERSION = "1.0"
 PROTOCOL_LEVEL = 1

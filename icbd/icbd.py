@@ -360,7 +360,7 @@ class Server(di.Injected):
             interval = int(self.__config.timeouts_ping)
             sessions = {k: v for k, v in self.__session_store if k != self.__session_id}
 
-            self.__log.debug("Processing idling session...")
+            self.__log.debug("Processing idling sessions...")
 
             max_idle_time = None
             max_idle_nick = None

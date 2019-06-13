@@ -34,6 +34,7 @@ from getpass import getuser
 import getopt
 import sys
 import os
+import math
 import core
 import config
 import config.json
@@ -356,7 +357,7 @@ class Server(di.Injected):
 
     async def __process_idling_sessions__(self):
         while True:
-            interval = self.__config.timeouts_ping
+            interval = int(self.__config.timeouts_ping)
             sessions = {k: v for k, v in self.__session_store if k != self.__session_id}
 
             self.__log.debug("Processing idling session...")
@@ -389,9 +390,9 @@ class Server(di.Injected):
 
                                 self.__session_store.update(k, t_ping=timer.Timer())
                             else:
-                                interval = min(interval, self.__config.timeouts_ping - last_ping)
+                                interval = self.__next_interval__(interval, self.__config.timeouts_ping - last_ping)
                         else:
-                            interval = min(interval, self.__config.timeouts_ping - elapsed)
+                            interval = self.__next_interval__(interval, self.__config.timeouts_ping - elapsed)
 
                         if v.group:
                             info = self.__groups.get(v.group)
@@ -400,15 +401,17 @@ class Server(di.Injected):
                                 if elapsed > info.idle_mod * 60:
                                     ACTION(actions.usersession.UserSession).idle_mod(k)
                                 else:
-                                    interval = min(interval, (info.idle_mod * 60) - elapsed)
+                                    interval = self.__next_interval__(interval, (info.idle_mod * 60) - elapsed)
 
                             if (not info.moderator or k != info.moderator) and info.idle_boot > 0:
                                 if elapsed > info.idle_boot * 60:
                                     ACTION(actions.usersession.UserSession).idle_boot(k)
                                 else:
-                                    interval = min(interval, (info.idle_boot * 60) - elapsed)
+                                    interval = self.__next_interval__(interval, (info.idle_boot * 60) - elapsed)
 
             if max_idle_time and max_idle_time > self.__max_idle_time:
+                max_idle_time = round(max_idle_time)
+
                 self.__log.debug("Max idle time: %2.2f (%s)", max_idle_time, max_idle_nick)
 
                 with self.__statsdb_connection.enter_scope() as scope:
@@ -421,6 +424,10 @@ class Server(di.Injected):
             self.__log.debug("Next interval: %2.2f", interval)
 
             await asyncio.sleep(interval)
+
+    @staticmethod
+    def __next_interval__(interval, next_interval):
+        return int(min(interval, math.ceil(next_interval)))
 
 async def run(opts):
     data_dir = opts.get("data_dir")

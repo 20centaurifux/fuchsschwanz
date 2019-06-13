@@ -70,6 +70,12 @@ MESSAGES = {cls.code: cls for cls in filter(lambda cls: isinstance(cls, type) an
                                             messages.__dict__.values())}
 
 class ICBServerProtocol(asyncio.Protocol, di.Injected):
+    def __init__(self, connections):
+        asyncio.Protocol.__init__(self)
+        di.Injected.__init__(self)
+
+        self.__connections = connections
+
     def inject(self,
                log: logging.Logger,
                config: config.Config,
@@ -99,7 +105,11 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
             tls = True
 
         self.__transport = transport
-        self.__session_id = self.__session_store.new(ip=address[0], host=socket.getfqdn(address[0]), tls=tls, t_recv=timer.Timer())
+        self.__session_id = self.__session_store.new(ip=address[0],
+                                                     host=socket.getfqdn(address[0]),
+                                                     tls=tls,
+                                                     t_recv=timer.Timer(),
+                                                     t_alive=timer.Timer())
         self.__broker.add_session(self.__session_id, self.__handle_write__)
         self.__reputation.add_session(self.__session_id)
         self.__buffer = bytearray()
@@ -109,6 +119,8 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         self.__shutdown = False
 
         self.__log.debug("Session created successfully: %s", self.__session_id)
+
+        self.__connections[self.__session_id] = self
 
         self.__write_protocol_info__()
 
@@ -202,6 +214,8 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
 
         ACTION(actions.usersession.UserSession).sign_off(self.__session_id)
 
+        del self.__connections[self.__session_id]
+
         self.__broker.remove_session(self.__session_id)
         self.__session_store.delete(self.__session_id)
         self.__away_table.remove_source(self.__session_id)
@@ -209,6 +223,9 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         self.__notification_table.remove_target(self.__session_id)
         self.__reputation.remove_session(self.__session_id)
 
+        self.__transport.abort()
+
+    def timeout(self):
         self.__transport.abort()
 
     def __message_received__(self, type_id, payload):
@@ -223,7 +240,9 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         old_reputation = self.__reputation.get(self.__session_id)
 
         if not type_id in ["m", "n"]:
-            self.__session_store.update(self.__session_id, t_recv=timer.Timer())
+            self.__session_store.update(self.__session_id, t_recv=timer.Timer(), t_alive=timer.Timer())
+        else:
+            self.__session_store.update(self.__session_id, t_alive=timer.Timer())
 
         msg = None
 
@@ -258,6 +277,12 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         self.__broker.deliver(self.__session_id, e.encode())
 
 class Server(di.Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.__connections = {}
+        self.__max_idle_time = 0.0
+
     def inject(self,
                log: logging.Logger,
                config: config.Config,
@@ -290,7 +315,9 @@ class Server(di.Injected):
         if self.__config.tcp_enabled:
             self.__log.info("Listening on %s:%d (tcp)", self.__config.tcp_address, self.__config.tcp_port)
 
-            server = await loop.create_server(lambda: ICBServerProtocol(), self.__config.tcp_address, self.__config.tcp_port)
+            server = await loop.create_server(lambda: ICBServerProtocol(self.__connections),
+                                                                        self.__config.tcp_address,
+                                                                        self.__config.tcp_port)
 
             servers.append(server)
 
@@ -300,7 +327,9 @@ class Server(di.Injected):
             sc = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
             sc.load_cert_chain(self.__config.tcp_tls_cert, self.__config.tcp_tls_key)
 
-            server = await loop.create_server(lambda: ICBServerProtocol(), self.__config.tcp_tls_address, self.__config.tcp_tls_port, ssl=sc)
+            server = await loop.create_server(lambda: ICBServerProtocol(self.__connections),
+                                              self.__config.tcp_tls_address,
+                                              self.__config.tcp_tls_port, ssl=sc)
 
             servers.append(server)
 
@@ -329,53 +358,65 @@ class Server(di.Injected):
         while True:
             interval = self.__config.timeouts_ping
             sessions = {k: v for k, v in self.__session_store if k != self.__session_id}
-            max_idle_time = None
-            max_idle_nick = None
 
             self.__log.debug("Processing idling session...")
 
+            max_idle_time = None
+            max_idle_nick = None
+
             for k, v in sessions.items():
                 if k != self.__session_id:
-                    elapsed = v.t_recv.elapsed()
+                    alive = v.t_alive.elapsed()
 
-                    if not max_idle_time or elapsed > max_idle_time:
-                        max_idle_time = elapsed
-                        max_idle_nick = v.nick
+                    if alive >= self.__config.timeouts_connection:
+                        self.__log.info("Connection timeout, session='%s', last activity=%2.2f", k, alive)
 
-                    if elapsed >= self.__config.timeouts_ping:
-                        last_ping = v.t_ping.elapsed() if v.t_ping else 0.0
-
-                        if not v.t_ping or last_ping >= self.__config.timeouts_ping:
-                            self.__log.debug("Sending ping message to session %s (idle=%2.2f, ping timeout=%2.2f).", k, elapsed, last_ping)
-
-                            self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
-
-                            self.__session_store.update(k, t_ping=timer.Timer())
-                        else:
-                            interval = min(interval, self.__config.timeouts_ping - last_ping)
+                        self.__connections[k].timeout()
                     else:
-                        interval = min(interval, self.__config.timeouts_ping - elapsed)
+                        elapsed = v.t_recv.elapsed()
 
-                    if v.group:
-                        info = self.__groups.get(v.group)
+                        if not max_idle_time or elapsed > max_idle_time:
+                            max_idle_time = elapsed
+                            max_idle_nick = v.nick
 
-                        if info.moderator and k == info.moderator and info.idle_mod > 0:
-                            if elapsed > info.idle_mod * 60:
-                                ACTION(actions.usersession.UserSession).idle_mod(k)
+                        if elapsed >= self.__config.timeouts_ping:
+                            last_ping = v.t_ping.elapsed() if v.t_ping else 0.0
+
+                            if not v.t_ping or last_ping >= self.__config.timeouts_ping:
+                                self.__log.debug("Sending ping message to session %s (idle=%2.2f, ping timeout=%2.2f).", k, elapsed, last_ping)
+
+                                self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
+
+                                self.__session_store.update(k, t_ping=timer.Timer())
                             else:
-                                interval = min(interval, (info.idle_mod * 60) - elapsed)
+                                interval = min(interval, self.__config.timeouts_ping - last_ping)
+                        else:
+                            interval = min(interval, self.__config.timeouts_ping - elapsed)
 
-                        if (not info.moderator or k != info.moderator) and info.idle_boot > 0:
-                            if elapsed > info.idle_boot * 60:
-                                ACTION(actions.usersession.UserSession).idle_boot(k)
-                            else:
-                                interval = min(interval, (info.idle_boot * 60) - elapsed)
+                        if v.group:
+                            info = self.__groups.get(v.group)
 
-            if max_idle_time:
+                            if info.moderator and k == info.moderator and info.idle_mod > 0:
+                                if elapsed > info.idle_mod * 60:
+                                    ACTION(actions.usersession.UserSession).idle_mod(k)
+                                else:
+                                    interval = min(interval, (info.idle_mod * 60) - elapsed)
+
+                            if (not info.moderator or k != info.moderator) and info.idle_boot > 0:
+                                if elapsed > info.idle_boot * 60:
+                                    ACTION(actions.usersession.UserSession).idle_boot(k)
+                                else:
+                                    interval = min(interval, (info.idle_boot * 60) - elapsed)
+
+            if max_idle_time and max_idle_time > self.__max_idle_time:
+                self.__log.debug("Max idle time: %2.2f (%s)", max_idle_time, max_idle_nick)
+
                 with self.__statsdb_connection.enter_scope() as scope:
                     self.__statsdb.set_max_idle(scope, max_idle_time, max_idle_nick)
 
                     scope.complete()
+
+                    self.__max_idle_time = max_idle_time
 
             self.__log.debug("Next interval: %2.2f", interval)
 

@@ -42,7 +42,8 @@ class Config:
     tcp_tls_key: str = None
     logging_verbosity: core.Verbosity = core.Verbosity.INFO
     mbox_limit: int = 25
-    timeouts_ping: float = 30.0
+    timeouts_connection: float = 120.0
+    timeouts_ping: float = 45.0
     timeouts_away_message: float = 30.0
     timeouts_mbox_full_message: float = 30.0
     timeouts_idle_boot: int = core.DEFAULT_IDLE_BOOT

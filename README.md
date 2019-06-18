@@ -10,7 +10,8 @@ configuration file.
 
 	$ python3.7 icbd/icbd.py --config=./config.json --data-dir=$(pwd)/data
 
-The data directory contains help files, news and the message of the day.
+The data directory contains help files, news and the message of the day (which
+can be an executable!).
 
 You can use the run.sh script to start the server. This script will also
 generate a self-signed certificate for TLS (this requires openssl).
@@ -46,7 +47,10 @@ Please find below a list with the most important settings.
 
 ## timeouts
 
-* ping: the server sends a ping message at this interval (in seconds) if no other client activity is detected
+* connection: defines after what period of time (seconds) the peer TCP connection
+  should be considered unreachable
+* ping: a ping message is sent at this regular interval (seconds) if no
+  activity from a client connection is detected
 * timeBetweenMessages: minimum allowed seconds between two client messages
 * idleBoot: default idle-boot setting for new created groups
 * idleMod: default idle-mod setting for new created groups

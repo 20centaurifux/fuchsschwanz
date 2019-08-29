@@ -27,13 +27,21 @@ from actions import Injected
 import ltd
 import validate
 import session
+import mail
+import template
 from exception import LtdErrorException
+from string import Template
 
 class MessageBox(Injected):
     def __init__(self):
         super().__init__()
 
         self.notification_table = self.resolve(session.NotificationTimeoutTable)
+
+        self.mail_queue_connection = self.resolve(mail.Connection)
+        self.mail_queue = self.resolve(mail.EmailQueue)
+
+        self.template = self.resolve(template.Template)
 
     def send_message(self, session_id, receiver, text):
         state = self.session.get(session_id)
@@ -78,6 +86,24 @@ class MessageBox(Injected):
                     self.notification_table.set_alive(loggedin_session, "mbox_full", self.config.timeouts_mbox_full_message)
 
             scope.complete()
+
+        self.__forward_message__(state.nick, receiver, text)
+
+    def __forward_message__(self, sender, receiver, text):
+        email = None
+
+        with self.nickdb_connection.enter_scope() as scope:
+            if self.nickdb.is_email_confirmed(scope, receiver) and self.nickdb.is_message_forwarding_enabled(scope, receiver):
+                email = self.nickdb.lookup(scope, receiver).email
+
+        if email:
+            with self.mail_queue_connection.enter_scope() as scope:
+                tpl = Template(self.template.load("forward_message"))
+                body = tpl.substitute(sender=sender, receiver=receiver, text=text)
+
+                self.mail_queue.enqueue(scope, email, "Message received", body)
+
+                scope.complete()
 
     def read_messages(self, session_id, msgid=""):
         state = self.session.get(session_id)

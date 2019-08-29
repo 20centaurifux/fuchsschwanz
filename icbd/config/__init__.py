@@ -41,6 +41,7 @@ class Config:
     tcp_tls_cert: str = None
     tcp_tls_key: str = None
     logging_verbosity: core.Verbosity = core.Verbosity.INFO
+    database_filename: str = None
     mbox_limit: int = 25
     timeouts_connection: float = 120.0
     timeouts_ping: float = 45.0
@@ -49,7 +50,16 @@ class Config:
     timeouts_idle_boot: int = core.DEFAULT_IDLE_BOOT
     timeouts_idle_mod: int = core.DEFAULT_IDLE_MOD
     timeouts_time_between_messages: float = 0.5
-    database_filename: str = None
+    timeouts_confirmation_request: float = 30.0
+    timeouts_confirmation_code: float = 1800.0
+    mailer_ttl: float = 480.0
+    mailer_interval: int = 15
+    smtp_hostname: str = "127.0.0.1"
+    smtp_port: int = 25
+    smtp_ssl_enabled: bool = False
+    smtp_sender: str = "root@localhost"
+    smtp_username: str = None
+    smtp_password: str = None
 
 def transform_map(m):
     m = copy.deepcopy(m)

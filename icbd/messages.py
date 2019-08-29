@@ -282,6 +282,33 @@ class ChangeWebsite:
     def process(session_id, fields):
         ACTION(actions.registration.Registration).change_field(session_id, "www", fields[0], msgid=msgid(fields))
 
+@command("forward")
+class EnableForwarding:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        ACTION(actions.registration.Registration).enable_forwarding(session_id, enabled=True, msgid=msgid(fields))
+
+@command("noforward")
+class DisableForwarding:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        ACTION(actions.registration.Registration).enable_forwarding(session_id, enabled=False, msgid=msgid(fields))
+
+@command("confirm")
+class ConfirmEmail:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=0, max=1)
+    def process(session_id, fields):
+        if fields and fields[0]:
+            ACTION(actions.registration.Registration).confirm(session_id, fields[0])
+        else:
+            ACTION(actions.registration.Registration).request_confirmation(session_id)
+
 @command("delete")
 class DeleteNick:
     @staticmethod

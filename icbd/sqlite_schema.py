@@ -39,6 +39,10 @@ class Schema(di.Injected):
 
         if revision == 1:
             self.__revision_2__(scope)
+            revision += 1
+
+        if revision == 2:
+            self.__revision_3__(scope)
 
     @staticmethod
     def __get_revision__(scope):
@@ -119,3 +123,40 @@ class Schema(di.Injected):
         cur.execute("create index MaxIdleTime on Stats (MaxIdleTime desc)")
 
         cur.execute("update Version set Revision=2")
+
+    def __revision_3__(self, scope):
+        self.log.info("Upgrading database to revision 3...")
+
+        cur = scope.get_handle()
+
+        cur.execute("""alter table Nick
+                         add column IsMailConfirmed int not null default 0""")
+
+        cur.execute("""alter table Nick
+                         add column ForwardMessages int not null default 0""")
+
+        cur.execute("""create table ConfirmationRequest (
+                         Nick varchar(16) not null,
+                         Email varchar(32) not null,
+                         Code varchar(32) not null,
+                         Timestamp int not null,
+                         constraint fk_requester
+                           foreign key (Nick)
+                           references Nick(Name)
+                           on delete cascade)""")
+
+        cur.execute("create index ConfirmationRequester on ConfirmationRequest (Nick asc)")
+
+        cur.execute("""create table Mail (
+                         UUID char(32) not null,
+                         Receiver varchar(32) not null,
+                         Subject varchar(64) not null,
+                         Body varchar(512) not null,
+                         Timestamp int not null,
+                         Sent int not null default 0,
+                         primary key (UUID))""")
+
+        cur.execute("create index MailTimestamp on Mail (Timestamp asc)")
+        cur.execute("create index MailSent on Mail (Sent asc)")
+
+        cur.execute("update Version set Revision=3")

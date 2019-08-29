@@ -53,12 +53,18 @@ import nickdb
 import nickdb.sqlite
 import statsdb
 import statsdb.sqlite
+import confirmation
+import confirmation.sqlite
 import motd
 import motd.plaintext
 import manual
 import manual.plaintext
 import news
 import news.plaintext
+import template
+import template.plaintext
+import mail
+import mail.sqlite
 import timer
 from actions import ACTION
 import actions.usersession
@@ -455,13 +461,19 @@ async def run(opts):
     container.register(nickdb.NickDb, nickdb.sqlite.NickDb())
     container.register(statsdb.Connection, connection)
     container.register(statsdb.StatsDb, statsdb.sqlite.StatsDb())
+    container.register(confirmation.Connection, connection)
+    container.register(confirmation.Confirmation, confirmation.sqlite.Confirmation())
     container.register(motd.Motd, motd.plaintext.Motd(os.path.join(data_dir, "motd")))
     container.register(manual.Manual, manual.plaintext.Manual(os.path.join(data_dir, "help")))
     container.register(news.News, news.plaintext.News(os.path.join(data_dir, "news")))
+    container.register(template.Template, template.plaintext.Template(os.path.join(data_dir, "templates")))
+    container.register(mail.Connection, connection)
+    container.register(mail.EmailQueue, mail.sqlite.EmailQueue())
 
     with connection.enter_scope() as scope:
         container.resolve(nickdb.NickDb).setup(scope)
         container.resolve(statsdb.StatsDb).setup(scope)
+        container.resolve(confirmation.Confirmation).setup(scope)
 
         scope.complete()
 

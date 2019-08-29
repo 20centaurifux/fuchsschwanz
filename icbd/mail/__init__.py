@@ -23,36 +23,38 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import inspect
+from typing import NewType
+from dataclasses import dataclass
+from datetime import datetime
 
-def decode(data):
-    text = ""
+from uuid import UUID
+import database
 
-    if data:
-        text = data.decode("UTF-8", errors="backslashreplace")
+@dataclass
+class Email:
+    msgid: UUID
+    created_at: datetime
+    receiver: str
+    subject: str
+    body: str
 
-    return text
+    def __str__(self):
+        return "msgid=%s, created_at=%s, receiver=%s, subject=%s" % (self.msgid, self.created_at, self.receiver, self.subject)
 
-def tolower(argname=None, argnames=None):
-    def decorator(fn):
-        spec = inspect.getfullargspec(fn)
+Connection = NewType("Connection", database.Connection)
 
-        def wrapper(*args):
-            vals = []
+class EmailQueue:
+    def setup(self, scope):
+        raise NotImplementedError
 
-            for i in range(len(args)):
-                val = args[i]
+    def enqueue(self, scope, receiver, subject, body):
+        raise NotImplementedError
 
-                if (argname and spec.args[i] == argname) or (argnames and spec.args[i] in argnames):
-                    val = val.lower()
+    def next_mail(self, scope):
+        raise NotImplementedError
 
-                vals.append(val)
+    def mark_delivered(self, scope, uuid):
+        raise NotImplementedError
 
-            return fn(*vals)
-
-        return wrapper
-
-    return decorator
-
-def hide_password(password):
-    return len(password) * "*"
+    def delete(self, scope, uuid):
+        raise NotImplementedError

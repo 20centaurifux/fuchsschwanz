@@ -23,36 +23,15 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import inspect
+import os.path
+import template
 
-def decode(data):
-    text = ""
+class Template(template.Template):
+    def __init__(self, path):
+        self.__path = path
 
-    if data:
-        text = data.decode("UTF-8", errors="backslashreplace")
+    def load(self, name):
+        path = os.path.join(self.__path, "%s.tpl" % name)
 
-    return text
-
-def tolower(argname=None, argnames=None):
-    def decorator(fn):
-        spec = inspect.getfullargspec(fn)
-
-        def wrapper(*args):
-            vals = []
-
-            for i in range(len(args)):
-                val = args[i]
-
-                if (argname and spec.args[i] == argname) or (argnames and spec.args[i] in argnames):
-                    val = val.lower()
-
-                vals.append(val)
-
-            return fn(*vals)
-
-        return wrapper
-
-    return decorator
-
-def hide_password(password):
-    return len(password) * "*"
+        with open(path) as f:
+             return f.read()

@@ -23,36 +23,23 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import inspect
+from typing import NewType
+import database
 
-def decode(data):
-    text = ""
+Connection = NewType("Connection", database.Connection)
 
-    if data:
-        text = data.decode("UTF-8", errors="backslashreplace")
+class Confirmation:
+    def setup(self, scope):
+        raise NotImplementedError
 
-    return text
+    def create_request(self, scope, nick, email):
+        raise NotImplementedError
 
-def tolower(argname=None, argnames=None):
-    def decorator(fn):
-        spec = inspect.getfullargspec(fn)
+    def count_pending_requests(self, scope, nick, email, ttl):
+        raise NotImplementedError
 
-        def wrapper(*args):
-            vals = []
+    def has_pending_request(self, scope, nick, code, email, ttl):
+        raise NotImplementedError
 
-            for i in range(len(args)):
-                val = args[i]
-
-                if (argname and spec.args[i] == argname) or (argnames and spec.args[i] in argnames):
-                    val = val.lower()
-
-                vals.append(val)
-
-            return fn(*vals)
-
-        return wrapper
-
-    return decorator
-
-def hide_password(password):
-    return len(password) * "*"
+    def delete_requests(self, scope, nick):
+        raise NotImplementedError

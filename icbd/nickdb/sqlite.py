@@ -162,6 +162,30 @@ class NickDb(nickdb.NickDb, di.Injected):
         cur.execute("update Nick set IsAdmin=? where Name=?", (int(is_admin), nick))
 
     @tolower(argname="nick")
+    def is_email_confirmed(self, scope, nick):
+        cur = scope.get_handle()
+        cur.execute("select IsMailConfirmed from Nick where Name=?", (nick,))
+
+        return bool(cur.fetchone()[0])
+
+    @tolower(argname="nick")
+    def set_email_confirmed(self, scope, nick, confirmed):
+        cur = scope.get_handle()
+        cur.execute("update Nick set IsMailConfirmed=? where Name=?", (int(confirmed), nick))
+
+    @tolower(argname="nick")
+    def is_message_forwarding_enabled(self, scope, nick):
+        cur = scope.get_handle()
+        cur.execute("select ForwardMessages from Nick where Name=?", (nick,))
+
+        return bool(cur.fetchone()[0])
+
+    @tolower(argname="nick")
+    def enable_message_forwarding(self, scope, nick, enabled):
+        cur = scope.get_handle()
+        cur.execute("update Nick set ForwardMessages=? where Name=?", (int(enabled), nick))
+
+    @tolower(argname="nick")
     def get_lastlogin(self, scope, nick):
         info = None
 

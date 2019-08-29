@@ -80,7 +80,12 @@ EMAIL_MIN = 0
 EMAIL_MAX = 32
 
 def is_valid_email(email):
-    return has_valid_length(email, EMAIL_MIN, EMAIL_MAX)
+    valid = False
+
+    if has_valid_length(email, EMAIL_MIN, EMAIL_MAX):
+        valid = not email or re.match(r"^(.+)@(.+)\.(.+)$", email)
+
+    return valid
 
 TEXT_MIN = 0
 TEXT_MAX = 128

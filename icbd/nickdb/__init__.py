@@ -81,6 +81,18 @@ class NickDb:
     def set_admin(self, scope, nick, is_admin):
         raise NotImplementedError
 
+    def is_email_confirmed(self, scope, nick):
+        raise NotImplementedError
+
+    def set_email_confirmed(self, scope, nick, confirmed):
+        raise NotImplementedError
+
+    def is_message_forwarding_enabled(self, scope, nick):
+        raise NotImplementedError
+
+    def enable_message_forwarding(self, scope, nick, enabled):
+        raise NotImplementedError
+
     def get_lastlogin(self, scope, nick):
         raise NotImplementedError
 

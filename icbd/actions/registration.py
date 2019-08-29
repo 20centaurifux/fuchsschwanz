@@ -25,14 +25,26 @@
 """
 from datetime import datetime
 from textwrap import wrap
+from string import Template
 from actions import Injected
 import validate
+import confirmation
+import mail
+import template
 import ltd
 from exception import LtdResponseException, LtdErrorException, LtdStatusException
 
 class Registration(Injected):
     def __init__(self):
         super().__init__()
+
+        self.confirmation_connection = self.resolve(confirmation.Connection)
+        self.confirmation = self.resolve(confirmation.Confirmation)
+
+        self.mail_queue_connection = self.resolve(mail.Connection)
+        self.mail_queue = self.resolve(mail.EmailQueue)
+
+        self.template = self.resolve(template.Template)
 
     def register(self, session_id, password):
         self.log.debug("Starting user registration.")
@@ -157,6 +169,11 @@ class Registration(Injected):
         with self.nickdb_connection.enter_scope() as scope:
             details = self.nickdb.lookup(scope, state.nick)
 
+            old_val = getattr(details, field)
+
+            if not old_val:
+                old_val = ""
+
             setattr(details, field, text)
 
             self.nickdb.update(scope, state.nick, details)
@@ -165,6 +182,12 @@ class Registration(Injected):
                 self.broker.deliver(session_id, ltd.encode_co_output("%s set to '%s'." % (self.__map_field__(field), text), msgid))
             else:
                 self.broker.deliver(session_id, ltd.encode_co_output("%s unset." % self.__map_field__(field), msgid))
+
+            if field == "email" and old_val.lower() != text.lower() and self.nickdb.is_email_confirmed(scope, state.nick):
+                self.broker.deliver(session_id, ltd.encode_co_output("Email confirmation revoked.", msgid))
+
+                self.nickdb.set_email_confirmed(scope, state.nick, False)
+                self.nickdb.enable_message_forwarding(scope, state.nick, False)
 
             scope.complete()
 
@@ -209,6 +232,90 @@ class Registration(Injected):
             raise ValueError
 
         return valid
+
+    def enable_forwarding(self, session_id, enabled, msgid=""):
+        state = self.session.get(session_id)
+
+        if not state.authenticated:
+            raise LtdErrorException("You must be registered to change forwarding.")
+
+        with self.nickdb_connection.enter_scope() as scope:
+            if not self.nickdb.is_email_confirmed(scope, state.nick):
+                raise LtdErrorException("Please confirm your email address first.")
+
+            self.nickdb.enable_message_forwarding(scope, state.nick, enabled)
+
+            if enabled:
+                self.broker.deliver(session_id, ltd.encode_co_output("Message forwarding enabled.", msgid))
+            else:
+                self.broker.deliver(session_id, ltd.encode_co_output("Message forwarding disabled."))
+
+            scope.complete()
+
+    def request_confirmation(self, session_id):
+        nick, details = self.__load_details_if_confirmed__(session_id)
+        code = None
+
+        with self.confirmation_connection.enter_scope() as scope:
+            pending = self.confirmation.count_pending_requests(scope, nick, details.email, self.config.timeouts_confirmation_request)
+
+            if pending > 0:
+                self.reputation.critical(session_id)
+
+                raise LtdStatusException("Confirmation", "Confirmation request pending, please check your inbox.")
+
+            code = self.confirmation.create_request(scope, nick, details.email)
+
+            scope.complete()
+
+        with self.mail_queue_connection.enter_scope() as scope:
+            text = self.template.load("confirm_email")
+            tpl = Template(text)
+            body = tpl.substitute(nick=nick, code=code)
+
+            self.mail_queue.enqueue(scope, details.email, "Email confirmation", body)
+
+            self.broker.deliver(session_id, ltd.encode_co_output("Confirmation mail sent."))
+
+            scope.complete()
+
+    def confirm(self, session_id, code):
+        nick, details = self.__load_details_if_confirmed__(session_id)
+
+        with self.confirmation_connection.enter_scope() as scope:
+            if not self.confirmation.has_pending_request(scope, nick, code, details.email, self.config.timeouts_confirmation_code):
+                self.reputation.fatal(session_id)
+
+                raise LtdStatusException("Confirmation", "Confirmation failed.")
+
+            self.confirmation.delete_requests(scope, nick)
+
+            scope.complete()
+
+        with self.nickdb_connection.enter_scope() as scope:
+            self.nickdb.set_email_confirmed(scope, nick, True)
+
+            scope.complete()
+
+        self.broker.deliver(session_id, ltd.encode_status_msg("Confirmation", "Email address confirmed. Enable message forwarding with /forward."))
+
+    def __load_details_if_confirmed__(self, session_id):
+        state = self.session.get(session_id)
+
+        if not state.authenticated:
+            raise LtdErrorException("You must be registered to confirm your email address.")
+
+        with self.nickdb_connection.enter_scope() as scope:
+            if self.nickdb.is_email_confirmed(scope, state.nick):
+                raise LtdResponseException("Already already confirmed.",
+                                           ltd.encode_co_output("Email address already confirmed."))
+
+            details = self.nickdb.lookup(scope, state.nick)
+
+            if not details.email:
+                raise LtdStatusException("Confirmation", "No email address set.")
+
+            return state.nick, details
 
     def delete(self, session_id, password, msgid=""):
         state = self.session.get(session_id)

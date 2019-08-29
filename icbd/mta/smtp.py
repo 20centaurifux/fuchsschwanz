@@ -23,36 +23,39 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import inspect
+import mta
+from email.mime.text import MIMEText
+import smtplib
 
-def decode(data):
-    text = ""
+class MTA(mta.MTA):
+    def __init__(self, host, port, ssl, sender, username=None, password=None):
+        self.server = host
+        self.port = port
+        self.ssl = ssl
+        self.sender = sender
+        self.username = username
+        self.password = password
+        self.__client = None
 
-    if data:
-        text = data.decode("UTF-8", errors="backslashreplace")
+    def start_session(self):
+        if self.ssl:
+            self.__client = smtplib.SMTP_SSL()
+        else:
+            self.__client = smtplib.SMTP()
 
-    return text
+        self.__client.connect(self.server, self.port)
 
-def tolower(argname=None, argnames=None):
-    def decorator(fn):
-        spec = inspect.getfullargspec(fn)
+        if self.username and self.password:
+            self.__client.login(self.username, self.password)
 
-        def wrapper(*args):
-            vals = []
+    def send(self, receiver, subject, body):
+        msg = MIMEText(body, 'plain', 'utf-8')
 
-            for i in range(len(args)):
-                val = args[i]
+        msg['Subject'] = subject.strip()
+        msg['From'] = self.sender.strip()
+        msg['To'] = receiver.strip()
 
-                if (argname and spec.args[i] == argname) or (argnames and spec.args[i] in argnames):
-                    val = val.lower()
+        self.__client.sendmail(self.sender, [ receiver ], msg.as_string())
 
-                vals.append(val)
-
-            return fn(*vals)
-
-        return wrapper
-
-    return decorator
-
-def hide_password(password):
-    return len(password) * "*"
+    def end_session(self):
+        self.__client.quit()

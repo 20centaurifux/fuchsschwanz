@@ -37,7 +37,8 @@ class EmailQueue(mail.EmailQueue):
         now = self.__now__()
 
         cur = scope.get_handle()
-        cur.execute("insert into Mail (UUID, Receiver, Subject, Body, Timestamp) values (?, ?, ?, ?, ?)", (msgid, receiver, subject, body, now))
+        cur.execute("insert into Mail (UUID, Receiver, Subject, Body, Timestamp) values (?, ?, ?, ?, ?)",
+                    (msgid, receiver, subject, body, now))
 
     def next_mail(self, scope):
         cur = scope.get_handle()
@@ -45,20 +46,28 @@ class EmailQueue(mail.EmailQueue):
 
         m = cur.fetchone()
 
+        msg = None
+
         if m:
-            return mail.Email(msgid=uuid.UUID(m["uuid"]),
-                              created_at=datetime.fromtimestamp(m["Timestamp"]),
-                              receiver=m["Receiver"],
-                              subject=m["Subject"],
-                              body=m["Body"])
+            msg = mail.Email(msgid=uuid.UUID(m["uuid"]),
+                             created_at=datetime.fromtimestamp(m["Timestamp"]),
+                             receiver=m["Receiver"],
+                             subject=m["Subject"],
+                             body=m["Body"],
+                             mta_errors=m["MTAErrors"])
+
+        return msg
 
     def mark_delivered(self, scope, msgid):
         cur = scope.get_handle()
         cur.execute("update Mail set Sent=1 where uuid=?", (msgid.hex,))
 
+    def mta_error(self, scope, msgid):
+        cur = scope.get_handle()
+        cur.execute("update Mail set MTAErrors=MTAErrors + 1 where uuid=?", (msgid.hex,))
+
     def delete(self, scope, msgid):
         cur = scope.get_handle()
-        print(msgid.hex)
         cur.execute("delete from Mail where uuid=?", (msgid.hex,))
 
     @staticmethod

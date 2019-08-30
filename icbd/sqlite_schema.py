@@ -145,7 +145,7 @@ class Schema(di.Injected):
                            references Nick(Name)
                            on delete cascade)""")
 
-        cur.execute("create index ConfirmationRequester on ConfirmationRequest (Nick asc)")
+        cur.execute("create index ConfirmationRequester on ConfirmationRequest (Nick asc, Email asc)")
 
         cur.execute("""create table Mail (
                          UUID char(32) not null,
@@ -154,6 +154,7 @@ class Schema(di.Injected):
                          Body varchar(512) not null,
                          Timestamp int not null,
                          Sent int not null default 0,
+                         MTAErrors int not null default 0,
                          primary key (UUID))""")
 
         cur.execute("create index MailTimestamp on Mail (Timestamp asc)")

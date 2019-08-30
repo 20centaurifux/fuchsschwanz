@@ -26,7 +26,6 @@
 from typing import NewType
 from dataclasses import dataclass
 from datetime import datetime
-
 from uuid import UUID
 import database
 
@@ -37,9 +36,14 @@ class Email:
     receiver: str
     subject: str
     body: str
+    mta_errors: int
 
     def __str__(self):
-        return "msgid=%s, created_at=%s, receiver=%s, subject=%s" % (self.msgid, self.created_at, self.receiver, self.subject)
+        return "msgid=%s, created_at=%s, receiver=%s, subject=%s, errors=%d" % (self.msgid,
+                                                                                self.created_at,
+                                                                                self.receiver,
+                                                                                self.subject,
+                                                                                self.mta_errors)
 
 Connection = NewType("Connection", database.Connection)
 
@@ -53,8 +57,21 @@ class EmailQueue:
     def next_mail(self, scope):
         raise NotImplementedError
 
-    def mark_delivered(self, scope, uuid):
+    def mark_delivered(self, scope, msgid):
         raise NotImplementedError
 
-    def delete(self, scope, uuid):
+    def mta_error(self, scope, msgid):
+        raise NotImplementedError
+
+    def delete(self, scope, msgid):
+        raise NotImplementedError
+
+class MTA:
+    def start_session(self):
+        raise NotImplementedError
+
+    def send(self, receiver, subject, body):
+        raise NotImplementedError
+
+    def end_session(self):
         raise NotImplementedError

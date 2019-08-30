@@ -33,7 +33,7 @@ import config.json
 import log
 import sqlite
 import mail.sqlite
-import mta.smtp
+import mail.smtp
 
 class Sendmail:
     def __init__(self, opts):
@@ -42,12 +42,12 @@ class Sendmail:
         self.__config = config.from_mapping(mapping)
         self.__log = log.new_logger(self.__config.logging_verbosity)
 
-        self.__mta = mta.smtp.MTA(self.__config.smtp_hostname,
-                                  self.__config.smtp_port,
-                                  self.__config.smtp_ssl_enabled,
-                                  self.__config.smtp_sender,
-                                  self.__config.smtp_username,
-                                  self.__config.smtp_password)
+        self.__mta = mail.smtp.MTA(self.__config.smtp_hostname,
+                                   self.__config.smtp_port,
+                                   self.__config.smtp_ssl_enabled,
+                                   self.__config.smtp_sender,
+                                   self.__config.smtp_username,
+                                   self.__config.smtp_password)
 
     def run(self):
         while True:
@@ -77,8 +77,8 @@ class Sendmail:
                     delta = datetime.utcnow() - msg.created_at
                     elapsed = int(delta.total_seconds())
 
-                    if elapsed > self.__config.mailer_ttl and False:
-                        self.__log.debug("Mail too old, removing from queue.")
+                    if elapsed > self.__config.mailer_ttl or msg.mta_errors >= self.__config.mailer_max_errors:
+                        self.__log.debug("Mail too old or too many transfer failures, removing from queue.")
 
                         queue.delete(scope, msg.msgid)
 
@@ -99,21 +99,38 @@ class Sendmail:
     def __send_mail__(self, msg):
         self.__log.info("Sending mail...")
 
+        delivered = False
+        error = False
+
         try:
             self.__mta.start_session()
-            self.__mta.send(msg.receiver, msg.subject, msg.body)
+
+            try:
+                self.__mta.send(msg.receiver, msg.subject, msg.body)
+                delivered = True
+            except:
+                traceback.print_exc()
+
+                error = True
+
             self.__mta.end_session()
+        except:
+            traceback.print_exc()
 
-            self.__log.debug("Marking mail delivered.")
-
+        if delivered or error:
             connection, queue = self.__connect__()
 
             with connection.enter_scope() as scope:
-                queue.mark_delivered(scope, msg.msgid)
+                if delivered:
+                    self.__log.debug("Marking mail delivered.")
+
+                    queue.mark_delivered(scope, msg.msgid)
+                elif error:
+                    self.__log.debug("Incrementing MTA error counter.")
+
+                    queue.mta_error(scope, msg.msgid)
 
                 scope.complete()
-        except:
-            traceback.print_exc()
 
     def __connect__(self):
         connection = sqlite.Connection(self.__config.database_filename)

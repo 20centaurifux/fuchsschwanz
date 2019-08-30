@@ -1,0 +1,13 @@
+USAGE
+     /confirm
+     /confirm {code}
+
+DESCRIPTION
+     Lets the registered user confirm his or her email address.
+
+     When no argument is given an email with a confirmation code is
+     sent to the user. This code is necessary to finish the
+     confirmation process successfully.
+
+SEE ALSO
+     confirmation /email /forward /noforward

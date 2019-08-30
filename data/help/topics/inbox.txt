@@ -7,5 +7,7 @@ INBOX
      Messages are stored in an inbox even when the receiver isn't
      logged in.
 
+     Messages can be forwarded to an associated email address.
+
 SEE ALSO
-     registration /p /write /read
+     registration /p /write /read confirmation /forward /noforward

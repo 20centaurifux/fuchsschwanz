@@ -1,0 +1,8 @@
+USAGE
+     /noforward
+
+DESCRIPTION
+     Turns off personal message forwarding.
+
+SEE ALSO
+     inbox /forward confirmation /email

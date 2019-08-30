@@ -1,0 +1,7 @@
+CONFIRMATION
+     Registered nicks can confirm their email address with the
+     /confirm command. This makes it possible to forward messages
+     from the personal inbox as email.
+
+SEE ALSO
+     registration /confirm /forward /noforward inbox

@@ -1,0 +1,11 @@
+USAGE
+     /forward
+
+DESCRIPTION
+     Turns on personal message forwarding.
+
+     Messages from the persoanl inbox are sent to the associated email
+     address.
+
+SEE ALSO
+     /noforward inbox confirmation /email

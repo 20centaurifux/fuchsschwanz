@@ -7,5 +7,8 @@ DESCRIPTION
 
      Without an argument the email address is unset.
 
+     Email addresses can be confirmed to enable message forwarding.
+
 SEE ALSO
-     registration /rname /addr /phone /text /www /whois
+     registration /rname /addr /phone /text /www /whois confirmation
+     /confirm /forward /noforward inbox

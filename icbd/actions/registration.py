@@ -111,6 +111,9 @@ class Registration(Injected):
 
         state = self.session.get(session_id)
 
+        if not state.authenticated:
+            raise LtdErrorException("You must be registered to change your password.")
+
         with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, state.nick):
                 raise LtdErrorException("Authorization failure.")
@@ -121,6 +124,11 @@ class Registration(Injected):
                 self.reputation.fatal(session_id)
 
                 raise LtdErrorException("Authorization failure.")
+
+            if not validate.is_valid_password(new_pwd):
+                raise LtdStatusException("Pass",
+                                         "Password format not valid. Password length must be between %d and %d characters."
+                                         % (validate.PASSWORD_MIN, validate.PASSWORD_MAX))
 
             self.nickdb.set_password(scope, state.nick, new_pwd)
 

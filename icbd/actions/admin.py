@@ -26,6 +26,7 @@
 from actions import Injected
 import ltd
 from core import Verbosity
+import validate
 from log import LOG_LEVELS
 from exception import LtdErrorException
 
@@ -80,18 +81,46 @@ class Admin(Injected):
 
         state = self.session.get(session_id)
 
-        for nick in nicks:
-            victim_id = self.session.find_nick(nick)
-
-            if victim_id:
-                self.broker.deliver(session_id, ltd.encode_status_msg("Drop", "You have dropped %s." % nick))
-                self.broker.deliver(victim_id, ltd.encode_status_msg("Drop", "You have been disconnected by %s." % state.nick))
-                self.broker.deliver(victim_id, ltd.encode_empty_cmd("g"))
-            else:
-                self.broker.deliver(session_id, ltd.encode_str("e", "%s not found." % nick))
-
         with self.statsdb_connection.enter_scope() as scope:
-            self.statsdb.add_drop(scope)
+            for nick in nicks:
+                victim_id = self.session.find_nick(nick)
+
+                if victim_id:
+                    self.broker.deliver(session_id, ltd.encode_status_msg("Drop", "You have dropped %s." % nick))
+                    self.broker.deliver(victim_id, ltd.encode_status_msg("Drop", "You have been disconnected by %s." % state.nick))
+                    self.broker.deliver(victim_id, ltd.encode_empty_cmd("g"))
+
+                    self.statsdb.add_drop(scope)
+                else:
+                    self.broker.deliver(session_id, ltd.encode_str("e", "%s not found." % nick))
+
+                scope.complete()
+
+    def change_password(self, session_id, nick, password):
+        state = self.session.get(session_id)
+
+        if state.nick.lower() == nick.lower():
+            if not state.authenticated:
+                raise LtdErrorException("You must be registered to change your password.")
+        else:
+            self.__test_admin__(session_id)
+
+        self.log.debug("Changing password of user %s." % nick)
+
+        with self.nickdb_connection.enter_scope() as scope:
+            if not self.nickdb.exists(scope, nick):
+                raise LtdErrorException("%s not found." % nick)
+
+            self.log.debug("Nick found, changing password.")
+
+            if not validate.is_valid_password(password):
+                raise LtdStatusException("Password",
+                                         "Password format not valid. Password length must be between %d and %d characters."
+                                         % (validate.PASSWORD_MIN, validate.PASSWORD_MAX))
+            
+            self.nickdb.set_password(scope, nick, password)
+
+            self.broker.deliver(session_id, ltd.encode_status_msg("Pass", "Password changed."))
 
             scope.complete()
 

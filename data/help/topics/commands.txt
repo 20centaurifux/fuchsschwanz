@@ -11,7 +11,7 @@ COMMANDS
      L    /log
      M    /m, /motd
      N    /name, /news, /noaway, /nobeep, notify
-     P    /p, /phone
+     P    /p, /passwd, /phone
      R    /read, /reputation, /rname
      S    /secure, /shush, /stats, /status
      T    /talk, /text, /topic

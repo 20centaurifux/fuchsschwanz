@@ -1,0 +1,9 @@
+USAGE
+     /passwd {nick} {password}
+
+DESCRIPTION
+     Changes the password of a user. This requires administrative
+     privileges.
+
+SEE ALSO
+     registration /p

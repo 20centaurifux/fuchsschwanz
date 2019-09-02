@@ -197,7 +197,6 @@ class Register:
 @command("cp")
 class ChangePassword:
     @staticmethod
-    @loginrequired
     @fieldslength(count=1)
     def process(session_id, fields):
         msg_fields = fields[0].split(" ")
@@ -208,6 +207,13 @@ class ChangePassword:
             ACTION(actions.registration.Registration).change_password(session_id, old_pwd, new_pwd)
         else:
             raise LtdErrorException("Usage: /cp {old password} {new password}")
+
+@command("newpasswd")
+class ResetPassword:
+    @staticmethod
+    @fieldslength(count=1)
+    def process(session_id, fields):
+        ACTION(actions.registration.Registration).reset_password(session_id, fields[0])
 
 def msgid(fields):
     return fields[1] if len(fields) == 2 else ""
@@ -297,6 +303,22 @@ class DisableForwarding:
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
         ACTION(actions.registration.Registration).enable_forwarding(session_id, enabled=False, msgid=msgid(fields))
+
+@command("protect")
+class EnableProtection:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        ACTION(actions.registration.Registration).set_protected(session_id, protected=True, msgid=msgid(fields))
+
+@command("noprotect")
+class DisableProtection:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        ACTION(actions.registration.Registration).set_protected(session_id, protected=False, msgid=msgid(fields))
 
 @command("confirm")
 class ConfirmEmail:

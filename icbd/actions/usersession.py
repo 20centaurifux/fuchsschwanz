@@ -35,12 +35,12 @@ import core
 import group
 import validate
 import ltd
-from textutils import hide_password
+from textutils import hide_chars
 from exception import LtdErrorException, LtdStatusException
 
 class UserSession(Injected):
     def login(self, session_id, loginid, nick, password, group_name, status=""):
-        self.log.debug("User login: loginid=%s, nick=%s, password=%s", loginid, nick, hide_password(password))
+        self.log.debug("User login: loginid=%s, nick=%s, password=%s", loginid, nick, hide_chars(password))
 
         if not validate.is_valid_loginid(loginid):
             raise LtdErrorException("loginid must consist of at least %d and at most %d alphabetic characters."

@@ -8,4 +8,4 @@ DESCRIPTION
      time. Otherwise the password is checked.
 
 SEE ALSO
-     registration /cp /delete /whois
+     registration /cp /newpasswd /delete /whois

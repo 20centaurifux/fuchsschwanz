@@ -130,6 +130,9 @@ class Schema(di.Injected):
         cur = scope.get_handle()
 
         cur.execute("""alter table Nick
+                         add column IsProtected int not null default 1""")
+
+        cur.execute("""alter table Nick
                          add column IsMailConfirmed int not null default 0""")
 
         cur.execute("""alter table Nick
@@ -146,6 +149,17 @@ class Schema(di.Injected):
                            on delete cascade)""")
 
         cur.execute("create index ConfirmationRequester on ConfirmationRequest (Nick asc, Email asc)")
+
+        cur.execute("""create table PasswordReset (
+                         Nick varchar(16) not null,
+                         Code varchar(32) not null,
+                         Timestamp int not null,
+                         constraint fk_nick
+                           foreign key (Nick)
+                           references Nick(Name)
+                           on delete cascade)""")
+
+        cur.execute("create index PasswordNick on ConfirmationRequest (Nick asc)")
 
         cur.execute("""create table Mail (
                          UUID char(32) not null,

@@ -1,0 +1,9 @@
+USAGE
+     /newpasswd {confirmed email address}
+
+DESCRIPTION
+     Requests a new password. This requires a confirmed email
+     address.
+
+SEE ALSO
+     /cp confirmation /email

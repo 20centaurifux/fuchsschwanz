@@ -186,6 +186,18 @@ class NickDb(nickdb.NickDb, di.Injected):
         cur.execute("update Nick set ForwardMessages=? where Name=?", (int(enabled), nick))
 
     @tolower(argname="nick")
+    def is_protected(self, scope, nick):
+        cur = scope.get_handle()
+        cur.execute("select IsProtected from Nick where Name=?", (nick,))
+
+        return bool(cur.fetchone()[0])
+
+    @tolower(argname="nick")
+    def set_protected(self, scope, nick, protected):
+        cur = scope.get_handle()
+        cur.execute("update Nick set IsProtected=? where Name=?", (int(protected), nick))
+
+    @tolower(argname="nick")
     def get_lastlogin(self, scope, nick):
         info = None
 

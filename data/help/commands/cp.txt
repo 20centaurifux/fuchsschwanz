@@ -5,4 +5,4 @@ DESCRIPTION
      Sets a new password for your registered nickname.
 
 SEE ALSO
-     registration /p
+     registration /p /newpasswd

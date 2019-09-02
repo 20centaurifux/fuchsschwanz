@@ -50,8 +50,10 @@ class Config:
     timeouts_idle_boot: int = core.DEFAULT_IDLE_BOOT
     timeouts_idle_mod: int = core.DEFAULT_IDLE_MOD
     timeouts_time_between_messages: float = 0.5
-    timeouts_confirmation_request: float = 30.0
+    timeouts_confirmation_request: float = 60.0
     timeouts_confirmation_code: float = 1800.0
+    timeouts_password_reset_request: float = 60.0
+    timeouts_password_reset_code: float = 1800.0
     mailer_ttl: float = 480.0
     mailer_max_errors: int = 5
     mailer_interval: int = 30

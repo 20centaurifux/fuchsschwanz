@@ -29,9 +29,11 @@ from string import Template
 from actions import Injected
 import validate
 import confirmation
+import passwordreset
 import mail
 import template
 import ltd
+from textutils import hide_chars
 from exception import LtdResponseException, LtdErrorException, LtdStatusException
 
 class Registration(Injected):
@@ -40,6 +42,9 @@ class Registration(Injected):
 
         self.confirmation_connection = self.resolve(confirmation.Connection)
         self.confirmation = self.resolve(confirmation.Confirmation)
+
+        self.password_reset_connection = self.resolve(passwordreset.Connection)
+        self.password_reset = self.resolve(passwordreset.PasswordReset)
 
         self.mail_queue_connection = self.resolve(mail.Connection)
         self.mail_queue = self.resolve(mail.EmailQueue)
@@ -123,20 +128,92 @@ class Registration(Injected):
 
         state = self.session.get(session_id)
 
+        is_reset_code = False
+
+        with self.password_reset_connection.enter_scope() as scope:
+            is_reset_code = self.password_reset.has_pending_request(scope, state.nick, old_pwd, self.config.timeouts_password_reset_code)
+
         with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, state.nick):
                 raise LtdErrorException("Authorization failure.")
 
             self.log.debug("Nick found, validating password.")
 
-            if not self.nickdb.check_password(scope, state.nick, old_pwd):
-                self.reputation.fatal(session_id)
+            if not is_reset_code:
+                if not state.authenticated:
+                    self.reputation.critical(session_id)
 
-                raise LtdErrorException("Authorization failure.")
+                    raise LtdErrorException("You must be registered to change your password.")
+
+                if not self.nickdb.check_password(scope, state.nick, old_pwd):
+                    self.reputation.fatal(session_id)
+
+                    raise LtdErrorException("Authorization failure.")
+            else:
+                self.log.debug("Password reset code found.")
 
             self.nickdb.set_password(scope, state.nick, new_pwd)
 
             self.broker.deliver(session_id, ltd.encode_status_msg("Pass", "Password changed."))
+
+            scope.complete()
+
+        if is_reset_code:
+            with self.password_reset_connection.enter_scope() as scope:
+                self.password_reset.delete_requests(scope, state.nick)
+
+                scope.complete()
+
+    def reset_password(self, session_id, email):
+        self.log.debug("Resetting user password.")
+
+        if not email:
+            raise LtdErrorException("Usage: /newpasswd {confirmed email address}")
+
+        if not validate.is_valid_email(email):
+            raise LtdErrorException("Wrong email address.")
+
+        state = self.session.get(session_id)
+        details = None
+
+        with self.nickdb_connection.enter_scope() as scope:
+            if not self.nickdb.exists(scope, state.nick):
+                raise LtdErrorException("Nick not registered.")
+
+            if not self.nickdb.is_email_confirmed(scope, state.nick):
+                self.reputation.warning(session_id)
+
+                raise LtdErrorException("Nick has no confirmed email address.")
+
+            details = self.nickdb.lookup(scope, state.nick)
+
+            if details.email.lower() != email.lower():
+                self.reputation.critical(session_id)
+
+                raise LtdErrorException("Wrong email address.")
+
+        code = None
+
+        with self.password_reset_connection.enter_scope() as scope:
+            pending = self.password_reset.count_pending_requests(scope, state.nick, self.config.timeouts_password_reset_request)
+
+            if pending > 0:
+                self.reputation.critical(session_id)
+
+                raise LtdStatusException("Pass", "Password reset pending, please check your inbox.")
+
+            code = self.password_reset.create_request(scope, state.nick)
+
+            scope.complete()
+
+        with self.mail_queue_connection.enter_scope() as scope:
+            text = self.template.load("password_reset_email")
+            tpl = Template(text)
+            body = tpl.substitute(nick=state.nick, code=code)
+
+            self.mail_queue.enqueue(scope, details.email, "Password reset", body)
+
+            self.broker.deliver(session_id, ltd.encode_co_output("Email sent."))
 
             scope.complete()
 
@@ -153,6 +230,22 @@ class Registration(Injected):
                 self.broker.deliver(session_id, ltd.encode_co_output("Security set to password required.", msgid))
             else:
                 self.broker.deliver(session_id, ltd.encode_co_output("Security set to automatic.", msgid))
+
+            scope.complete()
+
+    def set_protected(self, session_id, protected, msgid=""):
+        state = self.session.get(session_id)
+
+        if not state.authenticated:
+            raise LtdErrorException("You must be registered to change your protection level.")
+
+        with self.nickdb_connection.enter_scope() as scope:
+            self.nickdb.set_protected(scope, state.nick, protected)
+
+            if protected:
+                self.broker.deliver(session_id, ltd.encode_co_output("Protection enabled.", msgid))
+            else:
+                self.broker.deliver(session_id, ltd.encode_co_output("Protection disabled.", msgid))
 
             scope.complete()
 
@@ -342,13 +435,17 @@ class Registration(Injected):
         if not nick:
             raise LtdErrorException("Usage: /whois {nick}")
 
+        state = self.session.get(session_id)
+
+        signon = signoff = protected = details = None
+
         with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, nick):
                 raise LtdErrorException("%s not found." % nick)
 
             signon = self.nickdb.get_signon(scope, nick)
             signoff = self.nickdb.get_signoff(scope, nick)
-
+            protected = self.nickdb.is_protected(scope, nick)
             details = self.nickdb.lookup(scope, nick)
 
         login = idle = away = None
@@ -363,6 +460,14 @@ class Registration(Injected):
 
             if loggedin_state.away:
                 away = "%s (since %s)" % (loggedin_state.away, loggedin_state.t_away.elapsed_str())
+
+        email = None
+
+        if details.email:
+            if (session_id == loggedin_session and state.authenticated) or not protected:
+                email = details.email
+            else:
+                email = hide_chars(details.email)
 
         msgs = bytearray()
 
@@ -390,7 +495,7 @@ class Registration(Injected):
         if away:
             msgs.extend(ltd.encode_co_output("Away:           %s" % away, msgid))
 
-        msgs.extend(ltd.encode_co_output("E-Mail:         %s" % display_value(details.email), msgid))
+        msgs.extend(ltd.encode_co_output("E-Mail:         %s" % display_value(email), msgid))
         msgs.extend(ltd.encode_co_output("WWW:            %s" % display_value(details.www), msgid))
 
         if not details.address:

@@ -1,0 +1,8 @@
+USAGE
+     /noprotect
+
+DESCRIPTION
+     Allow other users to see the email address of the logged in user.
+
+SEE ALSO
+     /protect /whois /email

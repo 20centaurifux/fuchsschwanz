@@ -23,39 +23,23 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-import mta
-from email.mime.text import MIMEText
-import smtplib
+from typing import NewType
+import database
 
-class MTA(mta.MTA):
-    def __init__(self, host, port, ssl, sender, username=None, password=None):
-        self.server = host
-        self.port = port
-        self.ssl = ssl
-        self.sender = sender
-        self.username = username
-        self.password = password
-        self.__client = None
+Connection = NewType("Connection", database.Connection)
 
-    def start_session(self):
-        if self.ssl:
-            self.__client = smtplib.SMTP_SSL()
-        else:
-            self.__client = smtplib.SMTP()
+class PasswordReset:
+    def setup(self, scope):
+        raise NotImplementedError
 
-        self.__client.connect(self.server, self.port)
+    def create_request(self, scope, nick):
+        raise NotImplementedError
 
-        if self.username and self.password:
-            self.__client.login(self.username, self.password)
+    def count_pending_requests(self, scope, nick, ttl):
+        raise NotImplementedError
 
-    def send(self, receiver, subject, body):
-        msg = MIMEText(body, 'plain', 'utf-8')
+    def has_pending_request(self, scope, nick, code, ttl):
+        raise NotImplementedError
 
-        msg['Subject'] = subject.strip()
-        msg['From'] = self.sender.strip()
-        msg['To'] = receiver.strip()
-
-        self.__client.sendmail(self.sender, [ receiver ], msg.as_string())
-
-    def end_session(self):
-        self.__client.quit()
+    def delete_requests(self, scope, nick):
+        raise NotImplementedError

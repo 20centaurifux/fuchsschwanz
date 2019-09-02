@@ -26,49 +26,49 @@
 from datetime import datetime
 import secrets
 import string
-import confirmation
+import passwordreset
 from sqlite_schema import Schema
 from textutils import tolower
 
-class Confirmation(confirmation.Confirmation):
+class PasswordReset(passwordreset.PasswordReset):
     def setup(self, scope):
         Schema().upgrade(scope)
 
-    @tolower(argnames=["nick", "email"])
-    def create_request(self, scope, nick, email):
+    @tolower(argname="nick")
+    def create_request(self, scope, nick):
         code = self.__generate_code__()
         now = self.__now__()
 
         cur = scope.get_handle()
-        cur.execute("insert into ConfirmationRequest (Nick, Email, Code, Timestamp) values (?, ?, ?, ?)",
-                    (nick, email, code, now))
+        cur.execute("insert into PasswordReset (Nick, Code, Timestamp) values (?, ?, ?)",
+                    (nick, code, now))
 
         return code
 
-    @tolower(argnames=["nick", "email"])
-    def count_pending_requests(self, scope, nick, email, ttl):
+    @tolower(argname="nick")
+    def count_pending_requests(self, scope, nick, ttl):
         timestamp = self.__now__() - ttl
 
         cur = scope.get_handle()
-        cur.execute("select count(*) from ConfirmationRequest where Nick=? and Email=? and Timestamp>=?",
-                    (nick, email, timestamp))
+        cur.execute("select count(*) from PasswordReset where Nick=? and Timestamp>=?",
+                    (nick, timestamp))
 
         return int(cur.fetchone()[0])
 
-    @tolower(argnames=["nick", "email"])
-    def has_pending_request(self, scope, nick, code, email, ttl):
+    @tolower(argname="nick")
+    def has_pending_request(self, scope, nick, code, ttl):
         timestamp = self.__now__() - ttl
 
         cur = scope.get_handle()
-        cur.execute("select count(*) from ConfirmationRequest where Nick=? and Email=? and Code=? and Timestamp>=?",
-                    (nick, email, code, timestamp))
+        cur.execute("select count(*) from PasswordReset where Nick=? and Code=? and Timestamp>=?",
+                    (nick, code, timestamp))
 
         return bool(cur.fetchone()[0])
 
     @tolower(argname="nick")
     def delete_requests(self, scope, nick):
         cur = scope.get_handle()
-        cur.execute("delete from ConfirmationRequest where Nick=?", (nick,))
+        cur.execute("delete from PasswordReset where Nick=?", (nick,))
 
     @staticmethod
     def __generate_code__():

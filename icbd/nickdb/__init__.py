@@ -93,6 +93,12 @@ class NickDb:
     def enable_message_forwarding(self, scope, nick, enabled):
         raise NotImplementedError
 
+    def is_protected(self, scope, nick):
+        raise NotImplementedError
+
+    def set_protected(self, scope, nick, protected):
+        raise NotImplementedError
+
     def get_lastlogin(self, scope, nick):
         raise NotImplementedError
 

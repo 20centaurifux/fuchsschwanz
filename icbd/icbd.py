@@ -55,6 +55,8 @@ import statsdb
 import statsdb.sqlite
 import confirmation
 import confirmation.sqlite
+import passwordreset
+import passwordreset.sqlite
 import motd
 import motd.plaintext
 import manual
@@ -463,6 +465,8 @@ async def run(opts):
     container.register(statsdb.StatsDb, statsdb.sqlite.StatsDb())
     container.register(confirmation.Connection, connection)
     container.register(confirmation.Confirmation, confirmation.sqlite.Confirmation())
+    container.register(passwordreset.Connection, connection)
+    container.register(passwordreset.PasswordReset, passwordreset.sqlite.PasswordReset())
     container.register(motd.Motd, motd.plaintext.Motd(os.path.join(data_dir, "motd")))
     container.register(manual.Manual, manual.plaintext.Manual(os.path.join(data_dir, "help")))
     container.register(news.News, news.plaintext.News(os.path.join(data_dir, "news")))

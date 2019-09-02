@@ -11,4 +11,4 @@ DESCRIPTION
 
 SEE ALSO
      registration /rname /addr /phone /text /www /whois confirmation
-     /confirm /forward /noforward inbox
+     /confirm /forward /noforward inbox /protect /noprotect

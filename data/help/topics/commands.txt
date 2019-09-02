@@ -2,16 +2,18 @@ COMMANDS
      0-9  ?
      A    /addr, /away
      B    /beep, /boot
-     C    /cancel, /cp
+     C    /cancel, /cp, /confirm
      D    /delete, /drop
      E    /echoback, /email, /exclude
+     E    /forward
      G    /g
      H    /help, /hush
      I    /invite
      L    /log
      M    /m, /motd
-     N    /name, /news, /noaway, /nobeep, notify
-     P    /p, /phone
+     N    /name, /news, /newpasswd, /noaway, /nobeep, /noforward,
+          /noprotect, /notify
+     P    /p, /phone, /protect
      R    /read, /reputation, /rname
      S    /secure, /shush, /stats, /status
      T    /talk, /text, /topic

@@ -55,11 +55,9 @@ def tolower(argname=None, argnames=None):
     return decorator
 
 def hide_chars(text):
-    print("HIDE: %s" % text)
     hidden = ""
 
     if text:
         hidden = len(text) * "*"
-    print("HIDDEN: %s" % hidden)
 
     return hidden

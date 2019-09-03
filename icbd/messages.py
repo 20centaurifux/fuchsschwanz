@@ -215,6 +215,21 @@ class ResetPassword:
     def process(session_id, fields):
         ACTION(actions.registration.Registration).reset_password(session_id, fields[0])
 
+@command("passwd")
+class ChangeUserPassword:
+    @staticmethod
+    @loginrequired
+    @fieldslength(count=1)
+    def process(session_id, fields):
+        msg_fields = fields[0].split(" ")
+
+        if len(msg_fields) == 2:
+            nick, password = msg_fields
+
+            ACTION(actions.admin.Admin).change_password(session_id, nick, password)
+        else:
+            raise LtdErrorException("Usage: /passwd {nick} {new password}")
+
 def msgid(fields):
     return fields[1] if len(fields) == 2 else ""
 

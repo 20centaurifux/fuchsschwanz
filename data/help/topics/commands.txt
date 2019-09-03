@@ -13,7 +13,7 @@ COMMANDS
      M    /m, /motd
      N    /name, /news, /newpasswd, /noaway, /nobeep, /noforward,
           /noprotect, /notify
-     P    /p, /phone, /protect
+     P    /p, /passwd, /phone, /protect
      R    /read, /reputation, /rname
      S    /secure, /shush, /stats, /status
      T    /talk, /text, /topic

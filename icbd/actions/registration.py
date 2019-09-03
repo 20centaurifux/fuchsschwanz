@@ -152,6 +152,11 @@ class Registration(Injected):
             else:
                 self.log.debug("Password reset code found: %s", old_pwd)
 
+            if not validate.is_valid_password(new_pwd):
+                raise LtdStatusException("Pass",
+                                         "Password format not valid. Password length must be between %d and %d characters."
+                                         % (validate.PASSWORD_MIN, validate.PASSWORD_MAX))
+
             self.nickdb.set_password(scope, state.nick, new_pwd)
 
             self.broker.deliver(session_id, ltd.encode_status_msg("Pass", "Password changed."))

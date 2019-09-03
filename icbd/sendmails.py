@@ -109,13 +109,13 @@ class Sendmail:
                 self.__mta.send(msg.receiver, msg.subject, msg.body)
                 delivered = True
             except:
-                traceback.print_exc()
+                self.__log.warning(traceback.format_exc())
 
                 error = True
 
             self.__mta.end_session()
         except:
-            traceback.print_exc()
+            self.__log.error(traceback.format_exc())
 
         if delivered or error:
             connection, queue = self.__connect__()

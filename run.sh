@@ -8,4 +8,10 @@ if [ ! -f "$RUNTIME_DIR/selfsigned.key" ] || [ ! -f "$RUNTIME_DIR/selfsigned.cer
 	openssl req -new -newkey rsa:4096 -x509 -sha256 -days 365 -nodes -out "$RUNTIME_DIR/selfsigned.cert" -keyout "$RUNTIME_DIR/selfsigned.key"
 fi
 
-python3.7 icbd/icbd.py --config=./config.json --data-dir="$(pwd)/data"
+CONFIG=$(pwd)/config.json
+
+if [ ! -f "$CONFIG" ]; then
+	CONFIG=$(pwd)/config.minimal.json
+fi
+
+python3.7 icbd/icbd.py --config=$CONFIG --data-dir="$(pwd)/data"

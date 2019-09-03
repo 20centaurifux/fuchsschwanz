@@ -485,7 +485,8 @@ async def run(opts):
 
     try:
         await server.run()
-    except: pass
+    except:
+        logger.error(traceback.format_exc())
 
     logger.info("Server stopped.")
 

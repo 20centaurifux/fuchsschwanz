@@ -22,19 +22,6 @@
 	{
 		"verbosity": 4
 	},
-	"mbox":
-	{
-		"limit": 20
-	},
-	"timeouts":
-	{
-		"ping": 30,
-		"timeBetweenMessages": 0.5,
-		"idleBoot": 0,
-		"idleMod": 0,
-		"awayMessage": 30.0,
-		"mboxFullMessage": 60.0
-	},
 	"database":
 	{
 		"filename": "runtime/icbd.db"

@@ -63,10 +63,10 @@ class StatsDb:
         raise NotImplementedError
 
     def set_max_groups(self, scope, max_groups):
-        raise NotImplementedError#
+        raise NotImplementedError
 
     def set_max_idle(self, scope, idle_time, idle_nick):
-        raise NotImplementedError#
+        raise NotImplementedError
 
     def start(self, scope):
         raise NotImplementedError

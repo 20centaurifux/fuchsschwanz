@@ -1,0 +1,63 @@
+{
+	"server":
+	{
+		"hostname": "localhost",
+		"unsecureLogin": false,
+		"maxLogins": 100
+	},
+	"tcp":
+	{
+		"enabled": true,
+		"address": "127.0.0.1",
+		"port": 7326
+	},
+	"tcp_tls":
+	{
+		"enabled": true,
+		"address": "127.0.0.1",
+		"port": 7327,
+		"cert": "runtime/selfsigned.cert",
+		"key": "runtime/selfsigned.key"
+	},
+	"logging":
+	{
+		"verbosity": 4
+	},
+	"database":
+	{
+		"filename": "runtime/icbd.db"
+	},
+	"mbox":
+	{
+		"limit": 25
+	},
+	"timeouts":
+	{
+		"connection": 120.0,
+		"ping": 45.0,
+		"awayMessage": 30.0,
+		"mboxFullMessage": 30.0,
+		"idleBoot": 60.0,
+		"idleMod": 480.0,
+		"timeBetweenMessages": 0.5,
+		"confirmationRequest": 60.0,
+		"confirmationCode": 1800.0,
+		"passwordResetRequest": 60.0,
+		"passwordResetCode": 1800.0
+	},
+	"mailer":
+	{
+		"ttl": 480.0,
+		"maxErrors": 5,
+		"interval": 30
+	},
+	"smtp":
+	{
+		"hostname": "127.0.0.1",
+		"port": 25,
+		"sslEnabled": false,
+		"sender": "ICB Service",
+		"username": "foxmulder",
+		"password": "trustno1"
+	}
+}

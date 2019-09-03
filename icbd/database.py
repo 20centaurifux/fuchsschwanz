@@ -39,7 +39,6 @@ class TransactionScope():
         return self
 
     def __exit__(self, type, value, traceback):
-        self.__enter_scope__()
         self.__leave_scope__(self.__completed)
 
         for l in self.__listener:

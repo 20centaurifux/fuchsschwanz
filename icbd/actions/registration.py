@@ -137,9 +137,9 @@ class Registration(Injected):
             if not self.nickdb.exists(scope, state.nick):
                 raise LtdErrorException("Authorization failure.")
 
-            self.log.debug("Nick found, validating password.")
-
             if not is_reset_code:
+                self.log.debug("Validating password.")
+
                 if not state.authenticated:
                     self.reputation.critical(session_id)
 
@@ -150,7 +150,7 @@ class Registration(Injected):
 
                     raise LtdErrorException("Authorization failure.")
             else:
-                self.log.debug("Password reset code found.")
+                self.log.debug("Password reset code found: %s", old_pwd)
 
             self.nickdb.set_password(scope, state.nick, new_pwd)
 
@@ -178,6 +178,8 @@ class Registration(Injected):
 
         with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.exists(scope, state.nick):
+                self.reputation.warning(session_id)
+
                 raise LtdErrorException("Nick not registered.")
 
             if not self.nickdb.is_email_confirmed(scope, state.nick):
@@ -205,6 +207,8 @@ class Registration(Injected):
             code = self.password_reset.create_request(scope, state.nick)
 
             scope.complete()
+
+        self.log.debug("Reset code generated: %s", code)
 
         with self.mail_queue_connection.enter_scope() as scope:
             text = self.template.load("password_reset_email")
@@ -341,11 +345,13 @@ class Registration(Injected):
             if enabled:
                 self.broker.deliver(session_id, ltd.encode_co_output("Message forwarding enabled.", msgid))
             else:
-                self.broker.deliver(session_id, ltd.encode_co_output("Message forwarding disabled."))
+                self.broker.deliver(session_id, ltd.encode_co_output("Message forwarding disabled.", msgid))
 
             scope.complete()
 
     def request_confirmation(self, session_id):
+        self.log.debug("Requesting email confirmation.")
+
         nick, details = self.__load_details_if_confirmed__(session_id)
         code = None
 
@@ -353,13 +359,15 @@ class Registration(Injected):
             pending = self.confirmation.count_pending_requests(scope, nick, details.email, self.config.timeouts_confirmation_request)
 
             if pending > 0:
-                self.reputation.critical(session_id)
+                self.reputation.warning(session_id)
 
                 raise LtdStatusException("Confirmation", "Confirmation request pending, please check your inbox.")
 
             code = self.confirmation.create_request(scope, nick, details.email)
 
             scope.complete()
+
+        self.log.debug("Confirmation code generated: %s", code)
 
         with self.mail_queue_connection.enter_scope() as scope:
             text = self.template.load("confirm_email")

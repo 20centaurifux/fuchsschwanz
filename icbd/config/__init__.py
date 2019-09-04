@@ -60,6 +60,7 @@ class Config:
     smtp_hostname: str = "127.0.0.1"
     smtp_port: int = 25
     smtp_ssl_enabled: bool = False
+    smtp_start_tls: bool = False
     smtp_sender: str = "root@localhost"
     smtp_username: str = None
     smtp_password: str = None

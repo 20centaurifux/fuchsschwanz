@@ -28,10 +28,11 @@ import smtplib
 import mail
 
 class MTA(mail.MTA):
-    def __init__(self, host, port, ssl, sender, username=None, password=None):
+    def __init__(self, host, port, ssl, start_tls, sender, username=None, password=None):
         self.server = host
         self.port = port
         self.ssl = ssl
+        self.start_tls = start_tls
         self.sender = sender
         self.username = username
         self.password = password
@@ -39,9 +40,14 @@ class MTA(mail.MTA):
 
     def start_session(self):
         if self.ssl:
-            self.__client = smtplib.SMTP_SSL()
+            self.__client = smtplib.SMTP(self.server, self.port)
+            self.__client.ehlo()
         else:
             self.__client = smtplib.SMTP()
+
+        if self.start_tls:
+            self.__client.starttls()
+            self.__client.ehlo()
 
         self.__client.connect(self.server, self.port)
 

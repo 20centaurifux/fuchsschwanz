@@ -45,6 +45,7 @@ class Sendmail:
         self.__mta = mail.smtp.MTA(self.__config.smtp_hostname,
                                    self.__config.smtp_port,
                                    self.__config.smtp_ssl_enabled,
+                                   self.__config.smtp_start_tls,
                                    self.__config.smtp_sender,
                                    self.__config.smtp_username,
                                    self.__config.smtp_password)

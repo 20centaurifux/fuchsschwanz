@@ -45,10 +45,6 @@ Please find below a list with the most important settings.
 * address, port: network address and port used for encrypted TCP connections
 * key, cert: private key and certificate
 
-## mbox
-
-* limit: message box limit for new registered users
-
 ## timeouts
 
 * connection: defines after what period of time (seconds) the peer TCP connection

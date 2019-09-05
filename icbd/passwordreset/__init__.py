@@ -43,3 +43,6 @@ class PasswordReset:
 
     def delete_requests(self, scope, nick):
         raise NotImplementedError
+
+    def cleanup(self, scope, ttl):
+        raise NotImplementedError

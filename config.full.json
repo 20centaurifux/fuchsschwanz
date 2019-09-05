@@ -25,7 +25,8 @@
 	},
 	"database":
 	{
-		"filename": "runtime/icbd.db"
+		"filename": "runtime/icbd.db",
+		"cleanupInterval": 3600
 	},
 	"mbox":
 	{

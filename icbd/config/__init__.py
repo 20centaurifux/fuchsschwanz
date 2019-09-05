@@ -42,6 +42,7 @@ class Config:
     tcp_tls_key: str = None
     logging_verbosity: core.Verbosity = core.Verbosity.INFO
     database_filename: str = None
+    database_cleanup_interval: float = 3600.0
     mbox_limit: int = 25
     timeouts_connection: float = 120.0
     timeouts_ping: float = 45.0

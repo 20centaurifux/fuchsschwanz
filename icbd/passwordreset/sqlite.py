@@ -68,9 +68,11 @@ class PasswordReset(passwordreset.PasswordReset):
         cur = scope.get_handle()
         cur.execute("delete from PasswordReset where Nick=?", (nick,))
 
-    @staticmethod
-    def __generate_code__():
-        return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(8)])
+    def cleanup(self, scope, ttl):
+        timestamp = self.__now__() - ttl
+
+        cur = scope.get_handle()
+        cur.execute("delete from PasswordReset where Timestamp<?", (timestamp,))
 
     @staticmethod
     def __now__():

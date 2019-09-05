@@ -142,7 +142,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
     def __reject__(self, message):
         rejected = False
 
-        if len(message) >= 5 and (message[1] == 98 or message[1] == 99):
+        if len(message) >= 5 and (message[1] == 98 or message[1] == 99): # public or private message
             state = self.__session_store.get(self.__session_id)
 
             if not state.hushlist.empty():
@@ -301,7 +301,11 @@ class Server(di.Injected):
                nickdb_connection: nickdb.Connection,
                nickdb: nickdb.NickDb,
                statsdb_connection: statsdb.Connection,
-               statsdb: statsdb.StatsDb):
+               statsdb: statsdb.StatsDb,
+               cfm_connection: confirmation.Connection,
+               cfm: confirmation.Confirmation,
+               pwdreset_connection: passwordreset.Connection,
+               pwdreset: passwordreset.PasswordReset):
         self.__log = log
         self.__config = config
         self.__session_store = store
@@ -311,6 +315,10 @@ class Server(di.Injected):
         self.__nickdb = nickdb
         self.__statsdb_connection = statsdb_connection
         self.__statsdb = statsdb
+        self.__cfm_connection = cfm_connection
+        self.__cfm = cfm
+        self.__pwdreset_connection = pwdreset_connection
+        self.__pwdreset = pwdreset
 
     async def run(self):
         self.__signon_server__()
@@ -318,6 +326,7 @@ class Server(di.Injected):
         loop = asyncio.get_running_loop()
 
         loop.create_task(self.__process_idling_sessions__())
+        loop.create_task(self.__cleanup_dbs_())
 
         servers = []
 
@@ -378,7 +387,7 @@ class Server(di.Injected):
                     alive = v.t_alive.elapsed()
 
                     if alive >= self.__config.timeouts_connection:
-                        self.__log.info("Connection timeout, session='%s', last activity=%2.2f", k, alive)
+                        self.__log.info("Connection timeout, session='%s', last activity=%.2f", k, alive)
 
                         self.__connections[k].timeout()
                     else:
@@ -392,7 +401,7 @@ class Server(di.Injected):
                             last_ping = v.t_ping.elapsed() if v.t_ping else 0.0
 
                             if not v.t_ping or last_ping >= self.__config.timeouts_ping:
-                                self.__log.debug("Sending ping message to session %s (idle=%2.2f, ping timeout=%2.2f).", k, elapsed, last_ping)
+                                self.__log.debug("Sending ping message to session %s (idle=%.2f, ping timeout=%.2f).", k, elapsed, last_ping)
 
                                 self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
 
@@ -420,7 +429,7 @@ class Server(di.Injected):
             if max_idle_time and max_idle_time > self.__max_idle_time:
                 max_idle_time = round(max_idle_time)
 
-                self.__log.debug("Max idle time: %2.2f (%s)", max_idle_time, max_idle_nick)
+                self.__log.debug("Max idle time: %.2f (%s)", max_idle_time, max_idle_nick)
 
                 with self.__statsdb_connection.enter_scope() as scope:
                     self.__statsdb.set_max_idle(scope, max_idle_time, max_idle_nick)
@@ -429,13 +438,33 @@ class Server(di.Injected):
 
                     self.__max_idle_time = max_idle_time
 
-            self.__log.debug("Next interval: %2.2f", interval)
+            self.__log.debug("Next interval: %.2f", interval)
 
             await asyncio.sleep(interval)
 
     @staticmethod
     def __next_interval__(interval, next_interval):
         return int(min(interval, math.ceil(next_interval)))
+
+    async def __cleanup_dbs_(self):
+        while True:
+            self.__log.info("Cleaning up confirmation requests...")
+
+            with self.__cfm_connection.enter_scope() as scope:
+                self.__cfm.cleanup(scope, self.__config.timeouts_confirmation_code)
+
+                scope.complete()
+
+            self.__log.info("Cleaning up password reset codes...")
+
+            with self.__pwdreset_connection.enter_scope() as scope:
+                self.__pwdreset.cleanup(scope, self.__config.timeouts_password_reset_request)
+
+                scope.complete()
+
+            self.__log.debug("Next cleanup in %.2f seconds.", self.__config.database_cleanup_interval)
+
+            await asyncio.sleep(self.__config.database_cleanup_interval)
 
 async def run(opts):
     data_dir = opts.get("data_dir")

@@ -41,5 +41,5 @@ class Confirmation:
     def has_pending_request(self, scope, nick, code, email, ttl):
         raise NotImplementedError
 
-    def delete_requests(self, scope, nick):
+    def cleanup(self, scope, ttl):
         raise NotImplementedError

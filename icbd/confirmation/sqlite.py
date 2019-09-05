@@ -68,6 +68,12 @@ class Confirmation(confirmation.Confirmation):
         cur = scope.get_handle()
         cur.execute("delete from ConfirmationRequest where Nick=?", (nick,))
 
+    def cleanup(self, scope, ttl):
+        timestamp = self.__now__() - ttl
+
+        cur = scope.get_handle()
+        cur.execute("delete from ConfirmationRequest where Timestamp<?", (timestamp,))
+
     @staticmethod
     def __now__():
         return int(datetime.utcnow().timestamp())

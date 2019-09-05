@@ -24,11 +24,9 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from datetime import datetime
-import secrets
-import string
 import confirmation
 from sqlite_schema import Schema
-from textutils import tolower
+from textutils import tolower, make_password
 
 class Confirmation(confirmation.Confirmation):
     def setup(self, scope):
@@ -36,7 +34,7 @@ class Confirmation(confirmation.Confirmation):
 
     @tolower(argnames=["nick", "email"])
     def create_request(self, scope, nick, email):
-        code = self.__generate_code__()
+        code = make_password(8)
         now = self.__now__()
 
         cur = scope.get_handle()
@@ -69,10 +67,6 @@ class Confirmation(confirmation.Confirmation):
     def delete_requests(self, scope, nick):
         cur = scope.get_handle()
         cur.execute("delete from ConfirmationRequest where Nick=?", (nick,))
-
-    @staticmethod
-    def __generate_code__():
-        return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(8)])
 
     @staticmethod
     def __now__():

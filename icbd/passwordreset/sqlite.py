@@ -24,11 +24,9 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from datetime import datetime
-import secrets
-import string
 import passwordreset
 from sqlite_schema import Schema
-from textutils import tolower
+from textutils import tolower, make_password
 
 class PasswordReset(passwordreset.PasswordReset):
     def setup(self, scope):
@@ -36,7 +34,7 @@ class PasswordReset(passwordreset.PasswordReset):
 
     @tolower(argname="nick")
     def create_request(self, scope, nick):
-        code = self.__generate_code__()
+        code = make_password(8)
         now = self.__now__()
 
         cur = scope.get_handle()

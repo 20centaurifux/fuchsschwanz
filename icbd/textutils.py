@@ -24,6 +24,8 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 import inspect
+import secrets
+import string
 
 def decode(data):
     text = ""
@@ -61,3 +63,6 @@ def hide_chars(text):
         hidden = len(text) * "*"
 
     return hidden
+
+def make_password(length):
+    return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(length)])

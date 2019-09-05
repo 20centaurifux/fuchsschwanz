@@ -28,12 +28,11 @@ import secrets
 from logging import Logger
 from hashlib import sha256
 from datetime import datetime
-import string
 import nickdb
 from sqlite_schema import Schema
 import di
 import core
-from textutils import tolower
+from textutils import tolower, make_password
 
 class NickDb(nickdb.NickDb, di.Injected):
     def __init__(self):
@@ -48,9 +47,9 @@ class NickDb(nickdb.NickDb, di.Injected):
         if not self.exists(scope, core.NICKSERV):
             self.log.debug("Creating server account: nick='%s'", core.NICKSERV)
 
-            self.__create_user__(scope, nick=core.NICKSERV, password=self.__generate_password__(), is_admin=False)
+            self.__create_user__(scope, nick=core.NICKSERV, password=make_password(8), is_admin=False)
 
-            password = self.__generate_password__()
+            password = make_password(8)
 
         if not self.exists(scope, "admin"):
             self.log.debug("Creating admin account: nick='admin'")
@@ -58,10 +57,6 @@ class NickDb(nickdb.NickDb, di.Injected):
             self.__create_user__(scope, nick="admin", password=password, is_admin=True)
 
             self.log.info("Initial admin created with password '%s'." % password)
-
-    @staticmethod
-    def __generate_password__():
-        return "".join([secrets.choice(string.ascii_letters + string.digits) for _ in range(8)])
 
     def __create_user__(self, scope, nick, password, is_admin):
         self.create(scope, nick)

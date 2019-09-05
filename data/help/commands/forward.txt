@@ -4,7 +4,7 @@ USAGE
 DESCRIPTION
      Turns on personal message forwarding.
 
-     Messages from the persoanl inbox are sent to the associated email
+     Messages from the personal inbox are sent to the confirmed email
      address.
 
 SEE ALSO

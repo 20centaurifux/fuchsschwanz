@@ -1,5 +1,5 @@
 USAGE
-     /w {-s | -g | . | group }
+     /w {-s|-g|.|group}
 
 DESCRIPTION
      Displays a list of available groups and their members.

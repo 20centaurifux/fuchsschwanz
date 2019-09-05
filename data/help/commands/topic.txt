@@ -3,9 +3,7 @@ USAGE
      /topic
 
 DESCRIPTION
-     Sets the group's topic.
-
-     With no argument the topic is shown.
+     Sets or displays the group's topic.
 
 SEE ALSO
      group

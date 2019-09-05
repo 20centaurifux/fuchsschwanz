@@ -1,6 +1,6 @@
 ~OUTLAWS~ (GROUP)
-     ~OUTLAWS~ is a quiet group for booted users. Topic and status cannot be
-     changed.
+     ~OUTLAWS~ is a quiet group for booted users. Topic and status
+     cannot be changed.
 
 SEE ALSO
      group idle /topic /status 1 ~IDLE~

@@ -1,5 +1,6 @@
 VISIBILITY (GROUP)
-     There are 3 visibility levels. They affect how a group is listed.
+     There are 3 visibility levels. They affect how a group
+     is listed.
 
           Flag  Name          Description
           ------------------------------------------

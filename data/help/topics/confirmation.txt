@@ -3,5 +3,8 @@ CONFIRMATION
      /confirm command. This makes it possible to forward messages
      from the personal inbox as email.
 
+     Resetting a password with /newpasspwd requires a confirmed
+     email address.
+
 SEE ALSO
-     registration /confirm /forward /noforward inbox
+     registration /confirm /forward /noforward inbox /newpasspwd

@@ -3,7 +3,7 @@ REGISTRATION
      you should register it with the /p command.
 
      A new record is created if you register a nickname for the very first
-     time. From now on your password is required for registration.  Change
+     time. From now on your password is required for registration. Change
      your password with /cp.
 
      A registered nick has an inbox for private messages. This allows you

@@ -4,7 +4,7 @@ VOLUME (GROUP)
           Flag  Name       Description
           -------------------------------------------------
           l     loud       all messages are delivered
-          n     normal     a few status message are ignored
+          n     normal     a few status messages are ignored
           q     quiet      no messages at all
 
      Change the volume with the /status command.

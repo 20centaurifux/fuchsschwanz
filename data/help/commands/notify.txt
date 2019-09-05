@@ -1,8 +1,8 @@
 USAGE
-     /notify  {-q} {-n nick|-s site}
+     /notify {-q} {-n nick|-s site}
 
 DESCRIPTION
-     Receive a notification when nickname or site signs on/off.
+     Receive a notification when a nickname or site signs on/off.
 
           Argument         Description
           -----------------------------------------------------------

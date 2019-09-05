@@ -7,7 +7,8 @@ DESCRIPTION
 
      Without an argument the email address is unset.
 
-     Email addresses can be confirmed to enable message forwarding.
+     Confirm your email address to enable message forwarding or resetting
+     your password.
 
 SEE ALSO
      registration /rname /addr /phone /text /www /whois confirmation

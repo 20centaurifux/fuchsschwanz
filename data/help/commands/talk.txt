@@ -1,5 +1,5 @@
 USAGE
-     /talk  {-q} {-d} {-r} {-n nickname | -s address}
+     /talk {-q} {-d} {-r} {-n nickname|-s address}
 
 DESCRIPTION
      Adds a nickname (-n) or address (-s) to the list of allowed talkers in a

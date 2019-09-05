@@ -1,12 +1,10 @@
 ICB
      ICB (Internet Citizen's Band) is an early Internet teleconferencing
-     program.  It allows clients across the Internet to communicate. ICB
+     program. It allows clients across the Internet to communicate. ICB
      was first released in 1989.
 
      You find a brief history of ICB and a list of related software on the
-     official website.
-
-     http://www.icb.net
+     official website: http://www.icb.net
 
      This server is a full rewrite. It differs from the original software
      in some aspects. If you want to support this project or file a bug

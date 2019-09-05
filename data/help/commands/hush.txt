@@ -1,10 +1,10 @@
 USAGE
-     /hush  {-q} {-o} {-p} {-n nick|-s site}
+     /hush {-q} {-o} {-p} {-n nick|-s site}
 
 DESCRIPTION
      Hush nicknames or sites.
 
-     Note that hush is a toggle. If you have hushed someone, issued the same
+     Note that hush is a toggle. If you have hushed someone, issue the same
      command you used to hush them to unhush them.
 
           Argument         Description

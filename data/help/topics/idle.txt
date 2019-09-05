@@ -1,5 +1,5 @@
 IDLE (GROUP)
-     Group members and moderators can be booted automatically when they're
+     Group members and moderators may be booted automatically when they're
      idling too long.
 
      The idle-boot option defines the maximum allowed idle time for all

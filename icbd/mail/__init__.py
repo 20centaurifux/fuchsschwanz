@@ -47,6 +47,15 @@ class Email:
 
 Connection = NewType("Connection", database.Connection)
 
+class EmailQueueListener:
+    def enqueued(self, receiver, subject, body): pass
+
+    def delivered(self, msgid): pass
+
+    def mta_error(self, msgid): pass
+
+    def deleted(self, msgid): pass
+
 class EmailQueue:
     def setup(self, scope):
         raise NotImplementedError
@@ -64,6 +73,12 @@ class EmailQueue:
         raise NotImplementedError
 
     def delete(self, scope, msgid):
+        raise NotImplementedError
+
+    def add_listener(self, listener):
+        raise NotImplementedError
+
+    def remove_listener(self, listener):
         raise NotImplementedError
 
 class MTA:

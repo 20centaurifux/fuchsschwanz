@@ -22,10 +22,6 @@ note down the password.
 	2019-06-03 ... DEBUG ... Creating admin account: nick='admin'
 	2019-06-03 ... INFO ... Initial admin created with password 'HPjkVtiS'.
 
-Start the sendmails.sh script to send emails:
-
-	$ ./sendmails.sh
-
 # Configuration
 
 Please find below a list with the most important settings.

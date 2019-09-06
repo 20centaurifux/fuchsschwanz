@@ -25,8 +25,11 @@
 """
 import getopt
 import sys
+import asyncio
+import signal
 from datetime import datetime
 import traceback
+import logging
 import time
 import config
 import config.json
@@ -34,30 +37,21 @@ import log
 import sqlite
 import mail.sqlite
 import mail.smtp
+import di
 
-class Sendmail:
-    def __init__(self, opts):
-        mapping = config.json.load(opts["config"])
+class Sendmail(di.Injected):
+    def inject(self, config: config.Config, log: logging.Logger, mta: mail.MTA):
+        self.__config = config
+        self.__log = log
+        self.__mta = mta
 
-        self.__config = config.from_mapping(mapping)
-        self.__log = log.new_logger(self.__config.logging_verbosity)
+        self.__prepare_db__()
 
-        self.__mta = mail.smtp.MTA(self.__config.smtp_hostname,
-                                   self.__config.smtp_port,
-                                   self.__config.smtp_ssl_enabled,
-                                   self.__config.smtp_start_tls,
-                                   self.__config.smtp_sender,
-                                   self.__config.smtp_username,
-                                   self.__config.smtp_password)
+    def send(self):
+        msg = self.__next_mail__()
 
-    def run(self):
-        while True:
-            msg = self.__next_mail__()
-
-            if msg:
-                self.__send_mail__(msg)
-
-            time.sleep(self.__config.mailer_interval)
+        if msg:
+            self.__send_mail__(msg)
 
     def __next_mail__(self):
         connection, queue = self.__connect__()
@@ -139,6 +133,14 @@ class Sendmail:
 
         return connection, queue
 
+    def __prepare_db__(self):
+        connection, queue = self.__connect__()
+
+        with connection.enter_scope() as scope:
+            queue.setup(scope)
+
+            scope.complete()
+
 def get_opts(argv):
     options, _ = getopt.getopt(argv, 'c:d:', ['config=', 'data-dir='])
     m = {}
@@ -152,13 +154,60 @@ def get_opts(argv):
 
     return m
 
+async def run(opts):
+    mapping = config.json.load(opts["config"])
+    conf = config.from_mapping(mapping)
+    logger = log.new_logger(conf.logging_verbosity)
+
+    logger.info("Starting mailer...")
+
+    container = di.default_container
+
+    container.register(config.Config, conf)
+    container.register(logging.Logger, logger)
+    container.register(mail.Connection, sqlite.Connection(conf.database_filename))
+    container.register(mail.MTA, mail.smtp.MTA(conf.smtp_hostname,
+                                               conf.smtp_port,
+                                               conf.smtp_ssl_enabled,
+                                               conf.smtp_start_tls,
+                                               conf.smtp_sender,
+                                               conf.smtp_username,
+                                               conf.smtp_password))
+
+    logger.debug("Interval: %.2f", conf.mailer_interval)
+
+    mailer = Sendmail()
+
+    timeout_f = asyncio.ensure_future(asyncio.sleep(0))
+    signal_q = asyncio.Queue()
+    signal_f = asyncio.ensure_future(signal_q.get())
+
+    if hasattr(signal, "SIGUSR1"):
+        logger.debug("Registerung SIGUSR1 handler.")
+
+        loop = asyncio.get_event_loop()
+        loop.add_signal_handler(signal.SIGUSR1, lambda: signal_q.put_nowait(signal.SIGUSR1))
+
+    while True:
+        done, _ = await asyncio.wait([timeout_f, signal_f], return_when=asyncio.FIRST_COMPLETED)
+
+        for f in done:
+            if f is timeout_f:
+                logger.debug("Timeout.")
+
+                timeout_f = asyncio.ensure_future(asyncio.sleep(conf.mailer_interval))
+            elif f is signal_f:
+                logger.debug("Signal.")
+
+                signal_f = asyncio.ensure_future(signal_q.get())
+
+        mailer.send()
+
 if __name__ == "__main__":
     try:
         opts = get_opts(sys.argv[1:])
 
-        mailer = Sendmail(opts)
-
-        mailer.run()
+        asyncio.run(run(opts))
 
     except getopt.GetoptError as ex:
         print(str(ex))

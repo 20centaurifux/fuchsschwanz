@@ -29,6 +29,9 @@ import mail
 from sqlite_schema import Schema
 
 class EmailQueue(mail.EmailQueue):
+    def __init__(self):
+        self.__listeners = []
+
     def setup(self, scope):
         Schema().upgrade(scope)
 
@@ -39,6 +42,9 @@ class EmailQueue(mail.EmailQueue):
         cur = scope.get_handle()
         cur.execute("insert into Mail (UUID, Receiver, Subject, Body, Timestamp) values (?, ?, ?, ?, ?)",
                     (msgid, receiver, subject, body, now))
+
+        for l in self.__listeners:
+            l.enqueued(receiver, subject, body)
 
     def next_mail(self, scope):
         cur = scope.get_handle()
@@ -62,13 +68,28 @@ class EmailQueue(mail.EmailQueue):
         cur = scope.get_handle()
         cur.execute("update Mail set Sent=1 where uuid=?", (msgid.hex,))
 
+        for l in self.__listeners:
+            l.delivered(receiver, msgid)
+
     def mta_error(self, scope, msgid):
         cur = scope.get_handle()
         cur.execute("update Mail set MTAErrors=MTAErrors + 1 where uuid=?", (msgid.hex,))
 
+        for l in self.__listeners:
+            l.mta_error(msgid)
+
     def delete(self, scope, msgid):
         cur = scope.get_handle()
         cur.execute("delete from Mail where uuid=?", (msgid.hex,))
+
+        for l in self.__listeners:
+            l.deleted(msgid)
+
+    def add_listener(self, listener):
+        self.__listeners.append(listener)
+
+    def remove_listener(self, listener):
+        self.__listeners.remove(listener)
 
     @staticmethod
     def __now__():

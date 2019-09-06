@@ -34,6 +34,8 @@ from getpass import getuser
 import getopt
 import sys
 import os
+from subprocess import Popen
+import signal
 import math
 import core
 import config
@@ -466,6 +468,34 @@ class Server(di.Injected):
 
             await asyncio.sleep(self.__config.database_cleanup_interval)
 
+class Sendmail(di.Injected, mail.EmailQueueListener):
+    def inject(self, log: logging.Logger, queue: mail.EmailQueue):
+        self.__log = log
+        self.__queue = queue
+        self.__pid = None
+
+    def spawn(self, config):
+        args = self.__build_args__(config)
+
+        self.__log.info("Spawning mailer process: %s", " ".join(args))
+
+        self.__pid = Popen(args).pid
+
+        self.__log.info("Child process id: %d", self.__pid)
+
+        self.__queue.add_listener(self)
+
+    def __build_args__(self, config):
+        script = os.path.join(os.path.dirname(__file__), "sendmails.py")
+
+        return [sys.executable, script, "--config", config]
+
+    def enqueued(self, receiver, subject, body):
+        self.__log.debug("Mail enqueued.")
+
+        if hasattr(signal, "SIGUSR1"):
+            os.kill(self.__pid, signal.SIGUSR1)
+
 async def run(opts):
     data_dir = opts.get("data_dir")
 
@@ -511,6 +541,9 @@ async def run(opts):
         scope.complete()
 
     server = Server()
+    mailer = Sendmail()
+
+    mailer.spawn(opts["config"])
 
     try:
         await server.run()

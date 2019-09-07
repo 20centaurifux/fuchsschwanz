@@ -1,4 +1,4 @@
-# 2019-08-08 v0.1.4
+# 2019-09-07 v0.1.4
 	* FEATURE: email addresses are hidden by default
 	* FEATURE: email addresses can be confirmed
 	* FEATURE: message forwarding (personal inbox to email)

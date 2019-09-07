@@ -481,7 +481,7 @@ class Sendmail(di.Injected, mail.EmailQueueListener):
 
         self.__pid = Popen(args).pid
 
-        self.__log.info("Child process id: %d", self.__pid)
+        self.__log.info("Child process started with pid %d.", self.__pid)
 
         self.__queue.add_listener(self)
 
@@ -495,6 +495,14 @@ class Sendmail(di.Injected, mail.EmailQueueListener):
 
         if hasattr(signal, "SIGUSR1"):
             os.kill(self.__pid, signal.SIGUSR1)
+
+    def kill(self):
+        if self.__pid and hasattr(signal, "SIGKILL"):
+            self.__log.info("Killing mailer process with pid %d.", self.__pid)
+
+            try:
+                os.kill(self.__pid, signal.SIGKILL)
+            except: pass
 
 async def run(opts):
     data_dir = opts.get("data_dir")
@@ -549,6 +557,8 @@ async def run(opts):
         await server.run()
     except:
         logger.error(traceback.format_exc())
+
+    mailer.kill()
 
     logger.info("Server stopped.")
 

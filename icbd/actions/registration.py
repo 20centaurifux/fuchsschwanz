@@ -262,7 +262,7 @@ class Registration(Injected):
         state = self.session.get(session_id)
 
         if not state.authenticated:
-            raise LtdErrorException("You must be registered to change your security.")
+            raise LtdErrorException("You must be registered to change your profile.")
 
         if not self.__validate_field__(field, text):
             raise LtdResponseException("Invalid attribute.",

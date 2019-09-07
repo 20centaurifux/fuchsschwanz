@@ -66,6 +66,9 @@ class EmailQueue:
     def next_mail(self, scope):
         raise NotImplementedError
 
+    def next_batch(self, scope, max_size=None):
+        raise NotImplementedError
+
     def mark_delivered(self, scope, msgid):
         raise NotImplementedError
 

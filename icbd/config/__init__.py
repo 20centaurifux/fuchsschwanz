@@ -58,6 +58,7 @@ class Config:
     mailer_ttl: float = 480.0
     mailer_max_errors: int = 3
     mailer_interval: int = 30.0
+    mailer_batch_size: int = 100
     smtp_hostname: str = "127.0.0.1"
     smtp_port: int = 25
     smtp_ssl_enabled: bool = False

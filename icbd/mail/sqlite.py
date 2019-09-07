@@ -48,21 +48,37 @@ class EmailQueue(mail.EmailQueue):
 
     def next_mail(self, scope):
         cur = scope.get_handle()
-        cur.execute("select * from Mail where Sent=0 order by Timestamp asc")
+        cur.execute("select * from Mail where Sent=0 order by Timestamp asc limit 1")
 
         m = cur.fetchone()
 
         msg = None
 
         if m:
-            msg = mail.Email(msgid=uuid.UUID(m["uuid"]),
-                             created_at=datetime.fromtimestamp(m["Timestamp"]),
-                             receiver=m["Receiver"],
-                             subject=m["Subject"],
-                             body=m["Body"],
-                             mta_errors=m["MTAErrors"])
+            msg = self.__to_email__(m)
 
         return msg
+
+    def next_batch(self, scope, max_size=None):
+        cur = scope.get_handle()
+
+        query = "select * from Mail where Sent=0 order by Timestamp asc"
+
+        if max_size:
+            query += " limit %d" % max_size
+
+        cur.execute(query)
+
+        return [self.__to_email__(m) for m in cur.fetchall()]
+
+    @staticmethod
+    def __to_email__(row):
+        return mail.Email(msgid=uuid.UUID(row["uuid"]),
+                          created_at=datetime.fromtimestamp(row["Timestamp"]),
+                          receiver=row["Receiver"],
+                          subject=row["Subject"],
+                          body=row["Body"],
+                          mta_errors=row["MTAErrors"])
 
     def mark_delivered(self, scope, msgid):
         cur = scope.get_handle()

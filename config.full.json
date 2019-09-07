@@ -50,7 +50,8 @@
 	{
 		"ttl": 480.0,
 		"maxErrors": 5,
-		"interval": 30
+		"interval": 30,
+		"batchSize": 50
 	},
 	"smtp":
 	{

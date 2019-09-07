@@ -50,49 +50,43 @@ class Sendmail(di.Injected):
         self.__prepare_db__()
 
     def send(self):
-        msg = self.__next_mail__()
+        self.__log.debug("Reading batch from mail queue.")
 
-        if msg:
-            self.__send_mail__(msg)
-
-    def __next_mail__(self):
-        read_next = True
-        msg = None
-        commit = False
+        batch = []
 
         with self.__connection.enter_scope() as scope:
-            while read_next:
-                self.__log.debug("Reading next mail.")
+            batch = self.__queue.next_batch(scope, self.__config.mailer_batch_size)
 
-                msg = self.__queue.next_mail(scope)
+            self.__log.debug("Filtering batch of size %d." % len(batch))
 
-                if msg:
-                    self.__log.info("Next mail: %s", msg)
+            if batch:
+                batch = self.__filter__(scope, batch)
 
-                    delta = datetime.utcnow() - msg.created_at
-                    elapsed = int(delta.total_seconds())
-
-                    if elapsed > self.__config.mailer_ttl or msg.mta_errors >= self.__config.mailer_max_errors:
-                        self.__log.debug("Mail too old or too many transfer failures, removing from queue.")
-
-                        self.__queue.delete(scope, msg.msgid)
-
-                        msg = None
-                        commit = True
-                    else:
-                        read_next = False
-                else:
-                    self.__log.debug("No mails found.")
-
-                    read_next = False
-
-            if commit:
                 scope.complete()
 
-        return msg
+        self.__log.debug("%d message(s) left for sending." % len(batch))
+
+        for msg in batch:
+            self.__send_mail__(msg)
+
+    def __filter__(self, scope, batch):
+        filtered = []
+
+        for msg in batch:
+            delta = datetime.utcnow() - msg.created_at
+            elapsed = int(delta.total_seconds())
+
+            if elapsed > self.__config.mailer_ttl or msg.mta_errors >= self.__config.mailer_max_errors:
+                self.__log.debug("Mail %s too old or too many transfer failures, removing from queue.", msg.msgid)
+
+                self.__queue.delete(scope, msg.msgid)
+            else:
+                filtered.append(msg)
+
+        return filtered
 
     def __send_mail__(self, msg):
-        self.__log.info("Sending mail to '%s', subject: '%s'.", msg.receiver, msg.subject)
+        self.__log.info("Sending mail: %s", msg)
 
         delivered = False
         error = False

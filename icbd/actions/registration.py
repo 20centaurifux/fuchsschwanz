@@ -190,7 +190,7 @@ class Registration(Injected):
             if not self.nickdb.is_email_confirmed(scope, state.nick):
                 self.reputation.warning(session_id)
 
-                raise LtdErrorException("Nick has no confirmed email address.")
+                raise LtdErrorException("Wrong email address.")
 
             details = self.nickdb.lookup(scope, state.nick)
 

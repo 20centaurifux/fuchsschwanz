@@ -40,10 +40,12 @@ import mail.smtp
 import di
 
 class Sendmail(di.Injected):
-    def inject(self, config: config.Config, log: logging.Logger, mta: mail.MTA):
+    def inject(self, config: config.Config, log: logging.Logger, mta: mail.MTA, connection: mail.Connection, queue: mail.EmailQueue):
         self.__config = config
         self.__log = log
         self.__mta = mta
+        self.__connection = connection
+        self.__queue = queue
 
         self.__prepare_db__()
 
@@ -54,17 +56,15 @@ class Sendmail(di.Injected):
             self.__send_mail__(msg)
 
     def __next_mail__(self):
-        connection, queue = self.__connect__()
-
         read_next = True
         msg = None
         commit = False
 
-        with connection.enter_scope() as scope:
+        with self.__connection.enter_scope() as scope:
             while read_next:
-                self.__log.debug("Reading next mail...")
+                self.__log.debug("Reading next mail.")
 
-                msg = queue.next_mail(scope)
+                msg = self.__queue.next_mail(scope)
 
                 if msg:
                     self.__log.info("Next mail: %s", msg)
@@ -75,7 +75,7 @@ class Sendmail(di.Injected):
                     if elapsed > self.__config.mailer_ttl or msg.mta_errors >= self.__config.mailer_max_errors:
                         self.__log.debug("Mail too old or too many transfer failures, removing from queue.")
 
-                        queue.delete(scope, msg.msgid)
+                        self.__queue.delete(scope, msg.msgid)
 
                         msg = None
                         commit = True
@@ -92,7 +92,7 @@ class Sendmail(di.Injected):
         return msg
 
     def __send_mail__(self, msg):
-        self.__log.info("Sending mail...")
+        self.__log.info("Sending mail to '%s', subject: '%s'.", msg.receiver, msg.subject)
 
         delivered = False
         error = False
@@ -113,31 +113,21 @@ class Sendmail(di.Injected):
             self.__log.error(traceback.format_exc())
 
         if delivered or error:
-            connection, queue = self.__connect__()
-
-            with connection.enter_scope() as scope:
+            with self.__connection.enter_scope() as scope:
                 if delivered:
                     self.__log.debug("Marking mail delivered.")
 
-                    queue.mark_delivered(scope, msg.msgid)
+                    self.__queue.mark_delivered(scope, msg.msgid)
                 elif error:
                     self.__log.debug("Incrementing MTA error counter.")
 
-                    queue.mta_error(scope, msg.msgid)
+                    self.__queue.mta_error(scope, msg.msgid)
 
                 scope.complete()
 
-    def __connect__(self):
-        connection = sqlite.Connection(self.__config.database_filename)
-        queue = mail.sqlite.EmailQueue()
-
-        return connection, queue
-
     def __prepare_db__(self):
-        connection, queue = self.__connect__()
-
-        with connection.enter_scope() as scope:
-            queue.setup(scope)
+        with self.__connection.enter_scope() as scope:
+            self.__queue.setup(scope)
 
             scope.complete()
 
@@ -166,6 +156,7 @@ async def run(opts):
     container.register(config.Config, conf)
     container.register(logging.Logger, logger)
     container.register(mail.Connection, sqlite.Connection(conf.database_filename))
+    container.register(mail.EmailQueue, mail.sqlite.EmailQueue())
     container.register(mail.MTA, mail.smtp.MTA(conf.smtp_hostname,
                                                conf.smtp_port,
                                                conf.smtp_ssl_enabled,
@@ -191,17 +182,17 @@ async def run(opts):
     while True:
         done, _ = await asyncio.wait([timeout_f, signal_f], return_when=asyncio.FIRST_COMPLETED)
 
+        mailer.send()
+
         for f in done:
             if f is timeout_f:
-                logger.debug("Timeout.")
+                logger.debug("Resetting timeout.")
 
                 timeout_f = asyncio.ensure_future(asyncio.sleep(conf.mailer_interval))
             elif f is signal_f:
-                logger.debug("Signal.")
+                logger.debug("Reading from signal queue.")
 
                 signal_f = asyncio.ensure_future(signal_q.get())
-
-        mailer.send()
 
 if __name__ == "__main__":
     try:

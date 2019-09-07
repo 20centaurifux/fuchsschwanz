@@ -23,6 +23,7 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
+from string import Template
 from actions import Injected
 import ltd
 import validate
@@ -30,7 +31,6 @@ import session
 import mail
 import template
 from exception import LtdErrorException
-from string import Template
 
 class MessageBox(Injected):
     def __init__(self):

@@ -69,7 +69,7 @@ class EmailQueue(mail.EmailQueue):
         cur.execute("update Mail set Sent=1 where uuid=?", (msgid.hex,))
 
         for l in self.__listeners:
-            l.delivered(receiver, msgid)
+            l.delivered(msgid)
 
     def mta_error(self, scope, msgid):
         cur = scope.get_handle()

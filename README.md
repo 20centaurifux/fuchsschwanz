@@ -22,6 +22,8 @@ note down the password.
 	2019-06-03 ... DEBUG ... Creating admin account: nick='admin'
 	2019-06-03 ... INFO ... Initial admin created with password 'HPjkVtiS'.
 
+Send SIGTERM to the process to shutdown the server gracefully.
+
 # Configuration
 
 Please find below a list with the most important settings.

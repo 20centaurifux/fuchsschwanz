@@ -167,24 +167,48 @@ async def run(opts):
     signal_q = asyncio.Queue()
     signal_f = asyncio.ensure_future(signal_q.get())
 
+    loop = asyncio.get_event_loop()
+
+    logger.debug("Registerung SIGTERM handler.")
+
+    loop.add_signal_handler(signal.SIGTERM, lambda: signal_q.put_nowait(signal.SIGTERM))
+
+    logger.debug("Registerung SIGINT handler.")
+
+    loop.add_signal_handler(signal.SIGINT, lambda: None)
+
     if hasattr(signal, "SIGUSR1"):
         logger.debug("Registerung SIGUSR1 handler.")
 
-        loop = asyncio.get_event_loop()
         loop.add_signal_handler(signal.SIGUSR1, lambda: signal_q.put_nowait(signal.SIGUSR1))
 
-    while True:
+    quit = False
+
+    while not quit:
         done, _ = await asyncio.wait([timeout_f, signal_f], return_when=asyncio.FIRST_COMPLETED)
 
-        mailer.send()
+        send = True
+
+        for f in done:
+            if f is signal_f:
+                sig = signal_f.result()
+
+                logger.debug("Signal %s received.", sig)
+
+                if sig == signal.SIGTERM:
+                    send = False
+                    quit = True
+
+        if send:
+            mailer.send()
 
         for f in done:
             if f is timeout_f:
-                logger.debug("Resetting timeout.")
+                logger.debug("Resetting timeout (%.2f seconds).", conf.mailer_interval)
 
                 timeout_f = asyncio.ensure_future(asyncio.sleep(conf.mailer_interval))
-            elif f is signal_f:
-                logger.debug("Reading from signal queue.")
+            else:
+                logger.debug("Reading next signal.")
 
                 signal_f = asyncio.ensure_future(signal_q.get())
 

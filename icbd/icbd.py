@@ -293,6 +293,7 @@ class Server(di.Injected):
 
         self.__connections = {}
         self.__max_idle_time = 0.0
+        self.__servers = []
 
     def inject(self,
                log: logging.Logger,
@@ -330,8 +331,6 @@ class Server(di.Injected):
         loop.create_task(self.__process_idling_sessions__())
         loop.create_task(self.__cleanup_dbs_())
 
-        servers = []
-
         if self.__config.tcp_enabled:
             self.__log.info("Listening on %s:%d (tcp)", self.__config.tcp_address, self.__config.tcp_port)
 
@@ -339,7 +338,7 @@ class Server(di.Injected):
                                                                         self.__config.tcp_address,
                                                                         self.__config.tcp_port)
 
-            servers.append(server)
+            self.__servers.append(server)
 
         if self.__config.tcp_tls_enabled:
             self.__log.info("Listening on %s:%d (tcp/tls)", self.__config.tcp_tls_address, self.__config.tcp_tls_port)
@@ -351,9 +350,15 @@ class Server(di.Injected):
                                               self.__config.tcp_tls_address,
                                               self.__config.tcp_tls_port, ssl=sc)
 
-            servers.append(server)
+            self.__servers.append(server)
 
-        await asyncio.gather(*(map(lambda s: s.serve_forever(), servers)))
+        await asyncio.gather(*(map(lambda s: s.serve_forever(), self.__servers)))
+
+    def close(self):
+        self.__log.info("Stopping server.")
+
+        for s in self.__servers:
+            s.close()
 
     def __signon_server__(self):
         now = datetime.utcnow()
@@ -472,16 +477,16 @@ class Sendmail(di.Injected, mail.EmailQueueListener):
     def inject(self, log: logging.Logger, queue: mail.EmailQueue):
         self.__log = log
         self.__queue = queue
-        self.__pid = None
+        self.__process = None
 
     def spawn(self, config):
         args = self.__build_args__(config)
 
         self.__log.info("Spawning mailer process: %s", " ".join(args))
 
-        self.__pid = Popen(args).pid
+        self.__process = Popen(args)
 
-        self.__log.info("Child process started with pid %d.", self.__pid)
+        self.__log.info("Child process started with pid %d.", self.__process.pid)
 
         self.__queue.add_listener(self)
 
@@ -494,15 +499,21 @@ class Sendmail(di.Injected, mail.EmailQueueListener):
         self.__log.debug("Mail enqueued.")
 
         if hasattr(signal, "SIGUSR1"):
-            os.kill(self.__pid, signal.SIGUSR1)
+            os.kill(self.__process.pid, signal.SIGUSR1)
 
     def kill(self):
-        if self.__pid and hasattr(signal, "SIGKILL"):
-            self.__log.info("Killing mailer process with pid %d.", self.__pid)
+        if self.__process and hasattr(signal, "SIGTERM"):
+            self.__log.info("Sending SIGTERM to child process with pid %d.", self.__process.pid)
 
             try:
-                os.kill(self.__pid, signal.SIGKILL)
+                os.kill(self.__process.pid, signal.SIGTERM)
             except: pass
+
+            self.__log.info("Waiting for child process with pid %d.", self.__process.pid)
+
+            self.__process.wait()
+
+            self.__log.info("Process %d stopped with exit status %d.", self.__process.pid, self.__process.returncode)
 
 async def run(opts):
     data_dir = opts.get("data_dir")
@@ -512,7 +523,7 @@ async def run(opts):
 
     logger = log.new_logger(preferences.logging_verbosity)
 
-    logger.info("Starting server...")
+    logger.info("Starting server process with pid %d...", os.getpid())
 
     container = di.default_container
 
@@ -551,12 +562,19 @@ async def run(opts):
     server = Server()
     mailer = Sendmail()
 
+    loop = asyncio.get_event_loop()
+
+    loop.add_signal_handler(signal.SIGINT, lambda: None)
+    loop.add_signal_handler(signal.SIGTERM, lambda: server.close())
+
     mailer.spawn(opts["config"])
 
     try:
         await server.run()
+    except asyncio.CancelledError:
+        pass
     except:
-        logger.error(traceback.format_exc())
+        logger.warning(traceback.format_exc())
 
     mailer.kill()
 

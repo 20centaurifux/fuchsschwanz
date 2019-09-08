@@ -34,7 +34,7 @@ from getpass import getuser
 import getopt
 import sys
 import os
-from subprocess import Popen
+from subprocess import Popen, DEVNULL
 import signal
 import math
 import core
@@ -484,7 +484,7 @@ class Sendmail(di.Injected, mail.EmailQueueListener):
 
         self.__log.info("Spawning mailer process: %s", " ".join(args))
 
-        self.__process = Popen(args)
+        self.__process = Popen(args, stdout=DEVNULL, stderr=DEVNULL)
 
         self.__log.info("Child process started with pid %d.", self.__process.pid)
 
@@ -499,17 +499,17 @@ class Sendmail(di.Injected, mail.EmailQueueListener):
         self.__log.debug("Mail enqueued.")
 
         if hasattr(signal, "SIGUSR1"):
-            os.kill(self.__process.pid, signal.SIGUSR1)
+            self.__log.debug("Sending SIGUSR1 to child process with pid %d.", self.__process.pid)
+
+            self.__process.send_signal(signal.SIGUSR1)
 
     def kill(self):
-        if self.__process and hasattr(signal, "SIGTERM"):
-            self.__log.info("Sending SIGTERM to child process with pid %d.", self.__process.pid)
+        if self.__process:
+            self.__log.info("Terminating child process with pid %d.", self.__process.pid)
 
-            try:
-                os.kill(self.__process.pid, signal.SIGTERM)
-            except: pass
+            self.__process.terminate()
 
-            self.__log.info("Waiting for child process with pid %d.", self.__process.pid)
+            self.__log.info("Waiting for child process.")
 
             self.__process.wait()
 

@@ -34,13 +34,14 @@ from getpass import getuser
 import getopt
 import sys
 import os
-from subprocess import Popen, DEVNULL
+from subprocess import Popen, DEVNULL, PIPE
 import signal
 import math
 import core
 import config
 import config.json
 import log
+from log.asyncio import LogProtocol
 import di
 import session
 import session.memory
@@ -473,30 +474,40 @@ class Server(di.Injected):
 
             await asyncio.sleep(self.__config.database_cleanup_interval)
 
-class Sendmail(di.Injected, mail.EmailQueueListener):
-    def inject(self, log: logging.Logger, queue: mail.EmailQueue):
+class MailProcess(di.Injected, mail.EmailQueueListener):
+    def inject(self, config: config.Config, log: logging.Logger, queue: mail.EmailQueue):
+        self.__config = config
         self.__log = log
         self.__queue = queue
         self.__process = None
 
-    def spawn(self, config):
+    async def spawn(self, config):
         args = self.__build_args__(config)
 
-        self.__log.info("Spawning mailer process: %s", " ".join(args))
+        self.__log.info("Spawning mail process: %s", " ".join(args))
 
-        self.__process = Popen(args, stdout=DEVNULL, stderr=DEVNULL)
+        if os.name == "posix":
+            self.__process = Popen(args, stdout=DEVNULL, stderr=PIPE)
+
+            loop = asyncio.get_event_loop()
+
+            await loop.connect_read_pipe(lambda: LogProtocol("mail", self.__config.logging_verbosity), self.__process.stderr)
+        else:
+            self.__process = Popen(args, stdout=DEVNULL, stderr=DEVNULL)
+
+            self.__log.warning("Messages of mail process will be hidden.")
 
         self.__log.info("Child process started with pid %d.", self.__process.pid)
 
         self.__queue.add_listener(self)
 
     def __build_args__(self, config):
-        script = os.path.join(os.path.dirname(__file__), "sendmails.py")
+        script = os.path.join(os.path.dirname(__file__), "mail_process.py")
 
         return [sys.executable, script, "--config", config]
 
     def enqueued(self, receiver, subject, body):
-        self.__log.debug("Mail enqueued.")
+        self.__log.info("'%s' mail enqueued.", subject)
 
         if hasattr(signal, "SIGUSR1"):
             self.__log.debug("Sending SIGUSR1 to child process with pid %d.", self.__process.pid)
@@ -521,7 +532,11 @@ async def run(opts):
     mapping = config.json.load(opts["config"])
     preferences = config.from_mapping(mapping)
 
-    logger = log.new_logger(preferences.logging_verbosity)
+    logger = log.new_logger("icbd", preferences.logging_verbosity)
+
+    registry = log.Registry()
+
+    registry.register(logger)
 
     logger.info("Starting server process with pid %d...", os.getpid())
 
@@ -530,6 +545,7 @@ async def run(opts):
     connection = sqlite.Connection(preferences.database_filename)
 
     container.register(logging.Logger, logger)
+    container.register(log.Registry, registry)
     container.register(config.Config, preferences)
     container.register(broker.Broker, broker.memory.Broker())
     container.register(session.Store, session.memory.Store())
@@ -560,14 +576,17 @@ async def run(opts):
         scope.complete()
 
     server = Server()
-    mailer = Sendmail()
+    mailer = MailProcess()
 
-    loop = asyncio.get_event_loop()
+    if os.name == "posix":
+        loop = asyncio.get_event_loop()
 
-    loop.add_signal_handler(signal.SIGINT, lambda: None)
-    loop.add_signal_handler(signal.SIGTERM, lambda: server.close())
-
-    mailer.spawn(opts["config"])
+        loop.add_signal_handler(signal.SIGINT, lambda: None)
+        loop.add_signal_handler(signal.SIGTERM, lambda: server.close())
+    else:
+        logger.warning("No signal handlers registered.")
+        
+    await mailer.spawn(opts["config"])
 
     try:
         await server.run()

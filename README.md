@@ -19,8 +19,7 @@ generate a self-signed certificate for TLS (this requires openssl).
 Running for the first time an administrative user will be created. You should
 note down the password.
 
-	2019-06-03 ... DEBUG ... Creating admin account: nick='admin'
-	2019-06-03 ... INFO ... Initial admin created with password 'HPjkVtiS'.
+	2019-09-10 ... [icbd] INFO <sqlite.py, line 59> - Initial admin created with password '2vTOAlzv'.
 
 Send SIGTERM to the process to shutdown the server gracefully.
 

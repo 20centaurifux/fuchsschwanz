@@ -62,7 +62,7 @@ class EmailQueue(mail.EmailQueue):
     def next_batch(self, scope, max_size=None):
         cur = scope.get_handle()
 
-        query = "select * from Mail where Sent=0 order by Timestamp asc"
+        query = "select * from Mail where Sent=0 order by MTAErrors, Timestamp asc"
 
         if max_size:
             query += " limit %d" % max_size

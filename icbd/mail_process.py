@@ -25,6 +25,7 @@
 """
 import getopt
 import sys
+import os
 import asyncio
 import signal
 from datetime import datetime
@@ -140,26 +141,24 @@ def get_opts(argv):
 
 async def run(opts):
     mapping = config.json.load(opts["config"])
-    conf = config.from_mapping(mapping)
-    logger = log.new_logger(conf.logging_verbosity)
+    preferences = config.from_mapping(mapping)
+    logger = log.new_logger("mail", log.Verbosity.DEBUG, log.SIMPLE_TEXT_FORMAT)
 
-    logger.info("Starting mailer...")
+    logger.info("Starting mailer with interval %.2f.", preferences.mailer_interval)
 
     container = di.default_container
 
-    container.register(config.Config, conf)
+    container.register(config.Config, preferences)
     container.register(logging.Logger, logger)
-    container.register(mail.Connection, sqlite.Connection(conf.database_filename))
+    container.register(mail.Connection, sqlite.Connection(preferences.database_filename))
     container.register(mail.EmailQueue, mail.sqlite.EmailQueue())
-    container.register(mail.MTA, mail.smtp.MTA(conf.smtp_hostname,
-                                               conf.smtp_port,
-                                               conf.smtp_ssl_enabled,
-                                               conf.smtp_start_tls,
-                                               conf.smtp_sender,
-                                               conf.smtp_username,
-                                               conf.smtp_password))
-
-    logger.debug("Interval: %.2f", conf.mailer_interval)
+    container.register(mail.MTA, mail.smtp.MTA(preferences.smtp_hostname,
+                                               preferences.smtp_port,
+                                               preferences.smtp_ssl_enabled,
+                                               preferences.smtp_start_tls,
+                                               preferences.smtp_sender,
+                                               preferences.smtp_username,
+                                               preferences.smtp_password))
 
     mailer = Sendmail()
 
@@ -167,20 +166,22 @@ async def run(opts):
     signal_q = asyncio.Queue()
     signal_f = asyncio.ensure_future(signal_q.get())
 
-    loop = asyncio.get_event_loop()
+    if os.name == "posix":
+        loop = asyncio.get_event_loop()
 
-    logger.debug("Registerung SIGTERM handler.")
+        logger.debug("Registerung SIGTERM handler.")
 
-    loop.add_signal_handler(signal.SIGTERM, lambda: signal_q.put_nowait(signal.SIGTERM))
+        loop.add_signal_handler(signal.SIGTERM, lambda: signal_q.put_nowait(signal.SIGTERM))
 
-    logger.debug("Registerung SIGINT handler.")
+        logger.debug("Registerung SIGINT handler.")
 
-    loop.add_signal_handler(signal.SIGINT, lambda: None)
+        loop.add_signal_handler(signal.SIGINT, lambda: None)
 
-    if hasattr(signal, "SIGUSR1"):
         logger.debug("Registerung SIGUSR1 handler.")
 
         loop.add_signal_handler(signal.SIGUSR1, lambda: signal_q.put_nowait(signal.SIGUSR1))
+    else:
+        logger.warning("No signal handlers registered.")
 
     quit = False
 
@@ -204,13 +205,15 @@ async def run(opts):
 
         for f in done:
             if f is timeout_f:
-                logger.debug("Resetting timeout (%.2f seconds).", conf.mailer_interval)
+                logger.debug("Resetting timeout.")
 
-                timeout_f = asyncio.ensure_future(asyncio.sleep(conf.mailer_interval))
+                timeout_f = asyncio.ensure_future(asyncio.sleep(preferences.mailer_interval))
             else:
                 logger.debug("Reading next signal.")
 
                 signal_f = asyncio.ensure_future(signal_q.get())
+
+    logger.info("Stopped.")
 
 if __name__ == "__main__":
     try:

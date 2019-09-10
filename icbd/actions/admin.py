@@ -27,10 +27,15 @@ from actions import Injected
 import ltd
 from core import Verbosity
 import validate
-from log import LOG_LEVELS
+import log
 from exception import LtdErrorException
 
 class Admin(Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.__registry = self.resolve(log.Registry)
+
     def get_reputation(self, session_id, nick, msgid=""):
         self.__test_admin__(session_id)
 
@@ -64,15 +69,17 @@ class Admin(Injected):
         except ValueError:
             raise LtdErrorException("Unsupported log level: %d" % level)
 
-        self.log.info("Verbosity set set to %s.", verbosity)
-        self.log.setLevel(LOG_LEVELS[verbosity])
+        self.log.info("Verbosity set to %s.", verbosity)
+
+        for l in self.__registry.loggers:
+            l.setLevel(log.LOG_LEVELS[verbosity])
 
         self.broker.deliver(session_id, ltd.encode_co_output("The log level is %d." % level, msgid))
 
     def log_level(self, session_id, msgid):
         self.__test_admin__(session_id)
 
-        verbosity = next(k for k, v in LOG_LEVELS.items() if v == self.log.level)
+        verbosity = next(k for k, v in log.LOG_LEVELS.items() if v == self.log.level)
 
         self.broker.deliver(session_id, ltd.encode_co_output("The log level is %d." % verbosity.value, msgid))
 

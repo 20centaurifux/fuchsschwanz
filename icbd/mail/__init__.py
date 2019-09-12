@@ -32,56 +32,47 @@ import database
 @dataclass
 class Email:
     msgid: UUID
-    created_at: datetime
     receiver: str
     subject: str
     body: str
-    mta_errors: int
 
     def __str__(self):
-        return "msgid=%s, created_at=%s, receiver=%s, subject=%s, errors=%d" % (self.msgid,
-                                                                                self.created_at,
-                                                                                self.receiver,
-                                                                                self.subject,
-                                                                                self.mta_errors)
+        return "msgid=%s, receiver=%s, subject=%s" % (self.msgid,
+                                                      self.receiver,
+                                                      self.subject)
 
 Connection = NewType("Connection", database.Connection)
 
-class EmailQueueListener:
-    def enqueued(self, receiver, subject, body): pass
+class SinkListener:
+    def put(self, receiver, subject, body): pass
 
-    def delivered(self, msgid): pass
-
-    def mta_error(self, msgid): pass
-
-    def deleted(self, msgid): pass
-
-class EmailQueue:
+class Sink:
     def setup(self, scope):
         raise NotImplementedError
 
-    def enqueue(self, scope, receiver, subject, body):
-        raise NotImplementedError
-
-    def next_mail(self, scope):
-        raise NotImplementedError
-
-    def next_batch(self, scope, max_size=None):
-        raise NotImplementedError
-
-    def mark_delivered(self, scope, msgid):
-        raise NotImplementedError
-
-    def mta_error(self, scope, msgid):
-        raise NotImplementedError
-
-    def delete(self, scope, msgid):
+    def put(self, scope, receiver, subject, body):
         raise NotImplementedError
 
     def add_listener(self, listener):
         raise NotImplementedError
 
     def remove_listener(self, listener):
+        raise NotImplementedError
+
+class Queue:
+    def setup(self, scope):
+        raise NotImplementedError
+
+    def head(self, scope):
+        raise NotImplementedError
+
+    def delivered(self, scope, msgid):
+        raise NotImplementedError
+
+    def mta_error(self, scope, msgid):
+        raise NotImplementedError
+
+    def cleanup(self, scope):
         raise NotImplementedError
 
 class MTA:

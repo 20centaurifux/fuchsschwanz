@@ -46,8 +46,8 @@ class Registration(Injected):
         self.password_reset_connection = self.resolve(passwordreset.Connection)
         self.password_reset = self.resolve(passwordreset.PasswordReset)
 
-        self.mail_queue_connection = self.resolve(mail.Connection)
-        self.mail_queue = self.resolve(mail.EmailQueue)
+        self.mail_sink_connection = self.resolve(mail.Connection)
+        self.mail_sink = self.resolve(mail.Sink)
 
         self.template = self.resolve(template.Template)
 
@@ -215,12 +215,12 @@ class Registration(Injected):
 
         self.log.debug("Reset code generated: %s", code)
 
-        with self.mail_queue_connection.enter_scope() as scope:
+        with self.mail_sink_connection.enter_scope() as scope:
             text = self.template.load("password_reset_email")
             tpl = Template(text)
             body = tpl.substitute(nick=state.nick, code=code)
 
-            self.mail_queue.enqueue(scope, details.email, "Password reset", body)
+            self.mail_sink.put(scope, details.email, "Password reset", body)
 
             self.broker.deliver(session_id, ltd.encode_co_output("Email sent."))
 
@@ -374,12 +374,12 @@ class Registration(Injected):
 
         self.log.debug("Confirmation code generated: %s", code)
 
-        with self.mail_queue_connection.enter_scope() as scope:
+        with self.mail_sink_connection.enter_scope() as scope:
             text = self.template.load("confirm_email")
             tpl = Template(text)
             body = tpl.substitute(nick=nick, code=code)
 
-            self.mail_queue.enqueue(scope, details.email, "Email confirmation", body)
+            self.mail_sink.put(scope, details.email, "Email confirmation", body)
 
             self.broker.deliver(session_id, ltd.encode_co_output("Confirmation mail sent."))
 

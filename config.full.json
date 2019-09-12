@@ -46,12 +46,13 @@
 		"passwordResetRequest": 60.0,
 		"passwordResetCode": 1800.0
 	},
-	"mailer":
+	"mail":
 	{
-		"ttl": 480.0,
-		"maxErrors": 5,
-		"interval": 30,
-		"batchSize": 50
+		"ttl": 600,
+		"maxErrors": 3,
+		"interval": 60,
+		"retryTimeout": 120,
+		"cleanupInterval": 3600
 	},
 	"smtp":
 	{

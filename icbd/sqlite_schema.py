@@ -44,6 +44,9 @@ class Schema(di.Injected):
         if revision == 2:
             self.__revision_3__(scope)
 
+        if revision == 3:
+            self.__revision_4__(scope)
+
     @staticmethod
     def __get_revision__(scope):
         revision = 0
@@ -175,3 +178,13 @@ class Schema(di.Injected):
         cur.execute("create index MailSent on Mail (Sent asc)")
 
         cur.execute("update Version set Revision=3")
+
+    def __revision_4__(self, scope):
+        self.log.info("Upgrading database to revision 4...")
+
+        cur = scope.get_handle()
+
+        cur.execute("""alter table Mail
+                         add column DueDate int""")
+
+        cur.execute("update Version set Revision=4")

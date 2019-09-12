@@ -55,6 +55,8 @@ class Sendmail(di.Injected):
         self.__prepare_db__()
 
     def send(self):
+        self.__log.debug("Processing mail queue.")
+
         read_next = True
 
         while read_next:

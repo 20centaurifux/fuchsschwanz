@@ -59,7 +59,7 @@ class Config:
     mail_max_errors: int = 3
     mail_interval: int = 60.0
     mail_retry_timeout: int = 120
-    mail_cleanup_interval: int = 3600
+    mail_cleanup_interval: int = 900
     smtp_hostname: str = "127.0.0.1"
     smtp_port: int = 25
     smtp_ssl_enabled: bool = False

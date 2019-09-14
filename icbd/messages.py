@@ -303,6 +303,15 @@ class ChangeWebsite:
     def process(session_id, fields):
         ACTION(actions.registration.Registration).change_field(session_id, "www", fields[0], msgid=msgid(fields))
 
+@command("avatar")
+class ChangeAvatar:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    @arglength(display="Avatar", min=validate.AVATAR_MIN, max=validate.AVATAR_MAX)
+    def process(session_id, fields):
+        ACTION(actions.registration.Registration).change_field(session_id, "avatar", fields[0], msgid=msgid(fields))
+
 @command("forward")
 class EnableForwarding:
     @staticmethod
@@ -362,6 +371,15 @@ class Whois:
     @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(session_id, fields):
         ACTION(actions.registration.Registration).whois(session_id, fields[0], msgid=msgid(fields))
+
+@command("display")
+class DisplayAvatar:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
+    def process(session_id, fields):
+        ACTION(actions.registration.Registration).display_avatar(session_id, fields[0], msgid=msgid(fields))
 
 @command("write")
 class WriteMessage:

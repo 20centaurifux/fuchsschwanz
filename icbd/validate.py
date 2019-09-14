@@ -24,6 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 import re
+from urllib.parse import urlparse
 
 def has_valid_length(text, min_length, max_length):
     return len(text) >= min_length and len(text) <= max_length
@@ -98,6 +99,25 @@ WWW_MAX = 32
 
 def is_valid_www(www):
     return has_valid_length(www, WWW_MIN, WWW_MAX)
+
+AVATAR_MIN = 0
+AVATAR_MAX = 128
+
+def is_valid_avatar(url):
+    success = False
+
+    if has_valid_length(url, AVATAR_MIN, AVATAR_MAX):
+        if url:
+            try:
+                result = urlparse(url)
+
+                success = result.scheme == "http" or result.scheme == "https"
+            except:
+                pass
+        else:
+            success = True
+
+    return success
 
 MESSAGE_MIN = 1
 MESSAGE_MAX = 128

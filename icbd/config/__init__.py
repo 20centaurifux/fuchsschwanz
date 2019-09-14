@@ -66,6 +66,17 @@ class Config:
     smtp_sender: str = "root@localhost"
     smtp_username: str = None
     smtp_password: str = None
+    avatar_directory: str = "avatars"
+    avatar_max_file_size: int = 1024*2048
+    avatar_max_width: int = 2048
+    avatar_max_height: int = 2048
+    avatar_thumbnail_width: int = 320
+    avatar_thumbnail_height: int = 320
+    avatar_ascii_width: int = 64
+    avatar_ascii_height: int = 40
+    avatar_interval: int = 900
+    avatar_retry_timeout: int = 300
+    avatar_reload_timeout: int = 86400
 
 def transform_map(m):
     m = copy.deepcopy(m)

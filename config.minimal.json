@@ -22,6 +22,10 @@
 	{
 		"verbosity": 4
 	},
+	"avatar":
+	{
+		"directory": "runtime/avatar"
+	},
 	"database":
 	{
 		"filename": "runtime/icbd.db"

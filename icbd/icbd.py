@@ -70,6 +70,9 @@ import template
 import template.plaintext
 import mail
 import mail.sqlite
+import avatar
+import avatar.sqlite
+import avatar.fs
 import timer
 from actions import ACTION
 import actions.usersession
@@ -474,46 +477,42 @@ class Server(di.Injected):
 
             await asyncio.sleep(self.__config.database_cleanup_interval)
 
-class MailProcess(di.Injected, mail.EmailQueueListener):
-    def inject(self, config: config.Config, log: logging.Logger, queue: mail.EmailQueue):
-        self.__config = config
-        self.__log = log
-        self.__queue = queue
+class Process:
+    def __init__(self, name):
+        self.__name = name
         self.__process = None
+        self.__log = di.default_container.resolve(logging.Logger)
+        self.__config = di.default_container.resolve(config.Config)
 
-    async def spawn(self, config):
-        args = self.__build_args__(config)
+    async def spawn(self, argv):
+        log = di.default_container.resolve(logging.Logger)
 
-        self.__log.info("Spawning mail process: %s", " ".join(args))
+        args = self.__build_args__(argv)
+
+        self.__log.info("Spawning %s process: %s", self.__name, " ".join(args))
 
         if os.name == "posix":
             self.__process = Popen(args, stdout=DEVNULL, stderr=PIPE)
 
             loop = asyncio.get_event_loop()
+            conf = di.default_container.resolve(config.Config)
 
-            await loop.connect_read_pipe(lambda: LogProtocol("mail", self.__config.logging_verbosity), self.__process.stderr)
+            await loop.connect_read_pipe(lambda: LogProtocol(self.__name, self.__config.logging_verbosity), self.__process.stderr)
         else:
             self.__process = Popen(args, stdout=DEVNULL, stderr=DEVNULL)
 
-            self.__log.warning("Messages of mail process will be hidden.")
+            self.__log.warning("Messages of %s process will be hidden.", self.__name)
 
         self.__log.info("Child process started with pid %d.", self.__process.pid)
 
-        self.__queue.add_listener(self)
+    def __build_args__(self, argv):
+        raise NotImplementedError()
 
-    def __build_args__(self, config):
-        script = os.path.join(os.path.dirname(__file__), "mail_process.py")
+    def signal(self, sig):
+        self.__log.debug("Sending %s to child process with pid %d.", sig, self.__process.pid)
 
-        return [sys.executable, script, "--config", config]
-
-    def enqueued(self, receiver, subject, body):
-        self.__log.info("'%s' mail enqueued.", subject)
-
-        if hasattr(signal, "SIGUSR1"):
-            self.__log.debug("Sending SIGUSR1 to child process with pid %d.", self.__process.pid)
-
-            self.__process.send_signal(signal.SIGUSR1)
-
+        self.__process.send_signal(sig)
+    
     def kill(self):
         if self.__process:
             self.__log.info("Terminating child process with pid %d.", self.__process.pid)
@@ -525,6 +524,52 @@ class MailProcess(di.Injected, mail.EmailQueueListener):
             self.__process.wait()
 
             self.__log.info("Process %d stopped with exit status %d.", self.__process.pid, self.__process.returncode)
+
+class MailProcess(Process, di.Injected, mail.EmailQueueListener):
+    def __init__(self):
+        Process.__init__(self, "mail")
+        di.Injected.__init__(self)
+
+    def inject(self, config: config.Config, log: logging.Logger, queue: mail.EmailQueue):
+        self.__config = config
+        self.__log = log
+        self.__queue = queue
+
+        self.__queue.add_listener(self)
+
+    def __build_args__(self, argv):
+        script = os.path.join(os.path.dirname(__file__), "mail_process.py")
+
+        return [sys.executable, script, "--config", argv["config"]]
+
+    def enqueued(self, receiver, subject, body):
+        self.__log.info("'%s' mail enqueued.", subject)
+
+        if hasattr(signal, "SIGUSR1"):
+            self.signal(signal.SIGUSR1)
+
+class AvatarProcess(Process, di.Injected, avatar.Writer):
+    def __init__(self):
+        Process.__init__(self, "avatar")
+        di.Injected.__init__(self)
+
+    def inject(self, config: config.Config, log: logging.Logger, writer: avatar.Writer):
+        self.__config = config
+        self.__log = log
+        self.__writer = writer
+
+        self.__writer.add_listener(self)
+
+    def __build_args__(self, argv):
+        script = os.path.join(os.path.dirname(__file__), "avatar_process.py")
+
+        return [sys.executable, script, "--config", argv["config"]]
+
+    def put(self, nick, url):
+        self.__log.info("Avatar changed: %s (%s)", url, nick)
+
+        if hasattr(signal, "SIGUSR1"):
+            self.signal(signal.SIGUSR1)
 
 async def run(opts):
     data_dir = opts.get("data_dir")
@@ -567,26 +612,36 @@ async def run(opts):
     container.register(template.Template, template.plaintext.Template(os.path.join(data_dir, "templates")))
     container.register(mail.Connection, connection)
     container.register(mail.EmailQueue, mail.sqlite.EmailQueue())
+    container.register(avatar.Connection, connection)
+    container.register(avatar.Reader, avatar.sqlite.Reader())
+    container.register(avatar.Writer, avatar.sqlite.Writer(preferences.avatar_reload_timeout, preferences.avatar_retry_timeout))
+    container.register(avatar.Storage, avatar.fs.Storage(preferences.avatar_directory,
+                                                         preferences.avatar_ascii_width,
+                                                         preferences.avatar_ascii_height))
 
     with connection.enter_scope() as scope:
         container.resolve(nickdb.NickDb).setup(scope)
         container.resolve(statsdb.StatsDb).setup(scope)
         container.resolve(confirmation.Confirmation).setup(scope)
+        container.resolve(avatar.Reader).setup(scope)
+        container.resolve(avatar.Writer).setup(scope)
 
         scope.complete()
 
     server = Server()
-    mailer = MailProcess()
 
     if os.name == "posix":
         loop = asyncio.get_event_loop()
 
-        loop.add_signal_handler(signal.SIGINT, lambda: None)
+        #loop.add_signal_handler(signal.SIGINT, lambda: None)
         loop.add_signal_handler(signal.SIGTERM, lambda: server.close())
     else:
         logger.warning("No signal handlers registered.")
-        
-    await mailer.spawn(opts["config"])
+
+    mail_p = MailProcess()
+    avatar_p = AvatarProcess()
+
+    await asyncio.gather(mail_p.spawn(opts), avatar_p.spawn(opts))
 
     try:
         await server.run()
@@ -595,7 +650,8 @@ async def run(opts):
     except:
         logger.warning(traceback.format_exc())
 
-    mailer.kill()
+    for p in [mail_p, avatar_p]:
+        p.kill()
 
     logger.info("Server stopped.")
 

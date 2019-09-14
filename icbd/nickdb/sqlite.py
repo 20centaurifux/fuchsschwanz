@@ -59,11 +59,10 @@ class NickDb(nickdb.NickDb, di.Injected):
             self.log.info("Initial admin created with password '%s'." % password)
 
     def __create_user__(self, scope, nick, password, is_admin):
-        self.create(scope, nick)
+        cur = scope.get_handle()
+        cur.execute("insert into Nick (Name, IsAdmin, IsSecure) values (?, ?, 1)", (nick, int(is_admin)))
 
-        self.set_admin(scope, nick, is_admin)
         self.set_password(scope, nick, password)
-        self.set_secure(scope, nick, True)
 
     @tolower(argname="nick")
     def create(self, scope, nick):
@@ -82,7 +81,7 @@ class NickDb(nickdb.NickDb, di.Injected):
     @tolower(argname="nick")
     def lookup(self, scope, nick):
         cur = scope.get_handle()
-        cur.execute("select RealName, Phone, Address, Email, Text, WWW from Nick where Name=?", (nick,))
+        cur.execute("select RealName, Phone, Address, Email, Text, WWW, Avatar from Nick where Name=?", (nick,))
 
         m = cur.fetchone()
 
@@ -91,18 +90,20 @@ class NickDb(nickdb.NickDb, di.Injected):
                                   address=m["Address"],
                                   email=m["Email"],
                                   text=m["Text"],
-                                  www=m["WWW"])
+                                  www=m["WWW"],
+                                  avatar=m["Avatar"])
 
     @tolower(argname="nick")
     def update(self, scope, nick, details):
         cur = scope.get_handle()
-        cur.execute("update Nick set RealName=?, Phone=?, Address=?, Email=?, Text=?, WWW=? where Name=?",
+        cur.execute("update Nick set RealName=?, Phone=?, Address=?, Email=?, Text=?, WWW=?, Avatar=? where Name=?",
                     (details.real_name,
                      details.phone,
                      details.address,
                      details.email,
                      details.text,
                      details.www,
+                     details.avatar,
                      nick))
 
     @tolower(argname="nick")

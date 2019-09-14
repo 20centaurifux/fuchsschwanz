@@ -53,6 +53,20 @@
 		"interval": 30,
 		"batchSize": 50
 	},
+	"avatar":
+	{
+		"directory": "runtime/avatars",
+		"maxFileSize": 2097152,
+		"maxHeight": 2048,
+		"maxWidth": 2048,
+		"thumbnailWidth": 320,
+		"thumbnailHeight": 320,
+		"ascii_width": 64,
+		"ascii_height": 40,
+		"interval": 900,
+		"retryTimeout": 300,
+		"reloadTimeout": 1800
+	},
 	"smtp":
 	{
 		"hostname": "127.0.0.1",

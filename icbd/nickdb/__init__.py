@@ -37,6 +37,7 @@ class UserDetails:
     email: str = None
     text: str = None
     www: str = None
+    avatar: str = None
 
 @dataclass
 class Message:

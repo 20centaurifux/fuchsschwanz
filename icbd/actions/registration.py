@@ -26,11 +26,13 @@
 from datetime import datetime
 from textwrap import wrap
 from string import Template
+import os
 from actions import Injected
 import validate
 import confirmation
 import passwordreset
 import mail
+import avatar
 import template
 import ltd
 from textutils import hide_chars
@@ -48,6 +50,11 @@ class Registration(Injected):
 
         self.mail_queue_connection = self.resolve(mail.Connection)
         self.mail_queue = self.resolve(mail.EmailQueue)
+
+        self.avatar_connection = self.resolve(avatar.Connection)
+        self.avatar_writer = self.resolve(avatar.Writer)
+        self.avatar_reader = self.resolve(avatar.Reader)
+        self.avatar_storage = self.resolve(avatar.Storage)
 
         self.template = self.resolve(template.Template)
 
@@ -293,6 +300,15 @@ class Registration(Injected):
 
             scope.complete()
 
+        if field == "avatar":
+            with self.avatar_connection.enter_scope() as scope:
+                if text:
+                    self.avatar_writer.put(scope, state.nick, text)
+                else:
+                    self.avatar_writer.clear(scope, state.nick)
+
+                scope.complete()
+
     @staticmethod
     def __map_field__(field):
         name = None
@@ -309,6 +325,8 @@ class Registration(Injected):
             name = "Message text"
         elif field == "www":
             name = "Website"
+        elif field == "avatar":
+            name = "Avatar"
         else:
             raise ValueError
 
@@ -330,6 +348,8 @@ class Registration(Injected):
             valid = validate.is_valid_text(text)
         elif field == "www":
             valid = validate.is_valid_www(text)
+        elif field == "avatar":
+            valid = validate.is_valid_avatar(text)
         else:
             raise ValueError
 
@@ -510,6 +530,7 @@ class Registration(Injected):
 
         msgs.extend(ltd.encode_co_output("E-Mail:         %s" % display_value(email), msgid))
         msgs.extend(ltd.encode_co_output("WWW:            %s" % display_value(details.www), msgid))
+        msgs.extend(ltd.encode_co_output("Avatar:         %s" % display_value(details.avatar), msgid))
 
         if not details.address:
             msgs.extend(ltd.encode_co_output("Street address: (None)", msgid))
@@ -530,5 +551,36 @@ class Registration(Injected):
 
             for part in parts[1:]:
                 msgs.extend(ltd.encode_co_output("                %s" % part, msgid))
+
+        self.broker.deliver(session_id, msgs)
+
+    def display_avatar(self, session_id, nick, msgid=""):
+        if not nick:
+            raise LtdErrorException("Usage: /whois {nick}")
+
+        with self.nickdb_connection.enter_scope() as scope:
+            if not self.nickdb.exists(scope, nick):
+                raise LtdErrorException("%s not found." % nick)
+
+            details = self.nickdb.lookup(scope, nick)
+
+            if not details.avatar:
+                raise LtdErrorException("%s has no avatar.")
+
+        with self.avatar_connection.enter_scope() as scope:
+            key = self.avatar_reader.lookup_key(scope, nick)
+
+        if not key:
+            raise LtdErrorException("No avatar available.")
+
+        lines = self.avatar_storage.load(key)
+
+        if not lines:
+            raise LtdErrorException("No avatar available.")
+
+        msgs = bytearray()
+
+        for l in lines:
+            msgs.extend(ltd.encode_co_output(l))
 
         self.broker.deliver(session_id, msgs)

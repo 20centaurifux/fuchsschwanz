@@ -614,7 +614,10 @@ async def run(opts):
     container.register(mail.EmailQueue, mail.sqlite.EmailQueue())
     container.register(avatar.Connection, connection)
     container.register(avatar.Reader, avatar.sqlite.Reader())
-    container.register(avatar.Writer, avatar.sqlite.Writer(preferences.avatar_reload_timeout, preferences.avatar_retry_timeout))
+    container.register(avatar.Writer, avatar.sqlite.Writer(preferences.avatar_reload_timeout,
+                                                           preferences.avatar_retry_timeout,
+                                                           preferences.avatar_max_errors,
+                                                           preferences.avatar_error_timeout))
     container.register(avatar.Storage, avatar.fs.Storage(preferences.avatar_directory,
                                                          preferences.avatar_ascii_width,
                                                          preferences.avatar_ascii_height))

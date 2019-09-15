@@ -29,10 +29,12 @@ from sqlite_schema import Schema
 from textutils import tolower
 
 class Writer(avatar.Writer):
-    def __init__(self, refresh_timeout, retry_timeout):
+    def __init__(self, refresh_timeout, retry_timeout, max_errors, error_timeout):
         self.__listeners = []
         self.__refresh_timeout = refresh_timeout
         self.__retry_timeout = retry_timeout
+        self.__max_errors = max_errors
+        self.__error_timeout = error_timeout
 
     def setup(self, scope):
         Schema().upgrade(scope)
@@ -50,7 +52,7 @@ class Writer(avatar.Writer):
         count = cur.fetchone()[0]
 
         if count:
-            cur.execute("update Avatar set Active=1, DueDate=? where Nick=? and Url=?", (now, nick, url))
+            cur.execute("update Avatar set Active=1, DueDate=?, Errors=0 where Nick=? and Url=?", (now, nick, url))
         else:
             cur.execute("insert into Avatar (Nick, Active, DueDate, Url) values (?, 1, ?, ?)", (nick, now, url))
 
@@ -63,15 +65,27 @@ class Writer(avatar.Writer):
         due_date = now + self.__refresh_timeout
 
         cur = scope.get_handle()
-        cur.execute("update Avatar set Hash=?, DueDate=? where nick=? and Url=?", (key, due_date, nick, url))
+        cur.execute("update Avatar set Hash=?, DueDate=?, Errors=0 where nick=? and Url=?", (key, due_date, nick, url))
 
     @tolower(argname="nick")
     def error(self, scope, nick, url):
-        now = int(datetime.utcnow().timestamp())
-        due_date = now + self.__retry_timeout
-
         cur = scope.get_handle()
-        cur.execute("update Avatar set Errors=Errors + 1, DueDate=? where Nick=? and Url=?", (due_date, nick, url))
+
+        cur.execute("select Errors from Avatar where Nick=? and Url=?", (nick, url))
+
+        row = cur.fetchone()
+
+        if row:
+            errors = row[0]
+            now = int(datetime.utcnow().timestamp())
+
+            if errors == self.__max_errors:
+                due_date = now + self.__error_timeout
+            else:
+                due_date = now + self.__retry_timeout
+                errors += 1
+
+            cur.execute("update Avatar set Errors=?, DueDate=? where Nick=? and Url=?", (errors, due_date, nick, url))
 
     @tolower(argname="nick")
     def clear(self, scope, nick):

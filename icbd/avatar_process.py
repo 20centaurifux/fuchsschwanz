@@ -173,7 +173,7 @@ async def run(opts):
     preferences = config.from_mapping(mapping)
     logger = log.new_logger("avatar", log.Verbosity.DEBUG, log.SIMPLE_TEXT_FORMAT)
 
-    logger.info("Starting avatar process with interval %.2f.", preferences.avatar_interval)
+    logger.info("Starting avatar process with interval %d.", preferences.avatar_interval)
 
     container = di.default_container
 
@@ -182,7 +182,9 @@ async def run(opts):
     container.register(avatar.Connection, sqlite.Connection(preferences.database_filename))
     container.register(avatar.Reader, avatar.sqlite.Reader())
     container.register(avatar.Writer, avatar.sqlite.Writer(preferences.avatar_reload_timeout,
-                                                           preferences.avatar_retry_timeout))
+                                                           preferences.avatar_retry_timeout,
+                                                           preferences.avatar_max_errors,
+                                                           preferences.avatar_error_timeout))
     container.register(avatar.Storage, avatar.fs.Storage(preferences.avatar_directory,
                                                          preferences.avatar_ascii_width,
                                                          preferences.avatar_ascii_height))

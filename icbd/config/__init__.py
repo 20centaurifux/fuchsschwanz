@@ -75,8 +75,10 @@ class Config:
     avatar_ascii_width: int = 64
     avatar_ascii_height: int = 40
     avatar_interval: int = 900
+    avatar_reload_timeout: int = 60 * 60 * 24
     avatar_retry_timeout: int = 300
-    avatar_reload_timeout: int = 86400
+    avatar_max_errors: int = 5
+    avatar_error_timeout: int = 60 * 60 * 48
 
 def transform_map(m):
     m = copy.deepcopy(m)

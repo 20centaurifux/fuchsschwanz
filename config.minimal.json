@@ -1,8 +1,7 @@
 {
 	"server":
 	{
-		"hostname": "localhost",
-		"unsecureLogin": false
+		"hostname": "localhost"
 	},
 	"tcp":
 	{
@@ -17,10 +16,6 @@
 		"port": 7327,
 		"cert": "runtime/selfsigned.cert",
 		"key": "runtime/selfsigned.key"
-	},
-	"logging":
-	{
-		"verbosity": 4
 	},
 	"avatar":
 	{

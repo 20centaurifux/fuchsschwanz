@@ -38,8 +38,8 @@ class MessageBox(Injected):
 
         self.notification_table = self.resolve(session.NotificationTimeoutTable)
 
-        self.mail_queue_connection = self.resolve(mail.Connection)
-        self.mail_queue = self.resolve(mail.EmailQueue)
+        self.mail_sink_connection = self.resolve(mail.Connection)
+        self.mail_sink = self.resolve(mail.Sink)
 
         self.template = self.resolve(template.Template)
 
@@ -97,11 +97,11 @@ class MessageBox(Injected):
                 email = self.nickdb.lookup(scope, receiver).email
 
         if email:
-            with self.mail_queue_connection.enter_scope() as scope:
+            with self.mail_sink_connection.enter_scope() as scope:
                 tpl = Template(self.template.load("forward_message"))
                 body = tpl.substitute(sender=sender, receiver=receiver, text=text)
 
-                self.mail_queue.enqueue(scope, email, "Message received", body)
+                self.mail_sink.put(scope, email, "Message received", body)
 
                 scope.complete()
 

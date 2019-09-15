@@ -184,6 +184,9 @@ class Schema(di.Injected):
 
         cur = scope.get_handle()
 
+        cur.execute("""alter table Mail
+                         add column DueDate int""")
+
         cur.execute("""alter table Nick
                          add column Avatar varchar(128)""")
 

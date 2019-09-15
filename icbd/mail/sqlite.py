@@ -28,27 +28,48 @@ import uuid
 import mail
 from sqlite_schema import Schema
 
-class EmailQueue(mail.EmailQueue):
+class Sink(mail.Sink):
     def __init__(self):
         self.__listeners = []
 
     def setup(self, scope):
         Schema().upgrade(scope)
 
-    def enqueue(self, scope, receiver, subject, body):
+    def put(self, scope, receiver, subject, body):
         msgid = uuid.uuid4().hex
-        now = self.__now__()
+        now = int(datetime.utcnow().timestamp())
 
         cur = scope.get_handle()
-        cur.execute("insert into Mail (UUID, Receiver, Subject, Body, Timestamp) values (?, ?, ?, ?, ?)",
-                    (msgid, receiver, subject, body, now))
+        cur.execute("insert into Mail (UUID, Receiver, Subject, Body, Timestamp, DueDate) values (?, ?, ?, ?, ?, ?)",
+                    (msgid, receiver, subject, body, now, now))
 
         for l in self.__listeners:
-            l.enqueued(receiver, subject, body)
+            l.put(receiver, subject, body)
 
-    def next_mail(self, scope):
+    def add_listener(self, listener):
+        self.__listeners.append(listener)
+
+    def remove_listener(self, listener):
+        self.__listeners.remove(listener)
+
+class Queue(mail.Queue):
+    def __init__(self, ttl, max_errors, retry_timeout):
+        self.__ttl = ttl
+        self.__max_errors = max_errors
+        self.__retry_timeout = retry_timeout
+
+    def setup(self, scope):
+        Schema().upgrade(scope)
+
+    def head(self, scope):
+        now = int(datetime.utcnow().timestamp())
+
+        query = """select * from Mail
+                     where Sent=0 and %d - Timestamp <= %d and MTAErrors < %d and DueDate <= %d
+                     order by MTAErrors, Timestamp asc limit 1""" % (now, self.__ttl, self.__max_errors, now)
+
         cur = scope.get_handle()
-        cur.execute("select * from Mail where Sent=0 order by Timestamp asc limit 1")
+        cur.execute(query)
 
         m = cur.fetchone()
 
@@ -59,54 +80,26 @@ class EmailQueue(mail.EmailQueue):
 
         return msg
 
-    def next_batch(self, scope, max_size=None):
-        cur = scope.get_handle()
-
-        query = "select * from Mail where Sent=0 order by MTAErrors, Timestamp asc"
-
-        if max_size:
-            query += " limit %d" % max_size
-
-        cur.execute(query)
-
-        return [self.__to_email__(m) for m in cur.fetchall()]
-
     @staticmethod
     def __to_email__(row):
-        return mail.Email(msgid=uuid.UUID(row["uuid"]),
-                          created_at=datetime.fromtimestamp(row["Timestamp"]),
+        return mail.Email(msgid=uuid.UUID(row["UUID"]),
                           receiver=row["Receiver"],
                           subject=row["Subject"],
-                          body=row["Body"],
-                          mta_errors=row["MTAErrors"])
+                          body=row["Body"])
 
-    def mark_delivered(self, scope, msgid):
+    def delivered(self, scope, msgid):
         cur = scope.get_handle()
-        cur.execute("update Mail set Sent=1 where uuid=?", (msgid.hex,))
-
-        for l in self.__listeners:
-            l.delivered(msgid)
+        cur.execute("update Mail set Sent=1 where UUID=?", (msgid.hex,))
 
     def mta_error(self, scope, msgid):
+        now = int(datetime.utcnow().timestamp())
+        due_date = now + self.__retry_timeout
+
         cur = scope.get_handle()
-        cur.execute("update Mail set MTAErrors=MTAErrors + 1 where uuid=?", (msgid.hex,))
+        cur.execute("update Mail set MTAErrors=MTAErrors + 1, DueDate = ? where UUID=?", (due_date, msgid.hex,))
 
-        for l in self.__listeners:
-            l.mta_error(msgid)
+    def cleanup(self, scope):
+        now = int(datetime.utcnow().timestamp())
 
-    def delete(self, scope, msgid):
         cur = scope.get_handle()
-        cur.execute("delete from Mail where uuid=?", (msgid.hex,))
-
-        for l in self.__listeners:
-            l.deleted(msgid)
-
-    def add_listener(self, listener):
-        self.__listeners.append(listener)
-
-    def remove_listener(self, listener):
-        self.__listeners.remove(listener)
-
-    @staticmethod
-    def __now__():
-        return int(datetime.utcnow().timestamp())
+        cur.execute("delete from Mail where %d - Timestamp > %d" % (now, self.__ttl))

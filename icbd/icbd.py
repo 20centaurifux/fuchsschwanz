@@ -459,14 +459,14 @@ class Server(di.Injected):
 
     async def __cleanup_dbs_(self):
         while True:
-            self.__log.info("Cleaning up confirmation requests...")
+            self.__log.info("Cleaning up confirmation requests.")
 
             with self.__cfm_connection.enter_scope() as scope:
                 self.__cfm.cleanup(scope, self.__config.timeouts_confirmation_code)
 
                 scope.complete()
 
-            self.__log.info("Cleaning up password reset codes...")
+            self.__log.info("Cleaning up password reset codes.")
 
             with self.__pwdreset_connection.enter_scope() as scope:
                 self.__pwdreset.cleanup(scope, self.__config.timeouts_password_reset_request)
@@ -525,24 +525,24 @@ class Process:
 
             self.__log.info("Process %d stopped with exit status %d.", self.__process.pid, self.__process.returncode)
 
-class MailProcess(Process, di.Injected, mail.EmailQueueListener):
+class MailProcess(Process, di.Injected, mail.SinkListener):
     def __init__(self):
         Process.__init__(self, "mail")
         di.Injected.__init__(self)
 
-    def inject(self, config: config.Config, log: logging.Logger, queue: mail.EmailQueue):
+    def inject(self, config: config.Config, log: logging.Logger, sink: mail.Sink):
         self.__config = config
         self.__log = log
-        self.__queue = queue
+        self.__sink = sink
 
-        self.__queue.add_listener(self)
+        self.__sink.add_listener(self)
 
     def __build_args__(self, argv):
         script = os.path.join(os.path.dirname(__file__), "mail_process.py")
 
         return [sys.executable, script, "--config", argv["config"]]
 
-    def enqueued(self, receiver, subject, body):
+    def put(self, receiver, subject, body):
         self.__log.info("'%s' mail enqueued.", subject)
 
         if hasattr(signal, "SIGUSR1"):
@@ -611,7 +611,7 @@ async def run(opts):
     container.register(news.News, news.plaintext.News(os.path.join(data_dir, "news")))
     container.register(template.Template, template.plaintext.Template(os.path.join(data_dir, "templates")))
     container.register(mail.Connection, connection)
-    container.register(mail.EmailQueue, mail.sqlite.EmailQueue())
+    container.register(mail.Sink, mail.sqlite.Sink())
     container.register(avatar.Connection, connection)
     container.register(avatar.Reader, avatar.sqlite.Reader())
     container.register(avatar.Writer, avatar.sqlite.Writer(preferences.avatar_reload_timeout,
@@ -628,6 +628,8 @@ async def run(opts):
         container.resolve(confirmation.Confirmation).setup(scope)
         container.resolve(avatar.Reader).setup(scope)
         container.resolve(avatar.Writer).setup(scope)
+        container.resolve(passwordreset.PasswordReset).setup(scope)
+        container.resolve(mail.Sink).setup(scope)
 
         scope.complete()
 
@@ -636,7 +638,7 @@ async def run(opts):
     if os.name == "posix":
         loop = asyncio.get_event_loop()
 
-        #loop.add_signal_handler(signal.SIGINT, lambda: None)
+        loop.add_signal_handler(signal.SIGINT, lambda: None)
         loop.add_signal_handler(signal.SIGTERM, lambda: server.close())
     else:
         logger.warning("No signal handlers registered.")

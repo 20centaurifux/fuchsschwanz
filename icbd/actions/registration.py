@@ -565,18 +565,18 @@ class Registration(Injected):
             details = self.nickdb.lookup(scope, nick)
 
             if not details.avatar:
-                raise LtdErrorException("%s has no avatar.")
+                raise LtdErrorException("%s has no avatar." % nick)
 
         with self.avatar_connection.enter_scope() as scope:
             key = self.avatar_reader.lookup_key(scope, nick)
 
         if not key:
-            raise LtdErrorException("No avatar available.")
+            raise LtdErrorException("Preview not available.")
 
         lines = self.avatar_storage.load(key)
 
         if not lines:
-            raise LtdErrorException("No avatar available.")
+            raise LtdErrorException("Preview not available.")
 
         msgs = bytearray()
 

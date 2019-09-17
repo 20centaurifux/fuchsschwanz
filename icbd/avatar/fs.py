@@ -29,24 +29,33 @@ import avatar
 import PIL.Image
 import aalib
 
-class Storage(avatar.Storage):
+class AsciiFiles(avatar.Storage):
     def __init__(self, directory, width, height):
         self.__directory = directory
         self.__width = width
         self.__height = height
+
+    def setup(self):
+        if not os.path.exists(self.__directory):
+            os.makedirs(self.__directory)
 
     def store(self, image):
         bytes = image.read()
         checksum = self.__checksum__(bytes)
         path = os.path.join(self.__directory, checksum)
 
-        with open(path + ".png", "wb") as f:
-            f.write(bytes)
+        filename = path + ".png"
+
+        if not os.path.isfile(filename):
+            with open(filename, "wb") as f:
+                f.write(bytes)
 
         txt = self.__to_ascii__(image)
+        filename = path + ".txt"
 
-        with open(path + ".txt", "w") as f:
-            f.write(txt)
+        if not os.path.isfile(filename):
+            with open(filename, "w") as f:
+                f.write(txt)
 
         return checksum
 

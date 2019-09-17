@@ -372,7 +372,7 @@ class Whois:
     def process(session_id, fields):
         ACTION(actions.registration.Registration).whois(session_id, fields[0], msgid=msgid(fields))
 
-@command("display")
+@command("picture")
 class DisplayAvatar:
     @staticmethod
     @loginrequired

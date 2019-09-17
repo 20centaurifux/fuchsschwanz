@@ -27,6 +27,17 @@ from typing import NewType
 from dataclasses import dataclass
 import database
 
+def is_available():
+    success = True
+
+    try:
+        import PIL.Image
+        import aalib
+    except ImportError:
+        success = False
+
+    return success
+
 @dataclass
 class Request:
     nick: str
@@ -73,6 +84,9 @@ class Reader:
         raise NotImplementedError
 
 class Storage:
+    def setup(self):
+        raise NotImplementedError
+
     def store(self, image):
         raise NotImplementedError
 

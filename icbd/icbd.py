@@ -72,7 +72,12 @@ import mail
 import mail.sqlite
 import avatar
 import avatar.sqlite
-import avatar.fs
+
+if avatar.is_available():
+    import avatar.fs
+else:
+    import avatar.void
+
 import timer
 from actions import ACTION
 import actions.usersession
@@ -388,7 +393,7 @@ class Server(di.Injected):
             interval = int(self.__config.timeouts_ping)
             sessions = {k: v for k, v in self.__session_store if k != self.__session_id}
 
-            self.__log.debug("Processing idling sessions...")
+            self.__log.debug("Processing idling sessions.")
 
             max_idle_time = None
             max_idle_nick = None
@@ -511,7 +516,9 @@ class Process:
     def signal(self, sig):
         self.__log.debug("Sending %s to child process with pid %d.", sig, self.__process.pid)
 
-        self.__process.send_signal(sig)
+        loop = asyncio.get_running_loop()
+
+        loop.call_soon(self.__process.send_signal, sig)
     
     def kill(self):
         if self.__process:
@@ -618,9 +625,14 @@ async def run(opts):
                                                            preferences.avatar_retry_timeout,
                                                            preferences.avatar_max_errors,
                                                            preferences.avatar_error_timeout))
-    container.register(avatar.Storage, avatar.fs.Storage(preferences.avatar_directory,
-                                                         preferences.avatar_ascii_width,
-                                                         preferences.avatar_ascii_height))
+    if avatar.is_available():
+        container.register(avatar.Storage, avatar.fs.AsciiFiles(preferences.avatar_directory,
+                                                                preferences.avatar_ascii_width,
+                                                                preferences.avatar_ascii_height))
+    else:
+        logger.info("Avatar preview not available.")
+
+        container.register(avatar.Storage, avatar.void.Storage())
 
     with connection.enter_scope() as scope:
         container.resolve(nickdb.NickDb).setup(scope)
@@ -633,20 +645,24 @@ async def run(opts):
 
         scope.complete()
 
+    container.resolve(avatar.Storage).setup()
+
     server = Server()
 
     if os.name == "posix":
         loop = asyncio.get_event_loop()
 
-        loop.add_signal_handler(signal.SIGINT, lambda: None)
+        loop.add_signal_handler(signal.SIGINT, lambda: server.close())
         loop.add_signal_handler(signal.SIGTERM, lambda: server.close())
     else:
         logger.warning("No signal handlers registered.")
 
-    mail_p = MailProcess()
-    avatar_p = AvatarProcess()
+    processes = [MailProcess()]
 
-    await asyncio.gather(mail_p.spawn(opts), avatar_p.spawn(opts))
+    if avatar.is_available():
+        processes.append(AvatarProcess())
+
+    await asyncio.gather(*(map(lambda p: p.spawn(opts), processes)))
 
     try:
         await server.run()
@@ -655,7 +671,7 @@ async def run(opts):
     except:
         logger.warning(traceback.format_exc())
 
-    for p in [mail_p, avatar_p]:
+    for p in processes:
         p.kill()
 
     logger.info("Server stopped.")

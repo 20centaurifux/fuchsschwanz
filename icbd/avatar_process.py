@@ -185,9 +185,9 @@ async def run(opts):
                                                            preferences.avatar_retry_timeout,
                                                            preferences.avatar_max_errors,
                                                            preferences.avatar_error_timeout))
-    container.register(avatar.Storage, avatar.fs.Storage(preferences.avatar_directory,
-                                                         preferences.avatar_ascii_width,
-                                                         preferences.avatar_ascii_height))
+    container.register(avatar.Storage, avatar.fs.AsciiFiles(preferences.avatar_directory,
+                                                            preferences.avatar_ascii_width,
+                                                            preferences.avatar_ascii_height))
 
     download = Download()
 

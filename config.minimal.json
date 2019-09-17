@@ -19,7 +19,7 @@
 	},
 	"avatar":
 	{
-		"directory": "runtime/avatar"
+		"directory": "runtime/avatars"
 	},
 	"database":
 	{

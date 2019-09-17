@@ -34,7 +34,7 @@ from getpass import getuser
 import getopt
 import sys
 import os
-from subprocess import Popen, DEVNULL, PIPE
+from subprocess import Popen, DEVNULL, PIPE, TimeoutExpired
 import signal
 import math
 import core
@@ -494,7 +494,7 @@ class Process:
 
         args = self.__build_args__(argv)
 
-        self.__log.info("Spawning %s process: %s", self.__name, " ".join(args))
+        self.__log.info("Spawning '%s' process: %s", self.__name, " ".join(args))
 
         if os.name == "posix":
             self.__process = Popen(args, stdout=DEVNULL, stderr=PIPE)
@@ -506,7 +506,7 @@ class Process:
         else:
             self.__process = Popen(args, stdout=DEVNULL, stderr=DEVNULL)
 
-            self.__log.warning("Messages of %s process will be hidden.", self.__name)
+            self.__log.warning("Messages of '%s' process will be hidden.", self.__name)
 
         self.__log.info("Child process started with pid %d.", self.__process.pid)
 
@@ -522,13 +522,19 @@ class Process:
     
     def kill(self):
         if self.__process:
-            self.__log.info("Terminating child process with pid %d.", self.__process.pid)
+            self.__log.info("Terminating '%s' process with pid %d.", self.__name, self.__process.pid)
 
             self.__process.terminate()
 
-            self.__log.info("Waiting for child process.")
+            self.__log.info("Waiting for '%s' process.", self.__name)
 
-            self.__process.wait()
+            try:
+                self.__process.communicate(timeout=15)
+            except TimeoutExpired:
+                self.__log.info("Timeout expired, killing '%s' process.", self.__name)
+
+                self.__process.kill()
+                self.__process.communicate()
 
             self.__log.info("Process %d stopped with exit status %d.", self.__process.pid, self.__process.returncode)
 

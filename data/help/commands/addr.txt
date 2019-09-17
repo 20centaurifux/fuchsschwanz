@@ -12,4 +12,4 @@ EXAMPLE
      /addr Jeremy Martinson, Jr. | 455 Larkspur Dr. Apt 23 | Baviera, CA 92908
 
 SEE ALSO
-     registration /rname /phone /email /text /www /whois
+     registration /rname /avatar /phone /email /text /www /whois

@@ -1,0 +1,12 @@
+USAGE
+     /avatar {url}
+     /avatar
+
+DESCRIPTION
+     Sets the avatar of the registered user.
+
+     Without an argument the avatar is unset.
+
+SEE ALSO
+     /picture registration /rname /addr /avatar /phone
+     /text /text /whois

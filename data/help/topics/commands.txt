@@ -1,6 +1,6 @@
 COMMANDS
      0-9  ?
-     A    /addr, /away
+     A    /addr, /avatar, /away
      B    /beep, /boot
      C    /cancel, /cp, /confirm
      D    /delete, /drop
@@ -11,9 +11,9 @@ COMMANDS
      I    /invite
      L    /log
      M    /m, /motd
-     N    /name, /news, /newpasswd, /noaway, /nobeep, /noforward,
-          /noprotect, /notify
-     P    /p, /passwd, /phone, /protect
+     N    /name, /news, /newpasswd, /noaway, /nobeep,
+          /noforward, /noprotect, /notify
+     P    /p, /passwd, /phone, /picture, /protect
      R    /read, /reputation, /rname
      S    /secure, /shush, /stats, /status
      T    /talk, /text, /topic

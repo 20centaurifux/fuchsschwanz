@@ -5,4 +5,5 @@ DESCRIPTION
      Displays the profile of the specified nickname.
 
 SEE ALSO
-     registration /addr /rname /phone /email /text /www
+     registration /addr /avatar /rname /phone /email
+     /text /www

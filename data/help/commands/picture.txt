@@ -1,0 +1,8 @@
+USAGE
+     /picture {nickname}
+
+DESCRIPTION
+     Displays the avatar of a registered user.
+
+SEE ALSO
+     /avatar registration

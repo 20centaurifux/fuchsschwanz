@@ -8,4 +8,5 @@ DESCRIPTION
      Without an argument the real name is unset.
 
 SEE ALSO
-     registration /addr /phone /email /text /www /whois
+     registration /addr /avatar /phone /email /text /www
+     /whois

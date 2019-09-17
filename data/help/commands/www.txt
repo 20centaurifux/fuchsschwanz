@@ -8,4 +8,5 @@ DESCRIPTION
      Without an argument the website is unset.
 
 SEE ALSO
-     registration /rname /addr /phone /text /text /whois
+     registration /rname /addr /avatar /phone /text
+     /text /whois

@@ -8,5 +8,5 @@ DESCRIPTION
      Without an argument the text is unset.
 
 SEE ALSO
-     registration /rname /addr /phone /email /www /whois
-
+     registration /rname /addr /avatar /phone /email /www
+     /whois

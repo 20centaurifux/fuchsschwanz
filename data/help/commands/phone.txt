@@ -8,4 +8,5 @@ DESCRIPTION
      Without an argument the phone number is unset.
 
 SEE ALSO
-     registration /rname /addr /email /text /www /whois
+     registration /rname /addr /avatar /email /text /www
+     /whois

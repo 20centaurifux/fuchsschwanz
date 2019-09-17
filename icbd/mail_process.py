@@ -31,6 +31,7 @@ import signal
 from enum import Enum
 import traceback
 import logging
+import time
 import config
 import config.json
 import log
@@ -88,6 +89,8 @@ class Sendmail(di.Injected):
             self.__mta.end_session()
         except:
             self.__log.error(traceback.format_exc())
+
+            time.sleep(5)
 
         if status != TransferStatus.SERVER_ERROR:
             with self.__connection.enter_scope() as scope:

@@ -191,6 +191,7 @@ class Register:
     @staticmethod
     @loginrequired
     @fieldslength(count=1)
+    @arglength(display="Password", min=validate.PASSWORD_MIN, max=validate.PASSWORD_MAX)
     def process(session_id, fields):
         ACTION(actions.registration.Registration).register(session_id, fields[0])
 
@@ -212,6 +213,7 @@ class ChangePassword:
 class ResetPassword:
     @staticmethod
     @fieldslength(count=1)
+    @arglength(display="E-Mail address", min=validate.EMAIL_MIN, max=validate.EMAIL_MAX)
     def process(session_id, fields):
         ACTION(actions.registration.Registration).reset_password(session_id, fields[0])
 
@@ -348,7 +350,7 @@ class DisableProtection:
 class ConfirmEmail:
     @staticmethod
     @loginrequired
-    @fieldslength(min=0, max=1)
+    @fieldslength(min=1, max=2)
     def process(session_id, fields):
         if fields and fields[0]:
             ACTION(actions.registration.Registration).confirm(session_id, fields[0])
@@ -360,6 +362,7 @@ class DeleteNick:
     @staticmethod
     @loginrequired
     @fieldslength(min=1, max=2)
+    @arglength(display="Password", min=validate.PASSWORD_MIN, max=validate.PASSWORD_MAX)
     def process(session_id, fields):
         ACTION(actions.registration.Registration).delete(session_id, fields[0], msgid=msgid(fields))
 
@@ -667,6 +670,7 @@ class Boot:
     @staticmethod
     @loginrequired
     @fieldslength(min=1, max=2)
+    @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(session_id, fields):
         if not fields[0]:
             raise LtdErrorException("Usage: /boot {nick}")
@@ -689,6 +693,7 @@ class Reputation:
     @staticmethod
     @loginrequired
     @fieldslength(min=1, max=2)
+    @arglength(display="Nick Name", min=validate.NICK_MIN, max=validate.NICK_MAX)
     def process(session_id, fields):
         if not fields[0]:
             raise LtdErrorException("Usage: /reputation {nick}")
@@ -813,7 +818,7 @@ class Ping:
     @loginrequired
     @textfields
     @catchltdexceptions
-    @fieldslength(min=0, max=1)
+    @fieldslength(min=0, max=2)
     def process(session_id, fields):
         ACTION(actions.ping.Ping).ping(session_id, msgid(fields))
 
@@ -821,6 +826,7 @@ class Ping:
 class Pong:
     @staticmethod
     @loginrequired
+    @fieldslength(min=0, max=2)
     def process(session_id, fields):
         pass
 
@@ -828,5 +834,6 @@ class Pong:
 class Noop:
     @staticmethod
     @loginrequired
+    @fieldslength(min=0, max=2)
     def process(session_id, fields):
         pass

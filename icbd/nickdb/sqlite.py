@@ -52,9 +52,9 @@ class NickDb(nickdb.NickDb, di.Injected):
             password = make_password(8)
 
         if not self.exists(scope, "admin"):
-            self.log.debug("Creating admin account: nick='admin'")
+            self.log.debug("Creating admin account: nick='%s'", core.ADMIN)
 
-            self.__create_user__(scope, nick="admin", password=password, is_admin=True)
+            self.__create_user__(scope, nick=core.ADMIN, password=password, is_admin=True)
 
             self.log.info("Initial admin created with password '%s'." % password)
 

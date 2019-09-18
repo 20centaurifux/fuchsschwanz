@@ -29,6 +29,7 @@ from string import Template
 import os
 from actions import Injected
 import validate
+import core
 import confirmation
 import passwordreset
 import mail
@@ -451,6 +452,9 @@ class Registration(Injected):
 
         if not password:
             raise LtdErrorException("Usage: /delete {password}")
+
+        if state.nick.lower() == core.ADMIN.lower():
+            raise LtdErrorException("Cannot delete default admin account.")
 
         with self.nickdb_connection.enter_scope() as scope:
             if not self.nickdb.check_password(scope, state.nick, password):

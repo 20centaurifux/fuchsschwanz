@@ -32,6 +32,7 @@ PROTOCOL_VERSION = "1.0"
 PROTOCOL_LEVEL = 1
 
 NICKSERV = "server"
+ADMIN = "admin"
 
 DEFAULT_TOPIC = "If You Don't See the Fnord it Can't Eat You"
 DEFAULT_GROUP = "1"

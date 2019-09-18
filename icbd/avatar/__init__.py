@@ -49,7 +49,8 @@ class Request:
 Connection = NewType("Connection", database.Connection)
 
 class WriterListener:
-    def put(self, nick, url): pass
+    def put(self, nick, url):
+        pass
 
 class Writer:
     def setup(self, scope):

@@ -102,7 +102,6 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
                broker: broker.Broker,
                session_store: session.Store,
                away_table: session.AwayTimeoutTable,
-               notification_table: session.NotificationTimeoutTable,
                reputation: reputation.Reputation):
         self.__log = log
         self.__config = config
@@ -417,7 +416,9 @@ class Server(di.Injected):
                             last_ping = v.t_ping.elapsed() if v.t_ping else 0.0
 
                             if not v.t_ping or last_ping >= self.__config.timeouts_ping:
-                                self.__log.debug("Sending ping message to session %s (idle=%.2f, ping timeout=%.2f).", k, elapsed, last_ping)
+                                self.__log.debug("Sending ping message to session %s (idle=%.2f, ping timeout=%.2f).",
+                                                 k,
+                                                 elapsed, last_ping)
 
                                 self.__broker.deliver(k, ltd.encode_empty_cmd("l"))
 
@@ -561,7 +562,7 @@ class MailProcess(Process, di.Injected, mail.SinkListener):
         if hasattr(signal, "SIGUSR1"):
             self.signal(signal.SIGUSR1)
 
-class AvatarProcess(Process, di.Injected, avatar.Writer):
+class AvatarProcess(Process, di.Injected, avatar.WriterListener):
     def __init__(self):
         Process.__init__(self, "avatar")
         di.Injected.__init__(self)

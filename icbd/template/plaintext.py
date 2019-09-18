@@ -34,4 +34,4 @@ class Template(template.Template):
         path = os.path.join(self.__path, "%s.tpl" % name)
 
         with open(path) as f:
-             return f.read()
+            return f.read()

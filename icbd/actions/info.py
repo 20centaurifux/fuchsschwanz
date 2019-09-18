@@ -125,7 +125,8 @@ class Info(Injected):
 
         if stats.max_idle:
             self.broker.deliver(session_id,
-                                ltd.encode_co_output("  Max Idle: %s (%s)" % (stats.max_idle[1], timer.Timer.display_str(stats.max_idle[0])), msgid))
+                                ltd.encode_co_output("  Max Idle: %s (%s)"
+                                                     % (stats.max_idle[1], timer.Timer.display_str(stats.max_idle[0])), msgid))
         else:
             self.broker.deliver(session_id, ltd.encode_co_output("  Max Idle: (None)", msgid))
 

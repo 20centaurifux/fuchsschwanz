@@ -28,7 +28,7 @@ import ltd
 from core import Verbosity
 import validate
 import log
-from exception import LtdErrorException
+from exception import LtdErrorException, LtdStatusException
 
 class Admin(Injected):
     def __init__(self):
@@ -124,7 +124,7 @@ class Admin(Injected):
                 raise LtdStatusException("Password",
                                          "Password format not valid. Password length must be between %d and %d characters."
                                          % (validate.PASSWORD_MIN, validate.PASSWORD_MAX))
-            
+
             self.nickdb.set_password(scope, nick, password)
 
             self.broker.deliver(session_id, ltd.encode_status_msg("Pass", "Password changed."))

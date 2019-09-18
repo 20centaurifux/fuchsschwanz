@@ -29,12 +29,10 @@ import os
 import asyncio
 import signal
 import urllib.request
-import tempfile
-import shutil
 import traceback
 import logging
-import PIL.Image
 import io
+import PIL.Image
 import config
 import config.json
 import log

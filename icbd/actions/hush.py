@@ -71,9 +71,11 @@ class Hush(Injected):
                 if not msg_type or msg_type == "p":
                     if state.hushlist.hush_nick_private(target):
                         if not quiet:
-                            self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s added to nickname personal hush list." % target))
+                            self.broker.deliver(session_id,
+                                                ltd.encode_status_msg("Hush", "%s added to nickname personal hush list." % target))
                     elif not quiet:
-                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush", "%s removed from nickname personal hush list." % target))
+                        self.broker.deliver(session_id, ltd.encode_status_msg("Hush",
+                                                                              "%s removed from nickname personal hush list." % target))
             else:
                 if not msg_type or msg_type == "o":
                     if state.hushlist.hush_site_public(target):

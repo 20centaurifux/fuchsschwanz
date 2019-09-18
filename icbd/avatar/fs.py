@@ -25,9 +25,9 @@
 """
 import hashlib
 import os
-import avatar
 import PIL.Image
 import aalib
+import avatar
 
 class AsciiFiles(avatar.Storage):
     def __init__(self, directory, width, height):

@@ -26,7 +26,6 @@
 from datetime import datetime
 from textwrap import wrap
 from string import Template
-import os
 from actions import Injected
 import validate
 import core
@@ -424,7 +423,8 @@ class Registration(Injected):
 
             scope.complete()
 
-        self.broker.deliver(session_id, ltd.encode_status_msg("Confirmation", "Email address confirmed. Enable message forwarding with /forward."))
+        self.broker.deliver(session_id,
+                            ltd.encode_status_msg("Confirmation", "Email address confirmed. Enable message forwarding with /forward."))
 
     def __load_details_if_confirmed__(self, session_id):
         state = self.session.get(session_id)
@@ -585,6 +585,6 @@ class Registration(Injected):
         msgs = bytearray()
 
         for l in lines:
-            msgs.extend(ltd.encode_co_output(l))
+            msgs.extend(ltd.encode_co_output(l, msgid))
 
         self.broker.deliver(session_id, msgs)

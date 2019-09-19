@@ -746,6 +746,34 @@ class Drop:
 
         ACTION(actions.admin.Admin).drop(session_id, nicks)
 
+@command("shutdown")
+class Shutdown:
+    @staticmethod
+    @loginrequired
+    @fieldslength(count=1)
+    def process(session_id, fields):
+        delay = int(fields[0]) if (fields[0] and fields[0].isdigit()) else 60
+
+        ACTION(actions.admin.Admin).shutdown(session_id, max(delay, 0), restart=False)
+
+@command("restart")
+class Restart:
+    @staticmethod
+    @loginrequired
+    @fieldslength(count=1)
+    def process(session_id, fields):
+        delay = int(fields[0]) if (fields[0] and fields[0].isdigit()) else 60
+
+        ACTION(actions.admin.Admin).shutdown(session_id, max(delay, 0), restart=True)
+
+@command("abort")
+class AbortShutdown:
+    @staticmethod
+    @loginrequired
+    @fieldslength(count=1)
+    def process(session_id, fields):
+        ACTION(actions.admin.Admin).cancel_shutdown(session_id)
+
 @command("help")
 class Help:
     @staticmethod

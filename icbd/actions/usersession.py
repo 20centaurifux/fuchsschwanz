@@ -31,10 +31,12 @@ from actions.motd import Motd
 from actions.registration import Registration
 from actions.notification import Notify
 from actions.group import Group
+import di
 import core
 import group
 import validate
 import ltd
+import shutdown
 from textutils import hide_chars
 from exception import LtdErrorException, LtdStatusException
 
@@ -82,6 +84,15 @@ class UserSession(Injected):
         self.join(session_id, group_name, status)
 
         ACTION(Notify).notify_signon(session_id)
+
+        s = self.resolve(shutdown.Shutdown)
+        request = s.pending_request
+
+        if request != shutdown.PendingRequest.NONE:
+            msg = "Server is %s in %s." % ("restarting" if request == shutdown.PendingRequest.RESTART else "shutting down",
+                                           s.time_left_str)
+
+            self.broker.deliver(session_id, ltd.encode_status_msg("Shutdown", msg))
 
         with self.statsdb_connection.enter_scope() as scope:
             self.statsdb.add_signon(scope)

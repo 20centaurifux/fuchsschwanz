@@ -37,6 +37,9 @@ class Container:
 
         return obj() if callable(obj) else obj
 
+    def clear(self):
+        self.__m.clear()
+
 default_container = Container()
 
 class Injected:

@@ -35,6 +35,7 @@ import getopt
 import sys
 import os
 from subprocess import Popen, DEVNULL, PIPE, TimeoutExpired
+import multiprocessing
 import signal
 import math
 import core
@@ -43,6 +44,7 @@ import config.json
 import log
 from log.asyncio import LogProtocol
 import di
+import shutdown
 import session
 import session.memory
 import broker
@@ -295,17 +297,20 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
 
         self.__broker.deliver(self.__session_id, e.encode())
 
-class Server(di.Injected):
+class Server(di.Injected, shutdown.ShutdownListener):
     def __init__(self):
-        super().__init__()
+        di.Injected.__init__(self)
 
         self.__connections = {}
         self.__max_idle_time = 0.0
         self.__servers = []
+        self.__shutdown_task = None
+        self.__exit_code = core.EXIT_SUCCESS
 
     def inject(self,
                log: logging.Logger,
                config: config.Config,
+               shutdown: shutdown.Shutdown,
                store: session.Store,
                broker: broker.Broker,
                groups: group.Store,
@@ -319,6 +324,7 @@ class Server(di.Injected):
                pwdreset: passwordreset.PasswordReset):
         self.__log = log
         self.__config = config
+        self.__shutdown = shutdown
         self.__session_store = store
         self.__broker = broker
         self.__groups = groups
@@ -360,6 +366,8 @@ class Server(di.Injected):
 
             self.__servers.append(server)
 
+        self.__shutdown.add_listener(self)
+
         await asyncio.gather(*(map(lambda s: s.serve_forever(), self.__servers)))
 
     def close(self):
@@ -386,6 +394,39 @@ class Server(di.Injected):
             self.__nickdb.set_signon(scope, state.nick, now)
 
             scope.complete()
+
+    @property
+    def exit_code(self):
+        return self.__exit_code
+
+    def shutdown(self, delay, restart):
+        self.cancel_shutdown()
+
+        loop = asyncio.get_running_loop()
+
+        self.__shutdown_task = loop.create_task(self.__shutdown_task__(delay, restart))
+
+    def cancel_shutdown(self):
+        if self.__shutdown_task:
+            self.__log.info("Cancelling pending shutdown task.")
+
+            self.__shutdown_task.cancel()
+
+    async def __shutdown_task__(self, delay, restart):
+        self.__log.info("%s in %d second(s).", "Restart" if restart else "Shutdown", delay)
+
+        await asyncio.sleep(delay)
+
+        self.close()
+
+        e = ltd.Encoder("f")
+
+        e.add_field_str("WALL", append_null=False)
+        e.add_field_str("Server is %s." % ("restarting, please stay patient" if restart else "shutting down"), append_null=True)
+
+        self.__broker.broadcast(e.encode())
+
+        self.__exit_code = core.EXIT_RESTART if restart else core.EXIT_SUCCESS
 
     async def __process_idling_sessions__(self):
         while True:
@@ -597,7 +638,7 @@ async def run(opts):
 
     registry.register(logger)
 
-    logger.info("Starting server process with pid %d...", os.getpid())
+    logger.info("Starting server process with pid %d.", os.getpid())
 
     container = di.default_container
 
@@ -606,6 +647,7 @@ async def run(opts):
     container.register(logging.Logger, logger)
     container.register(log.Registry, registry)
     container.register(config.Config, preferences)
+    container.register(shutdown.Shutdown, shutdown.Shutdown())
     container.register(broker.Broker, broker.memory.Broker())
     container.register(session.Store, session.memory.Store())
     container.register(session.AwayTimeoutTable, timer.TimeoutTable())
@@ -671,12 +713,16 @@ async def run(opts):
 
     await asyncio.gather(*(map(lambda p: p.spawn(opts), processes)))
 
+    failed = False
+
     try:
         await server.run()
     except asyncio.CancelledError:
         pass
     except:
         logger.warning(traceback.format_exc())
+
+        failed = True
 
     for p in processes:
         p.kill()
@@ -686,6 +732,8 @@ async def run(opts):
     with container.resolve(nickdb.Connection).enter_scope() as scope:
         container.resolve(nickdb.NickDb).set_signoff(scope, core.NICKSERV, datetime.utcnow())
         scope.complete()
+
+    sys.exit(server.exit_code if not failed else core.EXIT_FAILURE)
 
 def get_opts(argv):
     options, _ = getopt.getopt(argv, 'c:d:', ['config=', 'data-dir='])
@@ -709,7 +757,16 @@ if __name__ == "__main__":
     try:
         opts = get_opts(sys.argv[1:])
 
-        asyncio.run(run(opts))
+        spawn = True
+
+        while spawn:
+            p = multiprocessing.Process(target=lambda: asyncio.run(run(opts)))
+
+            p.start()
+            p.join()
+
+            spawn = (p.exitcode == core.EXIT_RESTART)
+
     except getopt.GetoptError as ex:
         print(str(ex))
     except:

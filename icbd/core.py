@@ -28,6 +28,10 @@ from enum import Enum
 NAME = "Fuchsschwanz"
 VERSION = "0.1.4"
 
+EXIT_SUCCESS = 0
+EXIT_RESTART = 1
+EXIT_FAILURE = -1
+
 PROTOCOL_VERSION = "1.0"
 PROTOCOL_LEVEL = 1
 

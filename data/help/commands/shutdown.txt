@@ -1,0 +1,9 @@
+USAGE
+     /shutdown
+     /shutdown {seconds}
+
+DESCRIPTION
+     Shuts down the server.
+
+SEE ALSO
+     /abort /restart

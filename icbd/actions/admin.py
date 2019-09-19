@@ -28,17 +28,27 @@ import ltd
 from core import Verbosity
 import validate
 import log
+import shutdown
+from timer import Timer
 from exception import LtdErrorException, LtdStatusException
+
+def isadmin(fn):
+    def wrapper(*args, **kwds):
+        args[0].__test_admin__(args[1])
+
+        return fn(*args, **kwds)
+
+    return wrapper
 
 class Admin(Injected):
     def __init__(self):
         super().__init__()
 
         self.__registry = self.resolve(log.Registry)
+        self.__shutdown = self.resolve(shutdown.Shutdown)
 
+    @isadmin
     def get_reputation(self, session_id, nick, msgid=""):
-        self.__test_admin__(session_id)
-
         loggedin_session = self.session.find_nick(nick)
 
         if not loggedin_session:
@@ -51,9 +61,8 @@ class Admin(Injected):
                             ltd.encode_co_output("%s (%s): %.2f"
                                                  % (nick, loggedin_state.address, reputation), msgid))
 
+    @isadmin
     def wall(self, session_id, message):
-        self.__test_admin__(session_id)
-
         e = ltd.Encoder("f")
 
         e.add_field_str("WALL", append_null=False)
@@ -61,9 +70,8 @@ class Admin(Injected):
 
         self.broker.broadcast(e.encode())
 
+    @isadmin
     def set_log_level(self, session_id, level, msgid):
-        self.__test_admin__(session_id)
-
         try:
             verbosity = Verbosity(level)
         except ValueError:
@@ -76,16 +84,14 @@ class Admin(Injected):
 
         self.broker.deliver(session_id, ltd.encode_co_output("The log level is %d." % level, msgid))
 
+    @isadmin
     def log_level(self, session_id, msgid):
-        self.__test_admin__(session_id)
-
         verbosity = next(k for k, v in log.LOG_LEVELS.items() if v == self.log.level)
 
         self.broker.deliver(session_id, ltd.encode_co_output("The log level is %d." % verbosity.value, msgid))
 
+    @isadmin
     def drop(self, session_id, nicks):
-        self.__test_admin__(session_id)
-
         state = self.session.get(session_id)
 
         with self.statsdb_connection.enter_scope() as scope:
@@ -130,6 +136,37 @@ class Admin(Injected):
             self.broker.deliver(session_id, ltd.encode_status_msg("Pass", "Password changed."))
 
             scope.complete()
+
+    @isadmin
+    def shutdown(self, session_id, delay, restart):
+        self.__test_admin__(session_id)
+
+        msg = "Server %s in %s." % ("restarting" if restart else "shutting down", Timer.display_str(delay))
+
+        if restart:
+            self.__shutdown.restart(delay)
+        else:
+            self.__shutdown.halt(delay)
+
+        e = ltd.Encoder("f")
+
+        e.add_field_str("WALL", append_null=False)
+        e.add_field_str(msg, append_null=True)
+
+        self.broker.broadcast(e.encode())
+
+    @isadmin
+    def cancel_shutdown(self, session_id):
+        self.__test_admin__(session_id)
+
+        self.__shutdown.cancel()
+
+        e = ltd.Encoder("f")
+
+        e.add_field_str("WALL", append_null=False)
+        e.add_field_str("Server shutdown cancelled.", append_null=True)
+
+        self.broker.broadcast(e.encode())
 
     def __test_admin__(self, session_id):
         is_admin = False

@@ -1,0 +1,9 @@
+USAGE
+     /abort
+
+DESCRIPTION
+     Aborts a pending request to shutdown or restart the
+     ICB server.
+
+SEE ALSO
+     /shutdown

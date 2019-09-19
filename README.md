@@ -16,6 +16,8 @@ can be an executable!).
 You can use the run.sh script to start the server. This script will also
 generate a self-signed certificate for TLS (this requires openssl).
 
+	$ AUTO_RESPAWN=1 ./run.sh # activate failure recovery
+
 Running for the first time an administrative user will be created. You should
 note down the password.
 

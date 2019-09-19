@@ -30,6 +30,7 @@ import ssl
 import os.path
 import traceback
 from datetime import datetime
+import time
 from getpass import getuser
 import getopt
 import sys
@@ -712,7 +713,7 @@ async def run(opts):
         processes.append(AvatarProcess())
 
     await asyncio.gather(*(map(lambda p: p.spawn(opts), processes)))
-
+ 
     failed = False
 
     try:
@@ -736,14 +737,16 @@ async def run(opts):
     sys.exit(server.exit_code if not failed else core.EXIT_FAILURE)
 
 def get_opts(argv):
-    options, _ = getopt.getopt(argv, 'c:d:', ['config=', 'data-dir='])
-    m = {}
+    options, _ = getopt.getopt(argv, 'c:d:', ['config=', 'data-dir=', 'auto-respawn'])
+    m = {"auto-respawn": False}
 
     for opt, arg in options:
         if opt in ('-c', '--config'):
             m["config"] = arg
-        if opt in ('-d', '--data-dir'):
+        elif opt in ('-d', '--data-dir'):
             m["data_dir"] = arg
+        elif opt in ('--auto-respawn',):
+            m["auto-respawn"] = True
 
     if not m.get("config"):
         raise getopt.GetoptError("--config option is mandatory")
@@ -765,7 +768,14 @@ if __name__ == "__main__":
             p.start()
             p.join()
 
-            spawn = (p.exitcode == core.EXIT_RESTART)
+            if p.exitcode != core.EXIT_RESTART:
+                if p.exitcode == core.EXIT_SUCCESS or not opts["auto-respawn"]:
+                    spawn = False
+                else:
+                    for _ in range(10):
+                        sys.stdout.write(".")
+                        sys.stdout.flush()
+                        time.sleep(1)
 
     except getopt.GetoptError as ex:
         print(str(ex))

@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 RUNTIME_DIR=$(pwd)/runtime
 
@@ -14,4 +14,12 @@ if [ ! -f "$CONFIG" ]; then
 	CONFIG=$(pwd)/config.minimal.json
 fi
 
-python3.7 icbd/icbd.py --config=$CONFIG --data-dir="$(pwd)/data"
+DATA_DIR=$(pwd)/data
+
+OPTS=("--config" "$CONFIG" --data-dir "$DATA_DIR")
+
+if [ "$AUTO_RESPAWN" == "1" ]; then
+	OPTS+=("--auto-respawn")
+fi
+
+python3.7 icbd/icbd.py ${OPTS[*]}

@@ -23,4 +23,4 @@ USER
      message with /away.
 
 SEE ALSO
-     group /w /g /whereis registration /whois /m /beep /away
+     group /w /g /whereis registration /whois /whoami /m /beep /away

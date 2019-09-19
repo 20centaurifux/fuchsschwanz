@@ -235,6 +235,14 @@ class ChangeUserPassword:
 def msgid(fields):
     return fields[1] if len(fields) == 2 else ""
 
+@command("whoami")
+class WhoAmI:
+    @staticmethod
+    @loginrequired
+    @fieldslength(min=1, max=2)
+    def process(session_id, fields):
+        ACTION(actions.registration.Registration).whoami(session_id, msgid=msgid(fields))
+
 @command("secure")
 class EnableSecurity:
     @staticmethod

@@ -6,4 +6,4 @@ DESCRIPTION
      more details.
 
 SEE ALSO
-     user
+     user /whomami

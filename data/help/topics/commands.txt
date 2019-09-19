@@ -19,4 +19,5 @@ COMMANDS
      T    /talk, /text, /topic
      U    /unsecure
      V    /v
-     W    /w, /wall, /whereis, /whois, /write, /www
+     W    /w, /wall, /whereis, /whoami /whois, /write,
+          /www

@@ -1,0 +1,8 @@
+USAGE
+     /whoami
+
+DESCRIPTION
+     Displays current nick name.
+
+SEE ALSO
+     user /whereis

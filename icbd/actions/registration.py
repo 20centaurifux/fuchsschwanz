@@ -130,6 +130,11 @@ class Registration(Injected):
                 if count >= limit:
                     self.broker.deliver(session_id, ltd.encode_status_msg("Message", "User mailbox is full."))
 
+    def whoami(self, session_id, msgid=""):
+        state = self.session.get(session_id)
+
+        self.broker.deliver(session_id, ltd.encode_co_output(state.nick, msgid))
+
     def change_password(self, session_id, old_pwd, new_pwd):
         self.log.debug("Changing user password.")
 

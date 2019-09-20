@@ -23,8 +23,6 @@ note down the password.
 
 	2019-09-10 ... [icbd] INFO <sqlite.py, line 59> - Initial admin created with password '2vTOAlzv'.
 
-Send SIGTERM to the process to shutdown the server gracefully.
-
 # Configuration
 
 Please find below a list with the most important settings.

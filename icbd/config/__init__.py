@@ -33,6 +33,7 @@ class Config:
     server_hostname: str = "localhost"
     server_unsecure_login: bool = False
     server_max_logins: int = 500
+    server_binding: str = None
     bindings: List[str] = field(default_factory=list)
     logging_verbosity: core.Verbosity = core.Verbosity.INFO
     database_filename: str = None

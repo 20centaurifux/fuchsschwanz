@@ -29,7 +29,7 @@ from core import Verbosity
 import validate
 import log
 import shutdown
-from timer import Timer
+import dateutils
 from exception import LtdErrorException, LtdStatusException
 
 def isadmin(fn):
@@ -141,7 +141,7 @@ class Admin(Injected):
     def shutdown(self, session_id, delay, restart):
         self.__test_admin__(session_id)
 
-        msg = "Server %s in %s." % ("restarting" if restart else "shutting down", Timer.display_str(delay))
+        msg = "Server %s in %s." % ("restarting" if restart else "shutting down", dateutils.elapsed_time(delay))
 
         if restart:
             self.__shutdown.restart(delay)

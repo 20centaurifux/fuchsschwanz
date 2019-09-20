@@ -23,10 +23,10 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from datetime import datetime
 import passwordreset
 from sqlite_schema import Schema
 from textutils import tolower, make_password
+import dateutils
 
 class PasswordReset(passwordreset.PasswordReset):
     def setup(self, scope):
@@ -35,7 +35,7 @@ class PasswordReset(passwordreset.PasswordReset):
     @tolower(argname="nick")
     def create_request(self, scope, nick):
         code = make_password(8)
-        now = self.__now__()
+        now = dateutils.now()
 
         cur = scope.get_handle()
         cur.execute("insert into PasswordReset (Nick, Code, Timestamp) values (?, ?, ?)",
@@ -45,7 +45,7 @@ class PasswordReset(passwordreset.PasswordReset):
 
     @tolower(argname="nick")
     def count_pending_requests(self, scope, nick, ttl):
-        timestamp = self.__now__() - ttl
+        timestamp = dateutils.now() - ttl
 
         cur = scope.get_handle()
         cur.execute("select count(*) from PasswordReset where Nick=? and Timestamp>=?",
@@ -55,7 +55,7 @@ class PasswordReset(passwordreset.PasswordReset):
 
     @tolower(argname="nick")
     def has_pending_request(self, scope, nick, code, ttl):
-        timestamp = self.__now__() - ttl
+        timestamp = dateutils.now() - ttl
 
         cur = scope.get_handle()
         cur.execute("select count(*) from PasswordReset where Nick=? and Code=? and Timestamp>=?",
@@ -69,11 +69,7 @@ class PasswordReset(passwordreset.PasswordReset):
         cur.execute("delete from PasswordReset where Nick=?", (nick,))
 
     def cleanup(self, scope, ttl):
-        timestamp = self.__now__() - ttl
+        timestamp = dateutils.now() - ttl
 
         cur = scope.get_handle()
         cur.execute("delete from PasswordReset where Timestamp<?", (timestamp,))
-
-    @staticmethod
-    def __now__():
-        return int(datetime.utcnow().timestamp())

@@ -27,7 +27,7 @@ from actions import Injected
 import core
 import news
 import ltd
-import timer
+import dateutils
 from exception import LtdStatusException
 
 class Info(Injected):
@@ -126,7 +126,7 @@ class Info(Injected):
         if stats.max_idle:
             self.broker.deliver(session_id,
                                 ltd.encode_co_output("  Max Idle: %s (%s)"
-                                                     % (stats.max_idle[1], timer.Timer.display_str(stats.max_idle[0])), msgid))
+                                                     % (stats.max_idle[1], dateutils.elapsed_time(stats.max_idle[0])), msgid))
         else:
             self.broker.deliver(session_id, ltd.encode_co_output("  Max Idle: (None)", msgid))
 

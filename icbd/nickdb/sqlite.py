@@ -33,6 +33,7 @@ from sqlite_schema import Schema
 import di
 import core
 from textutils import tolower, make_password
+import dateutils
 
 class NickDb(nickdb.NickDb, di.Injected):
     def __init__(self):
@@ -274,7 +275,7 @@ class NickDb(nickdb.NickDb, di.Injected):
     @tolower(argname="nick")
     def add_message(self, scope, nick, sender, text):
         msgid = uuid.uuid4().hex
-        timestamp = int(datetime.utcnow().timestamp())
+        timestamp = dateutils.now()
 
         cur = scope.get_handle()
         cur.execute("insert into Message (UUID, Sender, Receiver, Timestamp, Message) values (?, ?, ?, ?, ?)",

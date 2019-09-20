@@ -25,6 +25,7 @@
 """
 from enum import Enum
 import timer
+import dateutils
 
 class PendingRequest(Enum):
     NONE = 1
@@ -88,7 +89,7 @@ class Shutdown:
         left = self.time_left
 
         if left:
-            left_str = timer.Timer.display_str(left)
+            left_str = dateutils.elapsed_time(left)
 
         return left_str
 

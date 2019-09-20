@@ -24,6 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from timeit import default_timer as timer
+import dateutils
 
 class Timer:
     def __init__(self):
@@ -36,40 +37,7 @@ class Timer:
         return timer() - self.__timer
 
     def elapsed_str(self):
-        return self.display_str(self.elapsed())
-
-    @staticmethod
-    def display_str(elapsed):
-        total_seconds = int(elapsed)
-        total_minutes = int(total_seconds / 60)
-        total_hours = int(total_minutes / 60)
-        minutes = total_minutes - (total_hours * 60)
-
-        parts = []
-
-        if total_hours > 23:
-            days = int(total_hours / 24)
-
-            parts.append("%dd" % days)
-
-            hours = total_hours - (days * 24)
-
-            if hours > 0:
-                parts.append("%dh" % hours)
-
-            if minutes > 0:
-                parts.append("%dm" % minutes)
-        elif total_hours > 0:
-            parts.append("%dh" % total_hours)
-
-            if minutes > 0:
-                parts.append("%dm" % minutes)
-        elif total_minutes > 0:
-            parts.append("%dm" % minutes)
-        else:
-            parts.append("%ds" % total_seconds)
-
-        return "".join(parts)
+        return dateutils.elapsed_time(self.elapsed())
 
 class TimeoutTable:
     def __init__(self):
@@ -116,4 +84,5 @@ class TimeoutTable:
     def remove_entry(self, target, source):
         try:
             del self.__m[target][source]
-        except KeyError: pass
+        except KeyError:
+            pass

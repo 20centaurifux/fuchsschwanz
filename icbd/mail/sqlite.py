@@ -27,6 +27,7 @@ from datetime import datetime
 import uuid
 import mail
 from sqlite_schema import Schema
+import dateutils
 
 class Sink(mail.Sink):
     def __init__(self):
@@ -37,7 +38,7 @@ class Sink(mail.Sink):
 
     def put(self, scope, receiver, subject, body):
         msgid = uuid.uuid4().hex
-        now = int(datetime.utcnow().timestamp())
+        now = dateutils.now()
 
         cur = scope.get_handle()
         cur.execute("insert into Mail (UUID, Receiver, Subject, Body, Timestamp, DueDate) values (?, ?, ?, ?, ?, ?)",

@@ -627,7 +627,7 @@ class AvatarProcess(Process, di.Injected, avatar.WriterListener):
         if hasattr(signal, "SIGUSR1"):
             self.signal(signal.SIGUSR1)
 
-async def run(opts):
+async def run_icbd(opts):
     data_dir = opts.get("data_dir")
 
     mapping = config.json.load(opts["config"])
@@ -736,6 +736,9 @@ async def run(opts):
 
     sys.exit(server.exit_code if not failed else core.EXIT_FAILURE)
 
+def run(opts):
+    asyncio.run(run_icbd(opts))
+
 def get_opts(argv):
     options, _ = getopt.getopt(argv, 'c:d:', ['config=', 'data-dir=', 'auto-respawn'])
     m = {"auto-respawn": False}
@@ -763,7 +766,7 @@ if __name__ == "__main__":
         spawn = True
 
         while spawn:
-            p = multiprocessing.Process(target=lambda: asyncio.run(run(opts)))
+            p = multiprocessing.Process(target=run, args=(opts,))
 
             p.start()
             p.join()
@@ -776,6 +779,8 @@ if __name__ == "__main__":
                         sys.stdout.write(".")
                         sys.stdout.flush()
                         time.sleep(1)
+
+                    sys.stdout.write("\n")
 
     except getopt.GetoptError as ex:
         print(str(ex))

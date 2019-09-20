@@ -23,10 +23,10 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from datetime import datetime
 import confirmation
 from sqlite_schema import Schema
 from textutils import tolower, make_password
+import dateutils
 
 class Confirmation(confirmation.Confirmation):
     def setup(self, scope):
@@ -35,7 +35,7 @@ class Confirmation(confirmation.Confirmation):
     @tolower(argnames=["nick", "email"])
     def create_request(self, scope, nick, email):
         code = make_password(8)
-        now = self.__now__()
+        now = dateutils.now()
 
         cur = scope.get_handle()
         cur.execute("insert into ConfirmationRequest (Nick, Email, Code, Timestamp) values (?, ?, ?, ?)",
@@ -45,7 +45,7 @@ class Confirmation(confirmation.Confirmation):
 
     @tolower(argnames=["nick", "email"])
     def count_pending_requests(self, scope, nick, email, ttl):
-        timestamp = self.__now__() - ttl
+        timestamp = dateutils.now() - ttl
 
         cur = scope.get_handle()
         cur.execute("select count(*) from ConfirmationRequest where Nick=? and Email=? and Timestamp>=?",
@@ -55,7 +55,7 @@ class Confirmation(confirmation.Confirmation):
 
     @tolower(argnames=["nick", "email"])
     def has_pending_request(self, scope, nick, code, email, ttl):
-        timestamp = self.__now__() - ttl
+        timestamp = dateutils.now() - ttl
 
         cur = scope.get_handle()
         cur.execute("select count(*) from ConfirmationRequest where Nick=? and Email=? and Code=? and Timestamp>=?",
@@ -69,11 +69,7 @@ class Confirmation(confirmation.Confirmation):
         cur.execute("delete from ConfirmationRequest where Nick=?", (nick,))
 
     def cleanup(self, scope, ttl):
-        timestamp = self.__now__() - ttl
+        timestamp = dateutils.now() - ttl
 
         cur = scope.get_handle()
         cur.execute("delete from ConfirmationRequest where Timestamp<?", (timestamp,))
-
-    @staticmethod
-    def __now__():
-        return int(datetime.utcnow().timestamp())

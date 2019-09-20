@@ -27,6 +27,7 @@ from datetime import datetime
 import avatar
 from sqlite_schema import Schema
 from textutils import tolower
+import dateutils
 
 class Writer(avatar.Writer):
     def __init__(self, refresh_timeout, retry_timeout, max_errors, error_timeout):
@@ -41,7 +42,7 @@ class Writer(avatar.Writer):
 
     @tolower(argname="nick")
     def put(self, scope, nick, url):
-        now = int(datetime.utcnow().timestamp())
+        now = dateutils.now()
 
         cur = scope.get_handle()
 
@@ -61,7 +62,7 @@ class Writer(avatar.Writer):
 
     @tolower(argname="nick")
     def fetched(self, scope, nick, url, key):
-        now = int(datetime.utcnow().timestamp())
+        now = dateutils.now()
         due_date = now + self.__refresh_timeout
 
         cur = scope.get_handle()
@@ -77,7 +78,7 @@ class Writer(avatar.Writer):
 
         if row:
             errors = row[0]
-            now = int(datetime.utcnow().timestamp())
+            now = dateutils.now()
 
             if errors == self.__max_errors:
                 due_date = now + self.__error_timeout
@@ -103,7 +104,7 @@ class Reader(avatar.Reader):
         Schema().upgrade(scope)
 
     def head(self, scope):
-        now = int(datetime.utcnow().timestamp())
+        now = dateutils.now()
 
         cur = scope.get_handle()
 

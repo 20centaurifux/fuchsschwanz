@@ -3,20 +3,11 @@
 	{
 		"hostname": "localhost"
 	},
-	"tcp":
-	{
-		"enabled": true,
-		"address": "127.0.0.1",
-		"port": 7326
-	},
-	"tcp_tls":
-	{
-		"enabled": true,
-		"address": "127.0.0.1",
-		"port": 7327,
-		"cert": "runtime/selfsigned.cert",
-		"key": "runtime/selfsigned.key"
-	},
+	"bindings":
+	[
+		"tcp://localhost",
+		"tcps://localhost?cert=./runtime/selfsigned.cert&key=./runtime/selfsigned.key"
+	],
 	"avatar":
 	{
 		"directory": "runtime/avatars"

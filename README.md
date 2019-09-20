@@ -33,16 +33,15 @@ Please find below a list with the most important settings.
 
 * hostname: hostname of your server
 
-## tcp
+## bindings
 
-* enabled: enable (true) or disable (false) TCP without encryption
-* address, port: network address and port used for TCP connections
+Array containing network bindings (TCP and TCP over TCP).
 
-## tcp\_tls
-
-* enabled: enable (true) or disable (false) TCP with TLS encryption
-* address, port: network address and port used for encrypted TCP connections
-* key, cert: private key and certificate
+	"bindings":
+	[
+		"tcp://localhost",
+		"tcps://localhost?cert=./runtime/selfsigned.cert&key=./runtime/selfsigned.key"
+	]
 
 ## timeouts
 

@@ -45,6 +45,7 @@ import config.json
 import log
 from log.asyncio import LogProtocol
 import di
+import url
 import shutdown
 import session
 import session.memory
@@ -346,26 +347,33 @@ class Server(di.Injected, shutdown.ShutdownListener):
         loop.create_task(self.__process_idling_sessions__())
         loop.create_task(self.__cleanup_dbs_())
 
-        if self.__config.tcp_enabled:
-            self.__log.info("Listening on %s:%d (tcp)", self.__config.tcp_address, self.__config.tcp_port)
+        for addr in self.__config.bindings:
+            self.__log.info("Found binding: %s", addr)
 
-            server = await loop.create_server(lambda: ICBServerProtocol(self.__connections),
-                                                                        self.__config.tcp_address,
-                                                                        self.__config.tcp_port)
+            binding = url.parse_server_address(addr)
 
-            self.__servers.append(server)
+            if binding["protocol"] == "tcp":
+                self.__log.info("Listening on %s:%d (tcp)", binding["address"], binding["port"])
 
-        if self.__config.tcp_tls_enabled:
-            self.__log.info("Listening on %s:%d (tcp/tls)", self.__config.tcp_tls_address, self.__config.tcp_tls_port)
+                server = await loop.create_server(lambda: ICBServerProtocol(self.__connections),
+                                                                            binding["address"],
+                                                                            binding["port"])
 
-            sc = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
-            sc.load_cert_chain(self.__config.tcp_tls_cert, self.__config.tcp_tls_key)
+                self.__servers.append(server)
+            elif binding["protocol"] == "tcps":
+                self.__log.info("Listening on %s:%d (tcp/tls)", binding["address"], binding["port"])
 
-            server = await loop.create_server(lambda: ICBServerProtocol(self.__connections),
-                                              self.__config.tcp_tls_address,
-                                              self.__config.tcp_tls_port, ssl=sc)
+                sc = ssl.create_default_context(ssl.Purpose.CLIENT_AUTH)
+                sc.load_cert_chain(binding["cert"], binding["key"])
 
-            self.__servers.append(server)
+                server = await loop.create_server(lambda: ICBServerProtocol(self.__connections),
+                                                                            binding["address"],
+                                                                            binding["port"],
+                                                                            ssl=sc)
+
+                self.__servers.append(server)
+            else:
+                self.__log.warning("Unsupported protocol: %s", binding["protocol"])
 
         self.__shutdown.add_listener(self)
 
@@ -381,8 +389,8 @@ class Server(di.Injected, shutdown.ShutdownListener):
         now = datetime.utcnow()
 
         self.__session_id = self.__session_store.new(loginid=getuser(),
-                                                     ip=self.__config.tcp_address,
-                                                     host=socket.getfqdn(self.__config.tcp_address),
+                                                     ip="127.0.0.1",
+                                                     host=self.__config.server_hostname,
                                                      nick=core.NICKSERV,
                                                      authenticated=True,
                                                      signon=now,

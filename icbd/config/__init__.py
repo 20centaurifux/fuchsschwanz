@@ -23,7 +23,8 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import List
 import copy
 import core
 
@@ -32,14 +33,7 @@ class Config:
     server_hostname: str = "localhost"
     server_unsecure_login: bool = False
     server_max_logins: int = 500
-    tcp_enabled: bool = True
-    tcp_address: str = "127.0.0.1"
-    tcp_port: int = 7326
-    tcp_tls_enabled: bool = False
-    tcp_tls_address: str = "127.0.0.1"
-    tcp_tls_port: int = 7327
-    tcp_tls_cert: str = None
-    tcp_tls_key: str = None
+    bindings: List[str] = field(default_factory=list)
     logging_verbosity: core.Verbosity = core.Verbosity.INFO
     database_filename: str = None
     database_cleanup_interval: float = 3600.0

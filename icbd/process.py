@@ -63,7 +63,9 @@ class Process:
         raise NotImplementedError()
 
     def status_message(self, category, text):
-        self.__broadcast.send(ltd.encode_status_msg(category, text))
+        loop = asyncio.get_event_loop()
+
+        loop.call_soon(self.__broadcast.send, ltd.encode_status_msg(category, text))
 
     def exit(self):
         if self.__process:

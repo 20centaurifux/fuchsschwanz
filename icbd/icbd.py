@@ -39,8 +39,9 @@ import config
 import config.json
 import log
 import di
-from server import Server
 from process import Process
+import ipc
+import network
 import session
 import session.memory
 import broker
@@ -72,6 +73,7 @@ import mail.sqlite
 import timer
 import avatar
 import avatar.sqlite
+import ltd
 
 if avatar.is_available():
     import avatar.fs
@@ -98,17 +100,17 @@ class MailProcess(Process, di.Injected, mail.SinkListener):
     def put(self, receiver, subject, body):
         self.__log.info("'%s' mail enqueued.", subject)
 
-        if hasattr(signal, "SIGUSR1"):
-            self.signal(signal.SIGUSR1)
+        self.status_message("mail", "put")
 
 class AvatarProcess(Process, di.Injected, avatar.WriterListener):
     def __init__(self):
         Process.__init__(self, "avatar")
         di.Injected.__init__(self)
 
-    def inject(self, config: config.Config, log: logging.Logger, writer: avatar.Writer):
+    def inject(self, config: config.Config, log: logging.Logger, broadcast: ipc.Broadcast, writer: avatar.Writer):
         self.__config = config
         self.__log = log
+        self.__broadcast = broadcast
         self.__writer = writer
 
         self.__writer.add_listener(self)
@@ -121,10 +123,9 @@ class AvatarProcess(Process, di.Injected, avatar.WriterListener):
     def put(self, nick, url):
         self.__log.info("Avatar changed: %s (%s)", url, nick)
 
-        if hasattr(signal, "SIGUSR1"):
-            self.signal(signal.SIGUSR1)
+        self.status_message("avatar", "put")
 
-async def run_server(opts):
+async def run_services(opts):
     data_dir = opts.get("data_dir")
 
     mapping = config.json.load(opts["config"])
@@ -145,6 +146,7 @@ async def run_server(opts):
     container.register(logging.Logger, logger)
     container.register(log.Registry, registry)
     container.register(config.Config, preferences)
+    container.register(ipc.Broadcast, ipc.Broadcast())
     container.register(shutdown.Shutdown, shutdown.Shutdown())
     container.register(broker.Broker, broker.memory.Broker())
     container.register(session.Store, session.memory.Store())
@@ -194,7 +196,11 @@ async def run_server(opts):
 
     container.resolve(avatar.Storage).setup()
 
-    server = Server()
+    awaitables = []
+
+    bus = ipc.Bus()
+
+    await bus.start()
 
     if os.name == "posix":
         loop = asyncio.get_event_loop()
@@ -209,14 +215,14 @@ async def run_server(opts):
     if avatar.is_available():
         processes.append(AvatarProcess())
 
-    awaitables = [p.spawn(opts) for p in processes]
+    asyncio.gather(*[p.spawn(opts) for p in processes])
 
     failed = False
 
     try:
-        awaitables.append(server.run())
+        server = network.Server()
 
-        await asyncio.gather(*awaitables)
+        await server.run()
     except asyncio.CancelledError:
         pass
     except:
@@ -224,8 +230,10 @@ async def run_server(opts):
 
         failed = True
 
+    await bus.close()
+
     for p in processes:
-        p.kill()
+        p.exit()
 
     logger.info("Server stopped.")
 
@@ -236,7 +244,7 @@ async def run_server(opts):
     sys.exit(server.exit_code if not failed else core.EXIT_FAILURE)
 
 def run(opts):
-    asyncio.run(run_server(opts))
+    asyncio.run(run_services(opts))
 
 def get_opts(argv):
     options, _ = getopt.getopt(argv, 'c:d:', ['config=', 'data-dir=', 'auto-respawn'])

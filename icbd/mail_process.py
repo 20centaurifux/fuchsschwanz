@@ -32,6 +32,8 @@ from enum import Enum
 import traceback
 import logging
 import time
+import ipc
+import ltd
 import config
 import config.json
 import log
@@ -157,29 +159,21 @@ async def run(opts):
                                                preferences.smtp_username,
                                                preferences.smtp_password))
 
+    client = ipc.Client(preferences.server_ipc_binding)
+
     mailer = Sendmail()
 
+    conn_f = await client.connect()
+    msg_f = asyncio.ensure_future(client.read())
     cleanup_f = asyncio.ensure_future(asyncio.sleep(0))
     timeout_f = asyncio.ensure_future(asyncio.sleep(1))
-    signal_q = asyncio.Queue()
-    signal_f = asyncio.ensure_future(signal_q.get())
 
     if os.name == "posix":
         loop = asyncio.get_event_loop()
 
-        logger.debug("Registerung SIGTERM handler.")
-
-        loop.add_signal_handler(signal.SIGTERM, lambda: signal_q.put_nowait(signal.SIGTERM))
-
         logger.debug("Registerung SIGINT handler.")
 
         loop.add_signal_handler(signal.SIGINT, lambda: None)
-
-        logger.debug("Registerung SIGUSR1 handler.")
-
-        loop.add_signal_handler(signal.SIGUSR1, lambda: signal_q.put_nowait(signal.SIGUSR1))
-    else:
-        logger.warning("No signal handlers registered.")
 
     quit = False
 
@@ -190,24 +184,27 @@ async def run(opts):
         QUIT = 3
 
     while not quit:
-        done, _ = await asyncio.wait([cleanup_f, timeout_f, signal_f], return_when=asyncio.FIRST_COMPLETED)
+        done, _ = await asyncio.wait([conn_f, msg_f, cleanup_f, timeout_f], return_when=asyncio.FIRST_COMPLETED)
 
         action = Action.NONE
 
         for f in done:
-            if f is signal_f:
-                sig = signal_f.result()
+            if f is msg_f:
+                t, fields = msg_f.result()
 
-                logger.debug("%s received.", sig)
+                logger.debug("Message received: type='%s', payload=%s", t, fields)
 
-                action = Action.SEND
+                if t == "d":
+                    msg = ltd.join_status_msg(fields)
 
-                if sig == signal.SIGTERM:
-                    action = Action.QUIT
+                    if msg and msg[0] == "mail" and msg[1] == "put":
+                        action = Action.SEND
             elif f is cleanup_f:
                 action = Action.CLEANUP
-            else:
+            elif f is timeout_f:
                 action = Action.SEND
+            elif f is conn_f:
+                action = Action.QUIT
 
         if action == Action.SEND:
             mailer.send()
@@ -217,12 +214,12 @@ async def run(opts):
             quit = True
 
         for f in done:
+            if f is msg_f:
+                msg_f = asyncio.ensure_future(client.read())
             if f is cleanup_f:
                 cleanup_f = asyncio.ensure_future(asyncio.sleep(preferences.mail_cleanup_interval))
             if f is timeout_f:
                 timeout_f = asyncio.ensure_future(asyncio.sleep(preferences.mail_interval))
-            elif f is signal_f:
-                signal_f = asyncio.ensure_future(signal_q.get())
 
     logger.info("Stopped.")
 
@@ -234,3 +231,5 @@ if __name__ == "__main__":
 
     except getopt.GetoptError as ex:
         print(str(ex))
+    except:
+        pass

@@ -29,6 +29,8 @@ import logging
 import os
 import di
 import config
+import ipc
+import ltd
 from log.asyncio import LogProtocol
 
 class Process:
@@ -37,6 +39,7 @@ class Process:
         self.__process = None
         self.__log = di.default_container.resolve(logging.Logger)
         self.__config = di.default_container.resolve(config.Config)
+        self.__broadcast = di.default_container.resolve(ipc.Broadcast)
 
     async def spawn(self, argv):
         args = self.__build_args__(argv)
@@ -59,27 +62,38 @@ class Process:
     def __build_args__(self, argv):
         raise NotImplementedError()
 
-    def signal(self, sig):
-        self.__log.debug("Sending %s to child process with pid %d.", sig, self.__process.pid)
+    def status_message(self, category, text):
+        self.__broadcast.send(ltd.encode_status_msg(category, text))
 
-        loop = asyncio.get_running_loop()
-
-        loop.call_soon(self.__process.send_signal, sig)
-
-    def kill(self):
+    def exit(self):
         if self.__process:
-            self.__log.info("Terminating '%s' process with pid %d.", self.__name, self.__process.pid)
+            returncode = self.__process.poll()
 
-            self.__process.terminate()
+            if returncode is None:
+                try:
+                    self.__log.info("Waiting for '%s' process.", self.__name)
 
-            self.__log.info("Waiting for '%s' process.", self.__name)
+                    self.__process.communicate(timeout=5)
 
-            try:
-                self.__process.communicate(timeout=15)
-            except TimeoutExpired:
-                self.__log.info("Timeout expired, killing '%s' process.", self.__name)
+                    returncode = self.__process.returncode
+                except TimeoutExpired:
+                    self.__log.info("Timeout expired, terminating '%s' process.", self.__name)
 
-                self.__process.kill()
-                self.__process.communicate()
+            if returncode is None:
+                self.__log.info("Terminating '%s' process with pid %d.", self.__name, self.__process.pid)
 
-            self.__log.info("Process %d stopped with exit status %d.", self.__process.pid, self.__process.returncode)
+                self.__process.terminate()
+
+                self.__log.info("Waiting for '%s' process to terminate.", self.__name)
+
+                try:
+                    self.__process.communicate(timeout=15)
+                except TimeoutExpired:
+                    self.__log.info("Timeout expired, killing '%s' process.", self.__name)
+
+                    self.__process.kill()
+                    self.__process.communicate()
+
+                returncode = self.__process.returncode
+
+            self.__log.info("Process %d stopped with exit status %d.", self.__process.pid, returncode)

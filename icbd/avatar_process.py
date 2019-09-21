@@ -33,6 +33,9 @@ import traceback
 import logging
 import io
 import PIL.Image
+import di
+import ipc
+import ltd
 import config
 import config.json
 import log
@@ -40,7 +43,6 @@ import sqlite
 import avatar
 import avatar.sqlite
 import avatar.fs
-import di
 
 class Download(di.Injected):
     def inject(self,
@@ -187,56 +189,53 @@ async def run(opts):
                                                             preferences.avatar_ascii_width,
                                                             preferences.avatar_ascii_height))
 
+    client = ipc.Client(preferences.server_ipc_binding)
+
     download = Download()
 
+    conn_f = await client.connect()
+    msg_f = asyncio.ensure_future(client.read())
     timeout_f = asyncio.ensure_future(asyncio.sleep(1))
-    signal_q = asyncio.Queue()
-    signal_f = asyncio.ensure_future(signal_q.get())
 
     if os.name == "posix":
         loop = asyncio.get_event_loop()
-
-        logger.debug("Registerung SIGTERM handler.")
-
-        loop.add_signal_handler(signal.SIGTERM, lambda: signal_q.put_nowait(signal.SIGTERM))
 
         logger.debug("Registerung SIGINT handler.")
 
         loop.add_signal_handler(signal.SIGINT, lambda: None)
 
-        logger.debug("Registerung SIGUSR1 handler.")
-
-        loop.add_signal_handler(signal.SIGUSR1, lambda: signal_q.put_nowait(signal.SIGUSR1))
-    else:
-        logger.warning("No signal handlers registered.")
-
     quit = False
 
     while not quit:
-        done, _ = await asyncio.wait([timeout_f, signal_f], return_when=asyncio.FIRST_COMPLETED)
+        done, _ = await asyncio.wait([conn_f, msg_f, timeout_f], return_when=asyncio.FIRST_COMPLETED)
 
-        trigger = True
+        trigger = False
         quit = False
 
         for f in done:
-            if f is signal_f:
-                sig = signal_f.result()
+            if f is msg_f:
+                t, fields = msg_f.result()
 
-                logger.debug("%s received.", sig)
+                logger.debug("Message received: type='%s', payload=%s", t, fields)
 
-                trigger = (sig == signal.SIGUSR1)
-                quit = (sig == signal.SIGTERM)
-            else:
+                if t == "d":
+                    msg = ltd.join_status_msg(fields)
+
+                    if msg and msg[0] == "avatar" and msg[1] == "put":
+                        trigger = True
+            elif f is conn_f:
+                quit = True
+            elif f is timeout_f:
                 trigger = True
 
         if trigger:
             download.fetch()
 
         for f in done:
-            if f is timeout_f:
+            if f is msg_f:
+                msg_f = asyncio.ensure_future(client.read())
+            elif f is timeout_f:
                 timeout_f = asyncio.ensure_future(asyncio.sleep(preferences.avatar_interval))
-            elif f is signal_f:
-                signal_f = asyncio.ensure_future(signal_q.get())
 
     logger.info("Stopped.")
 

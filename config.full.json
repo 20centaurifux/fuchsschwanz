@@ -3,7 +3,11 @@
 	{
 		"hostname": "localhost",
 		"unsecureLogin": false,
-		"maxLogins": 100
+		"maxLogins": 100,
+		"ipc":
+		{
+			"binding": "unix:///tmp/fuchsschwanz.sock"
+		}
 	},
 	"bindings":
 	[

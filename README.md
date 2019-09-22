@@ -35,7 +35,7 @@ Please find below a list with the most important settings.
 
 ## bindings
 
-Array containing network bindings (TCP and TCP over TCP).
+Array containing network bindings (TCP and TLS over TCP).
 
 	"bindings":
 	[

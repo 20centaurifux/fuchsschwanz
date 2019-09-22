@@ -59,6 +59,7 @@ class Download(di.Injected):
         self.__storage = storage
 
         self.__prepare_db__()
+        self.__prepare_storage__()
 
     def fetch(self):
         self.__log.debug("Processing queue.")
@@ -153,6 +154,9 @@ class Download(di.Injected):
             self.__writer.setup(scope)
 
             scope.complete()
+
+    def __prepare_storage__(self):
+        self.__storage.setup()
 
 def get_opts(argv):
     options, _ = getopt.getopt(argv, 'c:d:', ['config=', 'data-dir='])

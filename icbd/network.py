@@ -336,10 +336,8 @@ class Server(di.Injected, shutdown.ShutdownListener):
                                                                             binding["address"],
                                                                             binding["port"],
                                                                             ssl=sc)
-
-                self.__servers.append(server)
             else:
-                self.__log.warning("Unsupported protocol: %s", binding["protocol"])
+                raise NotImplementedError("Unsupported protocol: %s", binding["protocol"])
 
         self.__shutdown.add_listener(self)
 

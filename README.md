@@ -1,7 +1,9 @@
 # Fuchsschwanz
 
 Fuchsschwanz is a cross-platform [ICB](http://www.icb.net/) server written in Python. It's the
-first ICB server supporting TLS, UTF-8 & IPv6 out of the box :)
+first ICB server supporting TLS, UTF-8, IPv6 & avatars out of the box.
+
+![alt text](media/screenshot.png "screenshot")
 
 # Running Fuchsschwanz
 
@@ -13,8 +15,8 @@ configuration file.
 The data directory contains help files, news and the message of the day (which
 can be an executable!).
 
-You can use the run.sh script to start the server. This script will also
-generate a self-signed certificate for TLS (this requires openssl).
+The easiest way to start Fuchsschwanz is to start the run.sh script. This will also generate a
+self-signed certificate for TLS (this requires openssl).
 
 	$ AUTO_RESPAWN=1 ./run.sh # activate failure recovery
 
@@ -54,3 +56,23 @@ Array containing network bindings (TCP and TCP over TCP).
 ## database
 
 * filename: filename of the internal SQLite database
+
+# Avatar support
+
+To enable avatar support [Pillow](https://python-pillow.org/) and [python-aalib](http://jwilk.net/software/python-aalib/) are required:
+
+	$ python3.7 -m pip install pillow python-aalib
+
+# Windows issues
+
+By default Fuchsschwanz uses a Unix domain socket for inter-process communication. This
+doesn't work on Windows for obvious reasons. Use a TCP connection instead:
+
+	"server":
+	{
+		"hostname": "localhost",
+		"ipc":
+		{
+			"binding": "tcp://localhost:7328"
+		}
+	}

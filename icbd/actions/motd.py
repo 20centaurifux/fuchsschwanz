@@ -32,11 +32,11 @@ class Motd(Injected):
     def __init__(self):
         super().__init__()
 
-        self.motd = self.resolve(motd.Motd)
+        self.__motd = self.resolve(motd.Motd)
 
     def receive(self, session_id, msgid=""):
         try:
-            for line in self.motd.read():
+            for line in self.__motd.read():
                 self.broker.deliver(session_id, ltd.encode_co_output(line, msgid))
 
         except:

@@ -196,8 +196,6 @@ async def run_services(opts):
 
     container.resolve(avatar.Storage).setup()
 
-    awaitables = []
-
     bus = ipc.Bus()
 
     await bus.start()
@@ -207,8 +205,6 @@ async def run_services(opts):
 
         loop.add_signal_handler(signal.SIGINT, lambda: server.close())
         loop.add_signal_handler(signal.SIGTERM, lambda: server.close())
-    else:
-        logger.warning("No signal handlers registered.")
 
     processes = [MailProcess()]
 
@@ -239,6 +235,7 @@ async def run_services(opts):
 
     with container.resolve(nickdb.Connection).enter_scope() as scope:
         container.resolve(nickdb.NickDb).set_signoff(scope, core.NICKSERV, datetime.utcnow())
+
         scope.complete()
 
     sys.exit(server.exit_code if not failed else core.EXIT_FAILURE)

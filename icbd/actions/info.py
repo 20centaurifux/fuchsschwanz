@@ -34,7 +34,7 @@ class Info(Injected):
     def __init__(self):
         super().__init__()
 
-        self.news = self.resolve(news.News)
+        self.__news = self.resolve(news.News)
 
     def version(self, session_id, msgid=""):
         self.broker.deliver(session_id, ltd.encode_co_output("%s v%s" % (core.NAME, core.VERSION), msgid))
@@ -43,7 +43,7 @@ class Info(Injected):
                                                  msgid))
 
     def all_news(self, session_id, msgid=""):
-        news = self.news.all()
+        news = self.__news.all()
 
         if not news:
             raise LtdStatusException("News", "No news.")
@@ -57,7 +57,7 @@ class Info(Injected):
             self.broker.deliver(session_id, ltd.encode_co_output("-" * 64, msgid))
 
     def news_item(self, session_id, news_item, msgid=""):
-        item = self.news.get_item(news_item)
+        item = self.__news.get_item(news_item)
 
         if not item:
             raise LtdStatusException("News", "Entry not found.")

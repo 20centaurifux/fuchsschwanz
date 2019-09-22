@@ -34,7 +34,7 @@ class PrivateMessage(Injected):
     def __init__(self):
         super().__init__()
 
-        self.away_table = self.resolve(session.AwayTimeoutTable)
+        self.__away_table = self.resolve(session.AwayTimeoutTable)
 
     def send(self, session_id, receiver, message):
         loggedin_session = self.session.find_nick(receiver)
@@ -58,10 +58,10 @@ class PrivateMessage(Injected):
             loggedin_state = self.session.get(loggedin_session)
 
             if loggedin_state.away:
-                if not self.away_table.is_alive(session_id, receiver):
+                if not self.__away_table.is_alive(session_id, receiver):
                     self.broker.deliver(session_id, ltd.encode_status_msg("Away",
                                                                           "%s (since %s)." % (loggedin_state.away,
                                                                                               loggedin_state.t_away.elapsed_str())))
-                    self.away_table.set_alive(session_id, receiver, self.config.timeouts_away_message)
+                    self.__away_table.set_alive(session_id, receiver, self.config.timeouts_away_message)
         else:
             raise LtdErrorException("%s is not signed on." % receiver)

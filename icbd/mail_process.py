@@ -145,11 +145,9 @@ async def run(opts):
     container.register(config.Config, preferences)
     container.register(logging.Logger, logger)
     container.register(mail.Connection, sqlite.Connection(preferences.database_filename))
-
     container.register(mail.Queue, mail.sqlite.Queue(preferences.mail_ttl,
                                                      preferences.mail_max_errors,
                                                      preferences.mail_retry_timeout))
-
     container.register(mail.MTA, mail.smtp.MTA(preferences.smtp_hostname,
                                                preferences.smtp_port,
                                                preferences.smtp_ssl_enabled,

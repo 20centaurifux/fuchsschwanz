@@ -36,12 +36,12 @@ class MessageBox(Injected):
     def __init__(self):
         super().__init__()
 
-        self.notification_table = self.resolve(session.NotificationTimeoutTable)
+        self.__notification_table = self.resolve(session.NotificationTimeoutTable)
 
-        self.mail_sink_connection = self.resolve(mail.Connection)
-        self.mail_sink = self.resolve(mail.Sink)
+        self.__mail_sink_connection = self.resolve(mail.Connection)
+        self.__mail_sink = self.resolve(mail.Sink)
 
-        self.template = self.resolve(template.Template)
+        self.__template = self.resolve(template.Template)
 
     def send_message(self, session_id, receiver, text):
         state = self.session.get(session_id)
@@ -66,9 +66,9 @@ class MessageBox(Injected):
             loggedin_session = self.session.find_nick(receiver)
 
             if count > limit:
-                if loggedin_session and not self.notification_table.is_alive(loggedin_session, "mbox_full"):
+                if loggedin_session and not self.__notification_table.is_alive(loggedin_session, "mbox_full"):
                     self.broker.deliver(loggedin_session, ltd.encode_str("e", "User mailbox is full."))
-                    self.notification_table.set_alive(loggedin_session, "mbox_full", self.config.timeouts_mbox_full_message)
+                    self.__notification_table.set_alive(loggedin_session, "mbox_full", self.config.timeouts_mbox_full_message)
 
                 raise LtdErrorException("User mailbox full.")
 
@@ -81,9 +81,9 @@ class MessageBox(Injected):
                 self.broker.deliver(loggedin_session,
                                     ltd.encode_status_msg("Message", "You have %d message%s." % (count, "" if count == 1 else "s")))
 
-                if count == limit and not self.notification_table.is_alive(loggedin_session, "mbox_full"):
+                if count == limit and not self.__notification_table.is_alive(loggedin_session, "mbox_full"):
                     self.broker.deliver(loggedin_session, ltd.encode_str("e", "User mailbox is full."))
-                    self.notification_table.set_alive(loggedin_session, "mbox_full", self.config.timeouts_mbox_full_message)
+                    self.__notification_table.set_alive(loggedin_session, "mbox_full", self.config.timeouts_mbox_full_message)
 
             scope.complete()
 
@@ -97,11 +97,11 @@ class MessageBox(Injected):
                 email = self.nickdb.lookup(scope, receiver).email
 
         if email:
-            with self.mail_sink_connection.enter_scope() as scope:
-                tpl = Template(self.template.load("forward_message"))
+            with self.__mail_sink_connection.enter_scope() as scope:
+                tpl = Template(self.__template.load("forward_message"))
                 body = tpl.substitute(sender=sender, receiver=receiver, text=text)
 
-                self.mail_sink.put(scope, email, "Message received", body)
+                self.__mail_sink.put(scope, email, "Message received", body)
 
                 scope.complete()
 
@@ -129,4 +129,4 @@ class MessageBox(Injected):
 
             scope.complete()
 
-            self.notification_table.remove_entry(session_id, "mbox_full")
+            self.__notification_table.remove_entry(session_id, "mbox_full")

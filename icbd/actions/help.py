@@ -33,10 +33,10 @@ class Help(Injected):
     def __init__(self):
         super().__init__()
 
-        self.manual = self.resolve(manual.Manual)
+        self.__manual = self.resolve(manual.Manual)
 
     def introduction(self, session_id, msgid=""):
-        contents = self.__read_contents__(self.manual.introduction)
+        contents = self.__read_contents__(self.__manual.introduction)
 
         if not contents:
             raise LtdErrorException("No help available.")
@@ -48,10 +48,10 @@ class Help(Injected):
 
         if q.startswith("/"):
             domain = "Command"
-            contents = self.__read_contents__(lambda: self.manual.command(q[1:]))
+            contents = self.__read_contents__(lambda: self.__manual.command(q[1:]))
         else:
             domain = "Topic"
-            contents = self.__read_contents__(lambda: self.manual.topic(q))
+            contents = self.__read_contents__(lambda: self.__manual.topic(q))
 
         if not contents:
             raise LtdErrorException("%s '%s' not found." % (domain, q))

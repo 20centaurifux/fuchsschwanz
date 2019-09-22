@@ -100,7 +100,7 @@ class MailProcess(Process, di.Injected, mail.SinkListener):
     def put(self, receiver, subject, body):
         self.__log.info("'%s' mail enqueued.", subject)
 
-        self.status_message("mail", "put")
+        self.broadcast("put")
 
 class AvatarProcess(Process, di.Injected, avatar.WriterListener):
     def __init__(self):
@@ -123,7 +123,7 @@ class AvatarProcess(Process, di.Injected, avatar.WriterListener):
     def put(self, nick, url):
         self.__log.info("Avatar changed: %s (%s)", url, nick)
 
-        self.status_message("avatar", "put")
+        self.broadcast("put")
 
 async def run_services(opts):
     data_dir = opts.get("data_dir")

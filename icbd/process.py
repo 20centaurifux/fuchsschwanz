@@ -30,7 +30,6 @@ import os
 import di
 import config
 import ipc
-import ltd
 from log.asyncio import LogProtocol
 
 class Process:
@@ -62,10 +61,10 @@ class Process:
     def __build_args__(self, argv):
         raise NotImplementedError()
 
-    def status_message(self, category, text):
+    def broadcast(self, message):
         loop = asyncio.get_event_loop()
 
-        loop.call_soon(self.__broadcast.send, ltd.encode_status_msg(category, text))
+        loop.call_soon(self.__broadcast.send, self.__name, message)
 
     def exit(self):
         if self.__process:

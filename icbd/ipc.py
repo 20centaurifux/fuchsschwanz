@@ -26,44 +26,18 @@
 import logging
 import asyncio
 from secrets import token_hex
-import socket
-import ssl
-import traceback
-from datetime import datetime
-from getpass import getuser
-import math
-import core
 import config
-import config.json
 import di
-import config
-import broker
-import session
-import group
-import nickdb
-import statsdb
-import reputation
-import url
-import shutdown
-import session
-import session.memory
-import confirmation
-import passwordreset
-import timer
-from actions import ACTION
-import actions.usersession
 import ltd
-import messages
-from transform import Transform
-from exception import LtdResponseException, LtdErrorException
+import url
 
 class Broadcast:
     def __init__(self):
         self.__listeners = []
 
-    def send(self, message):
+    def send(self, receiver, message):
         for l in self.__listeners:
-            l(message)
+            l(receiver, message)
 
     def add_listener(self, listener):
         self.__listeners.append(listener)
@@ -142,16 +116,20 @@ class Bus(di.Injected):
 
             self.__server = await loop.create_unix_server(lambda: IPCServerProtocol(self.__connections), binding["path"])
         else:
-            self.__log.fatal("Unsupported protocol: %s", binding["protocol"])
+            raise NotImplementedError("Unsupported protocol: %s", binding["protocol"])
 
         await self.__server.start_serving()
 
-    def __broadcast__(self, message):
+    def __broadcast__(self, receiver, message):
+        e = ltd.Encoder("m")
+
+        e.add_field_str(receiver, append_null=False)
+        e.add_field_str(message, append_null=True)
+
+        pkg = e.encode()
+
         for c in self.__connections:
-            try:
-                c.write(message)
-            except Exception as ex:
-                self.__log.warning(ex)
+            c.write(pkg)
 
     async def close(self):
         self.__log.info("Stopping IPC bus.")
@@ -214,10 +192,16 @@ class Client:
         elif binding["protocol"] == "unix":
             self.__transport, _ = await loop.create_unix_connection(lambda: IPCClientProtocol(on_conn_lost, self.__queue),
                                                                                               binding["path"])
+        else:
+            raise NotImplementedError("Unsupported protocol: %s", binding["protocol"])
 
         return on_conn_lost
 
     async def read(self):
         t, p = await self.__queue.get()
 
-        return t, [f.decode("UTF-8").strip(" \0") for f in ltd.split(p)]
+        if t == "m":
+            fields = [f.decode("UTF-8").strip(" \0") for f in ltd.split(p)]
+
+            if len(fields) == 2:
+                return fields

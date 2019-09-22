@@ -35,7 +35,6 @@ import io
 import PIL.Image
 import di
 import ipc
-import ltd
 import config
 import config.json
 import log
@@ -214,15 +213,12 @@ async def run(opts):
 
         for f in done:
             if f is msg_f:
-                t, fields = msg_f.result()
+                receiver, message = msg_f.result()
 
-                logger.debug("Message received: type='%s', payload=%s", t, fields)
+                if receiver == "avatar":
+                    logger.debug("Message received: '%s'", message)
 
-                if t == "d":
-                    msg = ltd.join_status_msg(fields)
-
-                    if msg and msg[0] == "avatar" and msg[1] == "put":
-                        trigger = True
+                    trigger = (message == "put")
             elif f is conn_f:
                 quit = True
             elif f is timeout_f:

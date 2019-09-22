@@ -126,14 +126,6 @@ def split(payload):
 
     return fields
 
-def join_status_msg(fields):
-    parts = None
-
-    if len(fields) >= 2:
-        parts = (fields[0], " ".join(fields[1:]))
-
-    return parts
-
 def get_opts(line, **opts):
     m = {}
     tail = None

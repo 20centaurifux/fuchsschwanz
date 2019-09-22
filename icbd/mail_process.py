@@ -33,7 +33,6 @@ import traceback
 import logging
 import time
 import ipc
-import ltd
 import config
 import config.json
 import log
@@ -190,14 +189,12 @@ async def run(opts):
 
         for f in done:
             if f is msg_f:
-                t, fields = msg_f.result()
+                receiver, message = msg_f.result()
 
-                logger.debug("Message received: type='%s', payload=%s", t, fields)
+                if receiver == "mail":
+                    logger.debug("Message received: '%s'", message)
 
-                if t == "d":
-                    msg = ltd.join_status_msg(fields)
-
-                    if msg and msg[0] == "mail" and msg[1] == "put":
+                    if message == "put":
                         action = Action.SEND
             elif f is cleanup_f:
                 action = Action.CLEANUP

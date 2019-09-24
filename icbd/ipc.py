@@ -145,6 +145,28 @@ class Bus(di.Injected):
 
             self.__log.info("All connections closed.")
 
+class MessageQueue:
+    def __init__(self):
+        self.__msgs = []
+        self.__f = None
+
+    def put_nowait(self, msg):
+        if not self.__msgs or self.__msgs[-1] != msg:
+            self.__msgs.append(msg)
+
+            if self.__f and not self.__f.done():
+                self.__f.set_result(None)
+
+    async def get(self):
+        if not self.__msgs:
+            self.__f = asyncio.Future()
+
+            await self.__f
+
+        self.__f = None
+
+        return self.__msgs.pop(0)
+
 class IPCClientProtocol(asyncio.Protocol):
     def __init__(self, on_conn_lost, queue):
         self.__on_conn_lost = on_conn_lost
@@ -175,7 +197,7 @@ class IPCClientProtocol(asyncio.Protocol):
 class Client:
     def __init__(self, address):
         self.__address = address
-        self.__queue = asyncio.Queue()
+        self.__queue = MessageQueue()
         self.__transport = None
 
     async def connect(self):

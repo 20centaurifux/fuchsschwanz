@@ -28,6 +28,7 @@ import sys
 import os
 import asyncio
 import signal
+from enum import Enum
 import urllib.request
 import traceback
 import logging
@@ -148,6 +149,26 @@ class Download(di.Injected):
 
         return png
 
+    def cleanup(self):
+        self.__log.info("Removing old avatars.")
+
+        with self.__connection.enter_scope() as scope:
+            self.__writer.cleanup(scope)
+
+            keys = self.__reader.dangling_keys(scope)
+
+            scope.complete()
+
+        for k in keys:
+            self.__log.debug("Removing avatar: %s", k)
+
+            self.__storage.delete(k)
+
+            with self.__connection.enter_scope() as scope:
+                keys = self.__writer.remove_key(scope, k)
+
+                scope.complete()
+
     def __prepare_db__(self):
         with self.__connection.enter_scope() as scope:
             self.__reader.setup(scope)
@@ -199,6 +220,7 @@ async def run(opts):
     conn_f = await client.connect()
     msg_f = asyncio.ensure_future(client.read())
     timeout_f = asyncio.ensure_future(asyncio.sleep(1))
+    clean_f = asyncio.ensure_future(asyncio.sleep(preferences.avatar_cleanup_interval))
 
     if os.name == "posix":
         loop = asyncio.get_event_loop()
@@ -209,11 +231,16 @@ async def run(opts):
 
     quit = False
 
-    while not quit:
-        done, _ = await asyncio.wait([conn_f, msg_f, timeout_f], return_when=asyncio.FIRST_COMPLETED)
+    class Action(Enum):
+        NONE = 0
+        FETCH = 1
+        CLEANUP = 2
+        QUIT = 3
 
-        trigger = False
-        quit = False
+    while not quit:
+        done, _ = await asyncio.wait([conn_f, msg_f, timeout_f, clean_f], return_when=asyncio.FIRST_COMPLETED)
+
+        action = Action.NONE
 
         for f in done:
             if f is msg_f:
@@ -222,20 +249,29 @@ async def run(opts):
                 if receiver == "avatar":
                     logger.debug("Message received: '%s'", message)
 
-                    trigger = (message == "put")
+                    if message == "put":
+                        action = Action.FETCH
             elif f is conn_f:
-                quit = True
+                action = Action.QUIT
             elif f is timeout_f:
-                trigger = True
+                action = Action.FETCH
+            elif f is clean_f:
+                action = Action.CLEANUP
 
-        if trigger:
+        if action == Action.QUIT:
+            quit = True
+        elif action == Action.FETCH:
             download.fetch()
+        elif action == Action.CLEANUP:
+            download.cleanup()
 
         for f in done:
             if f is msg_f:
                 msg_f = asyncio.ensure_future(client.read())
             elif f is timeout_f:
                 timeout_f = asyncio.ensure_future(asyncio.sleep(preferences.avatar_interval))
+            elif f is clean_f:
+                clean_f = asyncio.ensure_future(asyncio.sleep(preferences.avatar_cleanup_interval))
 
     logger.info("Stopped.")
 

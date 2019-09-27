@@ -63,7 +63,8 @@
 		"reloadTimeout": 86400,
 		"retryTimeout": 1800,
 		"maxErrors": 5,
-		"errorTimeout": 172800
+		"errorTimeout": 172800,
+		"cleanupInterval": 3600
 	},
 	"smtp":
 	{

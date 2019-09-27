@@ -68,6 +68,12 @@ class Writer:
     def error(self, scope, nick, url):
         raise NotImplementedError
 
+    def remove_key(self, scope, key):
+        raise NotImplementedError
+
+    def cleanup(self, scope):
+        raise NotImplementedError
+
     def add_listener(self, listener):
         raise NotImplementedError
 
@@ -84,6 +90,9 @@ class Reader:
     def lookup_key(self, scope, nick):
         raise NotImplementedError
 
+    def dangling_keys(self, scope):
+        raise NotImplementedError
+
 class Storage:
     def setup(self):
         raise NotImplementedError
@@ -92,4 +101,7 @@ class Storage:
         raise NotImplementedError
 
     def load(self, key):
+        raise NotImplementedError
+
+    def delete(self, key):
         raise NotImplementedError

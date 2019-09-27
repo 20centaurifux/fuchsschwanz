@@ -34,3 +34,6 @@ class Storage(avatar.Storage):
 
     def load(self, key):
         return None
+
+    def delete(self, key):
+        pass

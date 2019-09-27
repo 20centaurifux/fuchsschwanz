@@ -23,7 +23,6 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from datetime import datetime
 import avatar
 from sqlite_schema import Schema
 from textutils import tolower
@@ -88,6 +87,14 @@ class Writer(avatar.Writer):
 
             cur.execute("update Avatar set Errors=?, DueDate=? where Nick=? and Url=?", (errors, due_date, nick, url))
 
+    def remove_key(self, scope, key):
+        cur = scope.get_handle()
+        cur.execute("delete from Avatar where Hash=?", (key,))
+
+    def cleanup(self, scope):
+        cur = scope.get_handle()
+        cur.execute("delete from Avatar where Active=0")
+
     @tolower(argname="nick")
     def clear(self, scope, nick):
         cur = scope.get_handle()
@@ -138,3 +145,12 @@ class Reader(avatar.Reader):
             result = result[0]
 
         return result
+
+    def dangling_keys(self, scope):
+        cur = scope.get_handle()
+        cur.execute("""select Hash, SUM(Active) as InUse
+                         from (select Hash, Active from Avatar where Hash is not null group by Hash, Active)
+                         group by Hash
+                         having InUse=0""")
+
+        return [row[0] for row in cur]

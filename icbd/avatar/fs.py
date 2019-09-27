@@ -84,3 +84,12 @@ class AsciiFiles(avatar.Storage):
             pass
 
         return contents
+
+    def delete(self, key):
+        for ext in [".png", ".txt"]:
+            try:
+                path = os.path.join(self.__directory, key + ext)
+
+                os.remove(path)
+            except FileNotFoundError:
+                pass

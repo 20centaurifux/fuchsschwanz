@@ -107,7 +107,7 @@ class List(Injected):
             status_util = UserStatus()
 
             for sub_id, sub_state in subscribers:
-                admin_flag = "*" if info.moderator == sub_id else " "
+                admin_flag = "m" if info.moderator == sub_id else " "
 
                 status_flags = status_util.get_flags(sub_state)
 

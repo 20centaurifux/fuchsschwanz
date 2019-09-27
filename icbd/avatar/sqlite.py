@@ -148,7 +148,7 @@ class Reader(avatar.Reader):
 
     def dangling_keys(self, scope):
         cur = scope.get_handle()
-        cur.execute("""select Hash, SUM(Active) as InUse
+        cur.execute("""select Hash, sum(Active) as InUse
                          from (select Hash, Active from Avatar where Hash is not null group by Hash, Active)
                          group by Hash
                          having InUse=0""")

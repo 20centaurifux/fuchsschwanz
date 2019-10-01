@@ -76,3 +76,7 @@ doesn't work on Windows for obvious reasons. Use a TCP connection instead:
 			"binding": "tcp://localhost:7328"
 		}
 	}
+
+# Test server
+
+There's a test server running on [internetcitizens.band](https://internetcitizens.band/).

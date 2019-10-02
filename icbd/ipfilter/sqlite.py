@@ -46,8 +46,10 @@ class Storage(ipfilter.Storage):
 
     @tolower(argname="expr")
     def deny_filter_exists(self, scope, expr):
+        now = dateutils.now()
+
         cur = scope.get_handle()
-        cur.execute("select count(*) from IPFilter where Expression=? and Action=1)", (expr,))
+        cur.execute("select count(*) from IPFilter where Expression=? and Action=1 and (Lifetime=-1 or Lifetime>=?)", (expr, now))
 
         return bool(cur.fetchone()[0])
 

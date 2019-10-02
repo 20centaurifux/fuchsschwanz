@@ -27,6 +27,7 @@ from textwrap import wrap
 from actions import Injected, UserStatus
 import group
 import ltd
+import core
 from exception import LtdErrorException
 
 class List(Injected):
@@ -107,7 +108,7 @@ class List(Injected):
             status_util = UserStatus()
 
             for sub_id, sub_state in subscribers:
-                admin_flag = "m" if info.moderator == sub_id else " "
+                admin_flag = core.MODERATOR_FLAG if info.moderator == sub_id else " "
 
                 status_flags = status_util.get_flags(sub_state)
 

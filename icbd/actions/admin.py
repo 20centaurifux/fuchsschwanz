@@ -29,6 +29,7 @@ from core import Verbosity
 import validate
 import log
 import shutdown
+import ipfilter
 import dateutils
 from exception import LtdErrorException, LtdStatusException
 
@@ -46,6 +47,8 @@ class Admin(Injected):
 
         self.__registry = self.resolve(log.Registry)
         self.__shutdown = self.resolve(shutdown.Shutdown)
+        self.__ipfilter_connection = self.resolve(ipfilter.Connection)
+        self.__ipfilters = self.resolve(ipfilter.Storage)
 
     @isadmin
     def get_reputation(self, session_id, nick, msgid=""):
@@ -167,6 +170,117 @@ class Admin(Injected):
         e.add_field_str("Server shutdown cancelled.", append_null=True)
 
         self.broker.broadcast(e.encode())
+
+    @isadmin
+    def ipfilter(self, session_id, fields):
+        action, argv = fields[0], fields[1:]
+
+        fn = None
+
+        if action == "deny":
+            fn = self.__deny_login__
+        elif action == "drop":
+            fn = self.__drop_ip_filter__
+        elif action == "flush":
+            fn = self.__flush_ip_filters__
+        elif action == "show":
+            fn = self.__show_ip_filters__
+        elif not action:
+            raise LtdErrorException("Usage: ipfilter {action} {arguments}")
+        else:
+            raise LtdErrorException("Unsupported action.")
+
+        fn(session_id, argv)
+
+    def __deny_login__(self, session_id, argv):
+        usage = "Usage: ipfilter deny {filter} {seconds}"
+
+        if not argv or len(argv) > 2:
+            raise LtdErrorException(usage)
+
+        filter = None
+
+        try:
+            filter = ipfilter.Factory.create(argv[0])
+        except:
+            raise LtdErrorException("Filter is malformed.")
+
+        ttl = -1
+
+        try:
+            if len(argv) == 2:
+                ttl = int(argv[1])
+
+                if ttl < 0:
+                    raise ValueError
+        except:
+            raise LtdErrorException(usage)
+
+        with self.__ipfilter_connection.enter_scope() as scope:
+            self.__ipfilters.deny(scope, filter, ttl)
+
+            lifetime = "forever"
+
+            if ttl > -1:
+                lifetime = dateutils.elapsed_time(ttl)
+
+            self.broker.deliver(session_id, ltd.encode_status_msg("IP-Filter", "%s denied (%s)." % (argv[0], lifetime)))
+
+            scope.complete()
+
+    def __drop_ip_filter__(self, session_id, argv):
+        if len(argv) != 1:
+            raise LtdErrorException("Usage: ipfilter drop {filter}")
+
+        filter = None
+
+        try:
+            filter = ipfilter.Factory.create(argv[0])
+        except:
+            raise LtdErrorException("Filter is malformed.")
+
+        with self.__ipfilter_connection.enter_scope() as scope:
+            if not self.__ipfilters.deny_filter_exists(scope, filter.expression):
+                raise LtdErrorException("Filter not found.")
+
+            self.__ipfilters.remove(scope, filter.expression)
+
+            self.broker.deliver(session_id, ltd.encode_status_msg("IP-Filter", "%s dropped." % (argv[0],)))
+
+            scope.complete()
+
+    def __flush_ip_filters__(self, session_id, argv):
+        if argv:
+            raise LtdErrorException("Usage: ipfilter flush")
+
+        with self.__ipfilter_connection.enter_scope() as scope:
+            self.__ipfilters.flush(scope)
+
+            scope.complete()
+
+        self.broker.deliver(session_id, ltd.encode_status_msg("IP-Filter", "Flushed."))
+
+    def __show_ip_filters__(self, session_id, argv):
+        if argv:
+            raise LtdErrorException("Usage: ipfilter show")
+
+        filters = []
+
+        with self.__ipfilter_connection.enter_scope() as scope:
+            for f, l in self.__ipfilters.load_deny_filters(scope):
+                lifetime = "forever"
+
+                if l > -1:
+                    time_left = max(1, l - dateutils.now())
+                    lifetime = dateutils.elapsed_time(time_left)
+
+                filters.append((f.expression, lifetime))
+
+        if filters:
+            for entry in sorted(filters, key=lambda e: "@".join(reversed(e[0].split("@", 1))).lower()):
+                self.broker.deliver(session_id, ltd.encode_status_msg("IP-Filter", "%s denied (%s)" % entry))
+        else:
+            self.broker.deliver(session_id, ltd.encode_status_msg("IP-Filter", "List is empty."))
 
     def __test_admin__(self, session_id):
         is_admin = False

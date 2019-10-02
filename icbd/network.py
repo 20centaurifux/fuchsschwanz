@@ -35,7 +35,7 @@ import core
 import config
 import config.json
 import di
-import config
+import ipfilter
 import broker
 import session
 import group
@@ -279,6 +279,8 @@ class Server(di.Injected, shutdown.ShutdownListener):
                log: logging.Logger,
                config: config.Config,
                shutdown: shutdown.Shutdown,
+               ipfilter_connection: ipfilter.Connection,
+               ipfilters: ipfilter.Storage,
                store: session.Store,
                broker: broker.Broker,
                groups: group.Store,
@@ -293,6 +295,8 @@ class Server(di.Injected, shutdown.ShutdownListener):
         self.__log = log
         self.__config = config
         self.__shutdown = shutdown
+        self.__ipfilter_connection = ipfilter_connection
+        self.__ipfilters = ipfilters
         self.__session_store = store
         self.__broker = broker
         self.__groups = groups
@@ -490,6 +494,13 @@ class Server(di.Injected, shutdown.ShutdownListener):
 
             with self.__pwdreset_connection.enter_scope() as scope:
                 self.__pwdreset.cleanup(scope, self.__config.timeouts_password_reset_request)
+
+                scope.complete()
+
+            self.__log.info("Cleaning up IP filters.")
+
+            with self.__ipfilter_connection.enter_scope() as scope:
+                self.__ipfilters.cleanup(scope)
 
                 scope.complete()
 

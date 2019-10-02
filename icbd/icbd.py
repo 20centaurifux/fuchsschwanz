@@ -73,6 +73,9 @@ import mail.sqlite
 import timer
 import avatar
 import avatar.sqlite
+import ipfilter
+import ipfilter.sqlite
+import ipfilter.cache
 import ltd
 
 if avatar.is_available():
@@ -143,11 +146,16 @@ async def run_services(opts):
 
     connection = sqlite.Connection(preferences.database_filename)
 
+    ipfilter_storage = ipfilter.sqlite.Storage()
+    ipfilter_cached = ipfilter.cache.Storage(ipfilter_storage)
+
     container.register(logging.Logger, logger)
     container.register(log.Registry, registry)
     container.register(config.Config, preferences)
     container.register(ipc.Broadcast, ipc.Broadcast())
     container.register(shutdown.Shutdown, shutdown.Shutdown())
+    container.register(ipfilter.Connection, connection)
+    container.register(ipfilter.Storage, ipfilter_cached)
     container.register(broker.Broker, broker.memory.Broker())
     container.register(session.Store, session.memory.Store())
     container.register(session.AwayTimeoutTable, timer.TimeoutTable())
@@ -184,6 +192,7 @@ async def run_services(opts):
         container.register(avatar.Storage, avatar.void.Storage())
 
     with connection.enter_scope() as scope:
+        container.resolve(ipfilter.Storage).setup(scope)
         container.resolve(nickdb.NickDb).setup(scope)
         container.resolve(statsdb.StatsDb).setup(scope)
         container.resolve(confirmation.Confirmation).setup(scope)

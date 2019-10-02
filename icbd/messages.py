@@ -774,16 +774,15 @@ class AbortShutdown:
     def process(session_id, fields):
         ACTION(actions.admin.Admin).cancel_shutdown(session_id)
 
-@command("help")
-class Help:
+@command("ipfilter")
+class Deny:
     @staticmethod
     @loginrequired
     @fieldslength(min=1, max=2)
     def process(session_id, fields):
-        if fields[0]:
-            ACTION(actions.help.Help).query(session_id, fields[0], msgid(fields))
-        else:
-            ACTION(actions.help.Help).introduction(session_id, msgid(fields))
+        argv = [s.strip() for s in fields[0].split(" ")]
+
+        ACTION(actions.admin.Admin).ipfilter(session_id, argv)
 
 @command("v")
 class Version:

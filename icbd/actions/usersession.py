@@ -31,16 +31,22 @@ from actions.motd import Motd
 from actions.registration import Registration
 from actions.notification import Notify
 from actions.group import Group
-import di
 import core
 import group
 import validate
 import ltd
 import shutdown
+import ipfilter
 from textutils import hide_chars
 from exception import LtdErrorException, LtdStatusException
 
 class UserSession(Injected):
+    def __init__(self):
+        super().__init__()
+
+        self.__ipfilter_connection = self.resolve(ipfilter.Connection)
+        self.__ipfilters = self.resolve(ipfilter.Storage)
+
     def login(self, session_id, loginid, nick, password, group_name, status=""):
         self.log.debug("User login: loginid=%s, nick=%s, password=%s", loginid, nick, hide_chars(password))
 
@@ -75,6 +81,7 @@ class UserSession(Injected):
             registration.mark_registered(session_id)
 
         self.__test_connection_limit__(session_id)
+        self.__test_ip__(session_id)
 
         registration.notify_messagebox(session_id)
 
@@ -261,6 +268,18 @@ class UserSession(Injected):
                         raise LtdErrorException("Connection limit reached.")
             else:
                 raise LtdErrorException("Connection limit reached.")
+
+    def __test_ip__(self, session_id):
+        state = self.session.get(session_id)
+
+        login = "%s@%s" % (state.loginid, state.ip)
+
+        with self.__ipfilter_connection.enter_scope() as scope:
+            for f, _ in self.__ipfilters.load_deny_filters(scope):
+                if f.matches(login):
+                    self.log.info("Blocking IP address: %s", login)
+
+                    raise LtdErrorException("Access denied.")
 
     def rename(self, session_id, nick):
         if not validate.is_valid_nick(nick):

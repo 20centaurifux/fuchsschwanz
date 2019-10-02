@@ -43,6 +43,7 @@ class Schema(di.Injected):
 
         if revision == 2:
             self.__revision_3__(scope)
+            revision += 1
 
         if revision == 3:
             self.__revision_4__(scope)
@@ -202,5 +203,11 @@ class Schema(di.Injected):
                            foreign key (Nick)
                            references Nick(Name)
                            on delete cascade)""")
+
+        cur.execute("""create table IPFilter (
+                         Expression varchar(64) not null,
+                         Action int not null default -1,
+                         Lifetime int not null,
+                         primary key (Expression, Action))""")
 
         cur.execute("update Version set Revision=4")

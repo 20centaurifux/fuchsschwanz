@@ -1,0 +1,53 @@
+USAGE
+     /ipfilter {action} {filter} {arguments}
+
+DESCRIPTION
+     Manages IP filter configuration.
+
+     A filter is any valid IP address or network (CIDR notation)
+     with an optional login id as prefix.
+
+     The following actions are available:
+
+     deny
+     ----
+
+          /ipfilter deny {filter} {ttl}
+
+     Denies access to the ICB server. The ttl argument is
+     optional and specifies the lifetime of the filter in
+     seconds.
+
+     drop
+     ----
+
+          /ipfilter drop {filter}
+
+     Deletes an existing filter.
+
+     flush
+     -----
+
+          /ipfilter flush
+
+     Deletes all filters.
+
+     show
+     ----
+
+          /ipfilter show
+
+     Prints a list of active filters.
+
+EXAMPLES
+
+     Forbid local root account to login:
+
+          /ipfilter deny root@127.0.0.1
+
+     Block subnet for 5 minutes:
+
+          /ipfilter deny 192.168.0.0/24 300
+
+SEE ALSO
+     /drop /boot

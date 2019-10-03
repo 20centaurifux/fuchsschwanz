@@ -8,7 +8,7 @@ COMMANDS
      E    /forward
      G    /g
      H    /help, /hush
-     I    /invite
+     I    /ipfilter, /invite
      L    /log
      M    /m, /motd
      N    /name, /news, /newpasswd, /noaway, /nobeep,

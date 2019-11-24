@@ -10,10 +10,10 @@ It's the first ICB server supporting TLS, UTF-8, IPv6 & avatars out of the box.
 
 # Running Fuchsschwanz
 
-You need Python 3.7 to start the server. It requires a data directory and a
-configuration file.
+You need at least Python 3.7 to start the server. It requires a data directory and
+a configuration file.
 
-	$ python3.7 icbd/icbd.py --config=./config.json --data-dir=$(pwd)/data
+	$ python3 icbd/icbd.py --config=./config.json --data-dir=$(pwd)/data
 
 The data directory contains help files, news and the message of the day (which
 can be an executable!).
@@ -27,6 +27,12 @@ Running for the first time an administrative user will be created. You should
 note down the password.
 
 	2019-09-10 ... [icbd] INFO <sqlite.py, line 59> - Initial admin created with password '2vTOAlzv'.
+
+## Dependencies
+
+Fuchsschwanz requires pytz.
+
+	$ python3 -m pip install pytz
 
 # Configuration
 
@@ -64,7 +70,7 @@ Array containing network bindings (TCP and TLS over TCP).
 
 To enable avatar support [Pillow](https://python-pillow.org/) and [python-aalib](http://jwilk.net/software/python-aalib/) are required:
 
-	$ python3.7 -m pip install pillow python-aalib
+	$ python3 -m pip install pillow python-aalib
 
 # Windows issues
 

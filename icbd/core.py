@@ -26,7 +26,7 @@
 from enum import Enum
 
 NAME = "Fuchsschwanz"
-VERSION = "0.1.5"
+VERSION = "0.1.6 (beta)"
 
 EXIT_SUCCESS = 0
 EXIT_FAILURE = 1

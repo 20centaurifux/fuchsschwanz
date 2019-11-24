@@ -33,7 +33,7 @@ class Storage(ipfilter.Storage):
         Schema().upgrade(scope)
 
     def load_deny_filters(self, scope):
-        now = dateutils.now()
+        now = dateutils.timestamp()
 
         cur = scope.get_handle()
         cur.execute("select Expression, Lifetime from IPFilter where Action=1 and (Lifetime=-1 or Lifetime>=?)", (now,))
@@ -46,7 +46,7 @@ class Storage(ipfilter.Storage):
 
     @tolower(argname="expr")
     def deny_filter_exists(self, scope, expr):
-        now = dateutils.now()
+        now = dateutils.timestamp()
 
         cur = scope.get_handle()
         cur.execute("select count(*) from IPFilter where Expression=? and Action=1 and (Lifetime=-1 or Lifetime>=?)", (expr, now))
@@ -63,7 +63,7 @@ class Storage(ipfilter.Storage):
         cur.execute("delete from IPFilter")
 
     def cleanup(self, scope):
-        now = dateutils.now()
+        now = dateutils.timestamp()
 
         cur = scope.get_handle()
         cur.execute("delete from IPFilter where Lifetime>-1 and Lifetime<?", (now,))

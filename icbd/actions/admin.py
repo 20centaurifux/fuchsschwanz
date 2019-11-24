@@ -271,7 +271,7 @@ class Admin(Injected):
                 lifetime = "forever"
 
                 if l > -1:
-                    time_left = max(1, l - dateutils.now())
+                    time_left = max(1, l - dateutils.timestamp())
                     lifetime = dateutils.elapsed_time(time_left)
 
                 filters.append((f.expression, lifetime))

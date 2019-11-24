@@ -41,7 +41,7 @@ class ShutdownListener:
 
 class Shutdown:
     def __init__(self):
-        self.__listeners= []
+        self.__listeners = []
         self.__pending = PendingRequest.NONE
         self.__timer = None
         self.__delay = 0

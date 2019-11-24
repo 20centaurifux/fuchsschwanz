@@ -35,6 +35,7 @@ import mail
 import avatar
 import template
 import ltd
+import dateutils
 from textutils import hide_chars
 from exception import LtdResponseException, LtdErrorException, LtdStatusException
 
@@ -103,7 +104,7 @@ class Registration(Injected):
 
             self.nickdb.set_lastlogin(scope, state.nick, state.loginid, state.host)
 
-            now = datetime.utcnow()
+            now = dateutils.now()
 
             self.nickdb.set_signon(scope, state.nick, now)
 

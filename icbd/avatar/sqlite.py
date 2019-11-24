@@ -41,7 +41,7 @@ class Writer(avatar.Writer):
 
     @tolower(argname="nick")
     def put(self, scope, nick, url):
-        now = dateutils.now()
+        now = dateutils.timestamp()
 
         cur = scope.get_handle()
 
@@ -61,7 +61,7 @@ class Writer(avatar.Writer):
 
     @tolower(argname="nick")
     def fetched(self, scope, nick, url, key):
-        now = dateutils.now()
+        now = dateutils.timestamp()
         due_date = now + self.__refresh_timeout
 
         cur = scope.get_handle()
@@ -77,7 +77,7 @@ class Writer(avatar.Writer):
 
         if row:
             errors = row[0]
-            now = dateutils.now()
+            now = dateutils.timestamp()
 
             if errors == self.__max_errors:
                 due_date = now + self.__error_timeout
@@ -111,7 +111,7 @@ class Reader(avatar.Reader):
         Schema().upgrade(scope)
 
     def head(self, scope):
-        now = dateutils.now()
+        now = dateutils.timestamp()
 
         cur = scope.get_handle()
 

@@ -354,7 +354,7 @@ class Server(di.Injected, shutdown.ShutdownListener):
             s.close()
 
     def __signon_server__(self):
-        now = datetime.utcnow()
+        now = dateutils.now()
 
         self.__session_id = self.__session_store.new(loginid=getuser(),
                                                      ip="127.0.0.1",

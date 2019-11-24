@@ -35,7 +35,7 @@ class Confirmation(confirmation.Confirmation):
     @tolower(argnames=["nick", "email"])
     def create_request(self, scope, nick, email):
         code = make_password(8)
-        now = dateutils.now()
+        now = dateutils.timestamp()
 
         cur = scope.get_handle()
         cur.execute("insert into ConfirmationRequest (Nick, Email, Code, Timestamp) values (?, ?, ?, ?)",
@@ -45,7 +45,7 @@ class Confirmation(confirmation.Confirmation):
 
     @tolower(argnames=["nick", "email"])
     def count_pending_requests(self, scope, nick, email, ttl):
-        timestamp = dateutils.now() - ttl
+        timestamp = dateutils.timestamp() - ttl
 
         cur = scope.get_handle()
         cur.execute("select count(*) from ConfirmationRequest where Nick=? and Email=? and Timestamp>=?",
@@ -55,7 +55,7 @@ class Confirmation(confirmation.Confirmation):
 
     @tolower(argnames=["nick", "email"])
     def has_pending_request(self, scope, nick, code, email, ttl):
-        timestamp = dateutils.now() - ttl
+        timestamp = dateutils.timestamp() - ttl
 
         cur = scope.get_handle()
         cur.execute("select count(*) from ConfirmationRequest where Nick=? and Email=? and Code=? and Timestamp>=?",
@@ -69,7 +69,7 @@ class Confirmation(confirmation.Confirmation):
         cur.execute("delete from ConfirmationRequest where Nick=?", (nick,))
 
     def cleanup(self, scope, ttl):
-        timestamp = dateutils.now() - ttl
+        timestamp = dateutils.timestamp() - ttl
 
         cur = scope.get_handle()
         cur.execute("delete from ConfirmationRequest where Timestamp<?", (timestamp,))

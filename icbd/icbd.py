@@ -77,6 +77,7 @@ import ipfilter
 import ipfilter.sqlite
 import ipfilter.cache
 import ltd
+import dateutils
 
 if avatar.is_available():
     import avatar.fs
@@ -243,7 +244,7 @@ async def run_services(opts):
     logger.info("Server stopped.")
 
     with container.resolve(nickdb.Connection).enter_scope() as scope:
-        container.resolve(nickdb.NickDb).set_signoff(scope, core.NICKSERV, datetime.utcnow())
+        container.resolve(nickdb.NickDb).set_signoff(scope, core.NICKSERV, dateutils.now())
 
         scope.complete()
 

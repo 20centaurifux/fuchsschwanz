@@ -24,9 +24,13 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from datetime import datetime
+import pytz
 
 def now():
-    return int(datetime.utcnow().timestamp())
+    return pytz.utc.localize(datetime.utcnow())
+
+def timestamp():
+    return int(now().timestamp())
 
 def elapsed_time(elapsed):
     total_seconds = int(elapsed)

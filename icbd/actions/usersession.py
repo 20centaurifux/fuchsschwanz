@@ -37,6 +37,7 @@ import validate
 import ltd
 import shutdown
 import ipfilter
+import dateutils
 from textutils import hide_chars
 from exception import LtdErrorException, LtdStatusException
 
@@ -73,7 +74,7 @@ class UserSession(Injected):
             else:
                 registered = self.__login_password__(session_id, loginid, nick, password)
 
-        self.session.update(session_id, signon=datetime.utcnow())
+        self.session.update(session_id, signon=dateutils.now())
 
         registration = ACTION(Registration)
 
@@ -356,7 +357,7 @@ class UserSession(Injected):
                 self.__auto_rename__(session_id)
             else:
                 registration.notify_messagebox(session_id)
-                self.session.update(session_id, signon=datetime.utcnow())
+                self.session.update(session_id, signon=dateutils.now())
 
     def sign_off(self, session_id):
         state = self.session.get(session_id)

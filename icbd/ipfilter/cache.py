@@ -38,7 +38,7 @@ class Storage(ipfilter.Storage):
         self.__reload__(scope)
 
     def load_deny_filters(self, scope):
-        return [t for t in self.__deny.values() if t[1] == -1 or t[1] >= dateutils.now()]
+        return [t for t in self.__deny.values() if t[1] == -1 or t[1] >= dateutils.timestamp()]
 
     def deny_until(self, scope, filter, timestamp):
         self.__storage.deny_until(scope, filter, timestamp)
@@ -55,7 +55,7 @@ class Storage(ipfilter.Storage):
         try:
             lifetime = self.__deny[expr][1]
 
-            exists = lifetime == -1 or lifetime >= dateutils.now()
+            exists = lifetime == -1 or lifetime >= dateutils.timestamp()
         except KeyError:
             pass
 

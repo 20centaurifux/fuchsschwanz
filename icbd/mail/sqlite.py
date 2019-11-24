@@ -38,7 +38,7 @@ class Sink(mail.Sink):
 
     def put(self, scope, receiver, subject, body):
         msgid = uuid.uuid4().hex
-        now = dateutils.now()
+        now = dateutils.timestamp()
 
         cur = scope.get_handle()
         cur.execute("insert into Mail (UUID, Receiver, Subject, Body, Timestamp, DueDate) values (?, ?, ?, ?, ?, ?)",
@@ -63,7 +63,7 @@ class Queue(mail.Queue):
         Schema().upgrade(scope)
 
     def head(self, scope):
-        now = int(datetime.utcnow().timestamp())
+        now = dateutils.timestamp()
 
         query = """select * from Mail
                      where Sent=0 and %d - Timestamp <= %d and MTAErrors < %d and DueDate <= %d
@@ -93,14 +93,14 @@ class Queue(mail.Queue):
         cur.execute("update Mail set Sent=1 where UUID=?", (msgid.hex,))
 
     def mta_error(self, scope, msgid):
-        now = int(datetime.utcnow().timestamp())
+        now = dateutils.timestamp()
         due_date = now + self.__retry_timeout
 
         cur = scope.get_handle()
         cur.execute("update Mail set MTAErrors=MTAErrors + 1, DueDate = ? where UUID=?", (due_date, msgid.hex,))
 
     def cleanup(self, scope):
-        now = int(datetime.utcnow().timestamp())
+        now = dateutils.timestamp()
 
         cur = scope.get_handle()
         cur.execute("delete from Mail where %d - Timestamp > %d" % (now, self.__ttl))

@@ -30,6 +30,7 @@ from typing import NewType
 from timer import Timer, TimeoutTable
 from hush import Hushlist
 from notify import Notifylist
+import dateutils
 
 class BeepMode(Enum):
     OFF = 0
@@ -50,7 +51,7 @@ class State:
     nick: str = None
     group: str = None
     authenticated: bool = False
-    signon: datetime = datetime.utcnow()
+    signon: datetime = dateutils.now()
     t_recv: Timer = None
     t_alive: Timer = None
     t_ping: Timer = None

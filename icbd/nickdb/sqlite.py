@@ -232,7 +232,7 @@ class NickDb(nickdb.NickDb, di.Injected):
         cur = scope.get_handle()
 
         if not timestamp:
-            timestamp = datetime.utcnow()
+            timestamp = dateutils.now()
 
         cur.execute("update Nick set Signon=? where Name=?", (int(timestamp.timestamp()), nick))
 
@@ -255,7 +255,7 @@ class NickDb(nickdb.NickDb, di.Injected):
         cur = scope.get_handle()
 
         if not timestamp:
-            timestamp = datetime.utcnow()
+            timestamp = dateutils.now()
 
         cur.execute("update Nick set Signoff=? where Name=?", (int(timestamp.timestamp()), nick))
 
@@ -275,7 +275,7 @@ class NickDb(nickdb.NickDb, di.Injected):
     @tolower(argname="nick")
     def add_message(self, scope, nick, sender, text):
         msgid = uuid.uuid4().hex
-        timestamp = dateutils.now()
+        timestamp = dateutils.timestamp()
 
         cur = scope.get_handle()
         cur.execute("insert into Message (UUID, Sender, Receiver, Timestamp, Message) values (?, ?, ?, ?, ?)",

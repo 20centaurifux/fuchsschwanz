@@ -26,6 +26,7 @@
 from datetime import datetime
 import statsdb
 from sqlite_schema import Schema
+import dateutils
 
 class StatsDb(statsdb.StatsDb):
     def __init__(self):
@@ -92,7 +93,7 @@ class StatsDb(statsdb.StatsDb):
             stats.max_idle = (idle_time, idle_nick)
 
     def __get_today__(self, scope):
-        now = datetime.utcnow()
+        now = dateutils.now()
 
         if not self.__date or (self.__date.year != now.year or self.__date.month != now.month or self.__date.day != now.day):
             self.__date = now
@@ -149,7 +150,7 @@ class StatsDb(statsdb.StatsDb):
         return self.__get_today__(scope)
 
     def month(self, scope):
-        now = datetime.utcnow()
+        now = dateutils.now()
 
         cur = scope.get_handle()
 
@@ -158,7 +159,7 @@ class StatsDb(statsdb.StatsDb):
         return self.__create_stats__(cur.fetchone())
 
     def year(self, scope):
-        now = datetime.utcnow()
+        now = dateutils.now()
 
         cur = scope.get_handle()
 

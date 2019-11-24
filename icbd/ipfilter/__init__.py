@@ -117,7 +117,7 @@ class Storage:
         timestamp = -1
 
         if ttl != -1:
-            timestamp = dateutils.now() + ttl
+            timestamp = dateutils.timestamp() + ttl
 
         self.deny_until(scope, expr, timestamp)
 

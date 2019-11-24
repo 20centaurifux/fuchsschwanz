@@ -35,7 +35,7 @@ class PasswordReset(passwordreset.PasswordReset):
     @tolower(argname="nick")
     def create_request(self, scope, nick):
         code = make_password(8)
-        now = dateutils.now()
+        now = dateutils.timestamp()
 
         cur = scope.get_handle()
         cur.execute("insert into PasswordReset (Nick, Code, Timestamp) values (?, ?, ?)",
@@ -45,7 +45,7 @@ class PasswordReset(passwordreset.PasswordReset):
 
     @tolower(argname="nick")
     def count_pending_requests(self, scope, nick, ttl):
-        timestamp = dateutils.now() - ttl
+        timestamp = dateutils.timestamp() - ttl
 
         cur = scope.get_handle()
         cur.execute("select count(*) from PasswordReset where Nick=? and Timestamp>=?",
@@ -55,7 +55,7 @@ class PasswordReset(passwordreset.PasswordReset):
 
     @tolower(argname="nick")
     def has_pending_request(self, scope, nick, code, ttl):
-        timestamp = dateutils.now() - ttl
+        timestamp = dateutils.timestamp() - ttl
 
         cur = scope.get_handle()
         cur.execute("select count(*) from PasswordReset where Nick=? and Code=? and Timestamp>=?",
@@ -69,7 +69,7 @@ class PasswordReset(passwordreset.PasswordReset):
         cur.execute("delete from PasswordReset where Nick=?", (nick,))
 
     def cleanup(self, scope, ttl):
-        timestamp = dateutils.now() - ttl
+        timestamp = dateutils.timestamp() - ttl
 
         cur = scope.get_handle()
         cur.execute("delete from PasswordReset where Timestamp<?", (timestamp,))

@@ -28,12 +28,6 @@ note down the password.
 
 	2019-09-10 ... [icbd] INFO <sqlite.py, line 59> - Initial admin created with password '2vTOAlzv'.
 
-## Dependencies
-
-Fuchsschwanz requires pytz.
-
-	$ python3 -m pip install pytz
-
 # Configuration
 
 Please find below a list with the most important settings.

@@ -23,11 +23,10 @@
     ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
     OTHER DEALINGS IN THE SOFTWARE.
 """
-from datetime import datetime
-import pytz
+import datetime
 
 def now():
-    return pytz.utc.localize(datetime.utcnow())
+    return datetime.datetime.now(datetime.timezone.utc)
 
 def timestamp():
     return int(now().timestamp())

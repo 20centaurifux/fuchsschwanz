@@ -24,7 +24,7 @@
     OTHER DEALINGS IN THE SOFTWARE.
 """
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict
 import copy
 import core
 
@@ -34,6 +34,7 @@ class Config:
     server_unsecure_login: bool = False
     server_max_logins: int = 500
     server_ipc_binding: str = "unix:///tmp/fuchsschwanz.sock"
+    server_bridges: List[Dict[str, object]] = field(default_factory=list)
     bindings: List[str] = field(default_factory=list)
     logging_verbosity: core.Verbosity = core.Verbosity.INFO
     database_filename: str = None

@@ -7,7 +7,11 @@
 		"ipc":
 		{
 			"binding": "unix:///tmp/fuchsschwanz.sock"
-		}
+		},
+		"bridges":
+		[
+			{"loginid": "webuser", "address": "::1"}
+		]
 	},
 	"bindings":
 	[

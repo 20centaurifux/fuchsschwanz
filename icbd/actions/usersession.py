@@ -26,6 +26,8 @@
 from datetime import datetime
 import secrets
 import re
+import socket
+import ipaddress
 from actions import Injected, ACTION, UserStatus
 from actions.motd import Motd
 from actions.registration import Registration
@@ -48,7 +50,7 @@ class UserSession(Injected):
         self.__ipfilter_connection = self.resolve(ipfilter.Connection)
         self.__ipfilters = self.resolve(ipfilter.Storage)
 
-    def login(self, session_id, loginid, nick, password, group_name, status=""):
+    def login(self, session_id, loginid, nick, password, group_name, status="", remote_address=""):
         self.log.debug("User login: loginid=%s, nick=%s, password=%s", loginid, nick, hide_chars(password))
 
         if not validate.is_valid_loginid(loginid):
@@ -58,6 +60,8 @@ class UserSession(Injected):
         if not validate.is_valid_nick(nick):
             raise LtdErrorException("Nickname must consist of at least %d and at most %d alphanumeric characters."
                                     % (validate.NICK_MIN, validate.NICK_MAX))
+
+        self.__resolve_bridged_user__(session_id, loginid, remote_address)
 
         self.broker.deliver(session_id, ltd.encode_empty_cmd("a"))
 
@@ -107,6 +111,26 @@ class UserSession(Injected):
             self.statsdb.set_max_logins(scope, self.session.count_logins())
 
             scope.complete()
+
+    def __resolve_bridged_user__(self, session_id, loginid, remote_address):
+        if remote_address:
+            try:
+                addr = ipaddress.ip_address(remote_address) 
+
+                state = self.session.get(session_id)
+
+                matches = filter(lambda m: m["loginid"] == loginid and m["address"] == state.ip, self.config.server_bridges)
+
+                if matches:
+                    match = next(matches)
+
+                    fqdn = socket.getfqdn(str(addr))
+
+                    self.log.info("Bridged user, overwriting remote address: %s (%s)", fqdn, addr)
+
+                    self.session.update(session_id, ip=str(addr), host=fqdn)
+            except Exception as ex:
+                self.log.warn(ex)
 
     def __try_login_unsecure__(self, session_id, loginid, nick):
         self.log.debug("Testing unsecure authentication.")

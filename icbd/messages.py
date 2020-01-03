@@ -148,7 +148,8 @@ class Login:
             fn = ACTION(actions.usersession.UserSession).login
             password = fields[4] if len(fields) >= 5 else ""
             status = fields[5] if len(fields) >= 6 else ""
-            args = [session_id, fields[0], fields[1], password, fields[2], status]
+            address = fields[6] if len(fields) >= 7 else ""
+            args = [session_id, fields[0], fields[1], password, fields[2], status, address]
         elif fields[3] == "w":
             fn = ACTION(actions.list.List).list_and_quit
             args = [session_id]

@@ -303,10 +303,10 @@ class Group(Injected):
 
                 info.invite_nick(invitee, registered)
 
-                self.broker.deliver(loggedin_session,
-                                    ltd.encode_status_msg("RSVP", "You are invited to group %s by %s." % (str(info), state.nick)))
+                if loggedin_session and registered:
+                    self.broker.deliver(loggedin_session,
+                                        ltd.encode_status_msg("RSVP", "You are invited to group %s by %s." % (str(info), state.nick)))
 
-                if registered:
                     loggedin_state = self.session.get(loggedin_session)
 
                     if not loggedin_state.authenticated:
@@ -398,9 +398,9 @@ class Group(Injected):
 
                     info.unmute_nick(talker, registered)
 
-                    self.broker.deliver(loggedin_session, ltd.encode_status_msg("RSVP", "You can now talk in group %s." % str(info)))
+                    if loggedin_session and registered:
+                        self.broker.deliver(loggedin_session, ltd.encode_status_msg("RSVP", "You can now talk in group %s." % str(info)))
 
-                    if registered:
                         loggedin_state = self.session.get(loggedin_session)
 
                         if not loggedin_state.authenticated:

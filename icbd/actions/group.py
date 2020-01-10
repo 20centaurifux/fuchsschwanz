@@ -204,7 +204,7 @@ class Group(Injected):
                 info.invite_nick(sub_state.nick, sub_state.authenticated)
 
                 self.broker.deliver(session_id, ltd.encode_status_msg("FYI", "%s invited." % sub_state.nick))
-                self.broker.deliver(sub_id, ltd.encode_status_msg("FYI", "You are invited to group %s by default." % sub_state.nick))
+                self.broker.deliver(sub_id, ltd.encode_status_msg("FYI", "You are invited to group %s by default." % sub_state.group))
             except OverflowError:
                 self.broker.deliver(session_id, ltd.encode_str("e", "Invitation list is full."))
 
@@ -303,15 +303,15 @@ class Group(Injected):
 
                 info.invite_nick(invitee, registered)
 
-                if loggedin_session and registered:
-                    self.broker.deliver(loggedin_session,
-                                        ltd.encode_status_msg("RSVP", "You are invited to group %s by %s." % (str(info), state.nick)))
-
+                if loggedin_session:
                     loggedin_state = self.session.get(loggedin_session)
 
-                    if not loggedin_state.authenticated:
+                    if registered and not loggedin_state.authenticated:
                         self.broker.deliver(loggedin_session,
                                             ltd.encode_status_msg("RSVP", "You need to be registered to enter group %s." % str(info)))
+                    else:
+                        self.broker.deliver(loggedin_session,
+                                            ltd.encode_status_msg("RSVP", "You are invited to group %s by %s." % (str(info), state.nick)))
             else:
                 info.invite_address(invitee, registered)
         except OverflowError:
@@ -398,15 +398,15 @@ class Group(Injected):
 
                     info.unmute_nick(talker, registered)
 
-                    if loggedin_session and registered:
-                        self.broker.deliver(loggedin_session, ltd.encode_status_msg("RSVP", "You can now talk in group %s." % str(info)))
-
+                    if loggedin_session:
                         loggedin_state = self.session.get(loggedin_session)
 
-                        if not loggedin_state.authenticated:
+                        if registered and not loggedin_state.authenticated:
                             self.broker.deliver(loggedin_session,
                                                 ltd.encode_status_msg("RSVP",
                                                                       "You need to be registered to talk in group %s." % str(info)))
+                        else:
+                            self.broker.deliver(loggedin_session, ltd.encode_status_msg("RSVP", "You can now talk in group %s." % str(info)))
                 else:
                     info.unmute_address(talker, registered)
             except OverflowError:

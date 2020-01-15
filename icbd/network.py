@@ -85,7 +85,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
     def connection_made(self, transport):
         address = transport.get_extra_info("peername")
 
-        self.__log.info("Client connected: %s:%d", address[0], address[1])
+        self.__log.info("Client address: %s:%d", address[0], address[1])
 
         cipher = transport.get_extra_info("cipher")
         tls = False

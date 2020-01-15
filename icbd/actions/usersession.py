@@ -28,6 +28,7 @@ import secrets
 import re
 import socket
 import ipaddress
+import traceback
 from actions import Injected, ACTION, UserStatus
 from actions.motd import Motd
 from actions.registration import Registration
@@ -119,18 +120,20 @@ class UserSession(Injected):
 
                 state = self.session.get(session_id)
 
-                matches = filter(lambda m: m["loginid"] == loginid and m["address"] == state.ip, self.config.server_bridges)
-
-                if matches:
-                    match = next(matches)
-
+                if self.__find_bridge_full__(loginid, state.ip) or self.__find_bridge__(state.ip):
                     fqdn = socket.getfqdn(str(addr))
 
                     self.log.info("Bridged user, overwriting remote address: %s (%s)", fqdn, addr)
 
                     self.session.update(session_id, ip=str(addr), host=fqdn)
             except Exception as ex:
-                self.log.warn(ex)
+                self.log.warning(traceback.format_exc())
+
+    def __find_bridge_full__(self, loginid, ip):
+        return [m for m in self.config.server_bridges if "loginid" in m and m["loginid"] == loginid and m["address"] == ip]
+
+    def __find_bridge__(self, ip):
+        return [m for m in self.config.server_bridges if "loginid" not in m and m["address"] == ip]
 
     def __try_login_unsecure__(self, session_id, loginid, nick):
         self.log.debug("Testing unsecure authentication.")

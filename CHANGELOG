@@ -1,3 +1,13 @@
+# 2020-01-24 v0.1.6
+	* FEATURE: start script prefers Python 3.8
+	* FEATURE: 'bridge' support (IP address forwarding)
+	* FIX: don't crash when adding a registered nick to
+	       invitation/talk list if the affected user
+	       isn't logged in
+	* FIX: invitation message typo
+	* FIX: use timezone aware datetime values to avoid
+	       potential daylight saving side-effects
+
 # 2019-10-18 v0.1.5
 	* FIX: send correct moderator flag
 	* FEATURE: /avatar, /picture

@@ -219,7 +219,7 @@ class ICBServerProtocol(asyncio.Protocol, di.Injected):
         self.__transport.abort()
 
     def __message_received__(self, type_id, payload):
-        self.__log.debug("Received message: type='%s', session='%s', payload (size)=%d", type_id, self.__session_id, len(payload))
+        self.__log.debug("Received message: type='%s', session='%s', payload (size=%d)", type_id, self.__session_id, len(payload))
 
         type_id, payload = self.__transform.transform(type_id, payload)
 

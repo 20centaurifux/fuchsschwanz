@@ -1,5 +1,6 @@
 #!/bin/bash
 
+PYTHON=python3
 RUNTIME_DIR=$(pwd)/runtime
 
 mkdir -p $RUNTIME_DIR
@@ -22,19 +23,4 @@ if [ "$AUTO_RESPAWN" == "1" ]; then
 	OPTS+=("--auto-respawn")
 fi
 
-PYTHON3=""
-
-for PYTHON in "python3.13" "python3.12" "python3.11" "python3.10" "python3.9" "python3.8" "python3.7"; do
-	PYTHON3=$(command -v $PYTHON 1)
-
-	if [ $? == 0 ]; then
-		break
-	fi
-done
-
-if [ -z "$PYTHON3" ]; then
-	echo "No supported python version found."
-	exit 1
-fi
-
-$PYTHON3 icbd/icbd.py ${OPTS[*]}
+$PYTHON icbd/icbd.py ${OPTS[*]}

@@ -132,7 +132,7 @@ class NickDb(nickdb.NickDb, di.Injected):
 
     @staticmethod
     def __hash_password__(plain, salt):
-        return sha256((plain + salt).encode("ascii")).hexdigest()
+        return sha256((plain + salt).encode("utf-8", errors="replace")).hexdigest()
 
     @tolower(argname="nick")
     def is_secure(self, scope, nick):

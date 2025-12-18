@@ -1,3 +1,7 @@
+# 2025-12-18 v0.1.7
+	* FIX: don't crash when password is no ascii string
+	* FEATURE: no Python version selection in start script
+
 # 2020-01-24 v0.1.6
 	* FEATURE: start script prefers Python 3.8
 	* FEATURE: 'bridge' support (IP address forwarding)
